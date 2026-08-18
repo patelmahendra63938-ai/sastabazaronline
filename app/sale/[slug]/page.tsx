@@ -9,6 +9,10 @@ import Link from 'next/link';
 import { Sparkles, ArrowLeft, Tag, ShoppingBag } from 'lucide-react';
 import { Metadata } from 'next';
 
+// Forces runtime server-rendering and bypasses static build-time prerendering
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 interface PageProps {
   params: Promise<{ slug: string }>;
 }
@@ -19,19 +23,22 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     .from('promotions')
     .select('name, seo_title, seo_description, discount_value, discount_type')
     .eq('slug', slug)
-    .single();
+    .maybeSingle();
 
   if (!campaign) {
     return { title: 'Offer Expired | SASTABAZARONLINE' };
   }
 
-  const discountText = campaign.discount_type === 'PERCENTAGE'
-    ? `${campaign.discount_value}% OFF`
-    : `₹${campaign.discount_value} OFF`;
+  const discountText =
+    campaign.discount_type === 'PERCENTAGE'
+      ? `${campaign.discount_value}% OFF`
+      : `₹${campaign.discount_value} OFF`;
 
   return {
     title: campaign.seo_title || `${campaign.name} (${discountText}) – SASTABAZARONLINE`,
-    description: campaign.seo_description || `Shop the official ${campaign.name} with up to ${discountText} at SASTABAZARONLINE.`
+    description:
+      campaign.seo_description ||
+      `Shop the official ${campaign.name} with up to ${discountText} at SASTABAZARONLINE.`,
   };
 }
 
@@ -43,15 +50,15 @@ export default async function SaleLandingPage({ params }: PageProps) {
     .from('promotions')
     .select('*')
     .eq('slug', slug)
-    .single();
+    .maybeSingle();
 
   const campaign = rawCampaign as Campaign | null;
   const now = new Date().getTime();
   const isLive = Boolean(
     campaign &&
-    campaign.is_enabled &&
-    new Date(campaign.start_at).getTime() <= now &&
-    new Date(campaign.end_at).getTime() > now
+      campaign.is_enabled &&
+      new Date(campaign.start_at).getTime() <= now &&
+      new Date(campaign.end_at).getTime() > now
   );
 
   // 2. Expired / Inactive Fallback View
@@ -85,7 +92,7 @@ export default async function SaleLandingPage({ params }: PageProps) {
 
   // 3. Query participating products based on campaign targeting rules
   let query = supabase.from('products').select('*').eq('is_active', true);
-  
+
   if (campaign.target_category && campaign.target_category.toUpperCase() !== 'ALL') {
     query = query.eq('category', campaign.target_category);
   }
@@ -104,7 +111,9 @@ export default async function SaleLandingPage({ params }: PageProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-8">
           {/* Breadcrumbs Navigation */}
           <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs text-gray-500">
-            <Link href="/" className="hover:text-indigo-950 font-bold transition">Home</Link>
+            <Link href="/" className="hover:text-indigo-950 font-bold transition">
+              Home
+            </Link>
             <span>/</span>
             <span className="text-gray-400">Promotions</span>
             <span>/</span>
@@ -144,7 +153,7 @@ export default async function SaleLandingPage({ params }: PageProps) {
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-                {products.map(product => (
+                {products.map((product) => (
                   <ProductCard
                     key={product.id}
                     product={product}

@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Valid fallback ensures Vercel build will not crash during static evaluation
+// Safe HTTPS fallback prevents build-time evaluation crashes on Vercel
 const supabaseUrl =
   process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ozzxrzyahbnavldyrlms.supabase.co';
 const supabaseAnonKey =
