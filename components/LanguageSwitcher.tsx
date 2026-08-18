@@ -1,0 +1,99 @@
+'use client';
+
+import React, { useState, useEffect, useRef } from 'react';
+import { Globe, Check, ChevronDown } from 'lucide-react';
+import { SUPPORTED_INDIAN_LANGUAGES, logLanguageError, logLanguageSuccess } from '@/lib/i18n';
+
+export default function LanguageSwitcher() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [currentLang, setCurrentLang] = useState('en');
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    try {
+      // Read active language from Google Translate cookie or localStorage
+      const match = document.cookie.match(/(^|;\s*)googtrans=([^;]*)/);
+      if (match) {
+        const langCode = match[2].split('/').pop();
+        if (langCode) setCurrentLang(langCode);
+      } else {
+        const saved = localStorage.getItem('sastabazaronline_lang');
+        if (saved) setCurrentLang(saved);
+      }
+    } catch (err: any) {
+      logLanguageError('Read Language Preference', err.message);
+    }
+
+    // Close dropdown on outside click
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const switchLanguage = (langCode: string) => {
+    try {
+      // Set Google Translate cookie format: /en/hi
+      const cookieValue = `/en/${langCode}`;
+      document.cookie = `googtrans=${cookieValue}; path=/; domain=${window.location.hostname}`;
+      document.cookie = `googtrans=${cookieValue}; path=/;`;
+      localStorage.setItem('sastabazaronline_lang', langCode);
+
+      setCurrentLang(langCode);
+      setIsOpen(false);
+      logLanguageSuccess(langCode);
+
+      // Reload page to instantly apply Google Translate across all DOM elements
+      window.location.reload();
+    } catch (err: any) {
+      logLanguageError('Switch Language', err.message);
+      alert('Failed to switch language. Please try again.');
+    }
+  };
+
+  const activeLangObj = SUPPORTED_INDIAN_LANGUAGES.find(l => l.code === currentLang) || SUPPORTED_INDIAN_LANGUAGES[0];
+
+  return (
+    <div className="relative inline-block text-left" ref={dropdownRef}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-1.5 bg-indigo-900/90 hover:bg-indigo-900 text-white px-3 py-2 rounded-xl text-xs font-bold border border-indigo-700 transition cursor-pointer shadow-2xs"
+        aria-label="Select Language"
+      >
+        <Globe size={15} className="text-orange-400 shrink-0" />
+        <span className="uppercase">{activeLangObj.native}</span>
+        <ChevronDown size={13} className={`opacity-70 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {isOpen && (
+        <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-gray-200 py-2 z-50 max-h-80 overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-100">
+          <div className="px-3 py-2 border-b border-gray-100 flex items-center justify-between bg-gray-50/80">
+            <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+              SASTABAZARONLINE Languages
+            </span>
+          </div>
+          <div className="py-1">
+            {SUPPORTED_INDIAN_LANGUAGES.map((lang) => (
+              <button
+                key={lang.code}
+                onClick={() => switchLanguage(lang.code)}
+                className={`w-full text-left px-4 py-2.5 text-xs flex items-center justify-between hover:bg-orange-50 hover:text-orange-600 transition cursor-pointer ${
+                  currentLang === lang.code ? 'font-black text-orange-600 bg-orange-50/60' : 'text-gray-700 font-semibold'
+                }`}
+              >
+                <div className="flex flex-col">
+                  <span className="font-bold">{lang.native}</span>
+                  <span className="text-[10px] text-gray-400 font-normal">{lang.name}</span>
+                </div>
+                {currentLang === lang.code && <Check size={14} className="text-orange-500 shrink-0" />}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
