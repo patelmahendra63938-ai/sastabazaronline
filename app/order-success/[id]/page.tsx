@@ -1,4 +1,5 @@
 import Header from '@/components/Header';
+export const dynamic = 'force-dynamic';
 import { supabase } from '@/lib/supabase';
 import { CheckCircle2, Package, Truck, ArrowRight, ShoppingBag } from 'lucide-react';
 import Link from 'next/link';

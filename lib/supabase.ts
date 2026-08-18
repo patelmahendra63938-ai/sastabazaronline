@@ -1,20 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Safe fallback URL prevents build-time crashes during Vercel static page data collection
+// Valid fallback ensures Vercel build will not crash during static evaluation
 const supabaseUrl =
   process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ozzxrzyahbnavldyrlms.supabase.co';
 const supabaseAnonKey =
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key';
-
-if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-  if (typeof window !== 'undefined') {
-    console.warn('⚠️ Supabase environment variables missing in client runtime.');
-  }
-}
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_jXpCXLTZTtwJ6oVeEq8M9g_ZRx0K1ex';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    persistSession: true, // Retains authentication state across sessions and RLS policies
+    persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
   },
