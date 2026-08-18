@@ -1,33 +1,52 @@
-import React from 'react';
-import { Metadata } from 'next';
-import { redirect } from 'next/navigation';
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import AdminSidebar from '@/components/AdminSidebar';
-import { createClient } from '@/lib/supabase/server'; // જો તમારી સર્વર ફાઈલ lib/supabase.ts હોય તો તે મુજબ પાથ રાખવો
+import { supabase } from '@/lib/supabase';
 
-export const metadata: Metadata = {
-  title: 'Admin Control Panel — SASTABAZARONLINE',
-  description: 'Manage store promotions, inventory, orders, and fulfillment for SASTABAZARONLINE.',
-};
-
-export default async function AdminLayout({
+export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // ૧. સર્વર પર Supabase ક્લાયન્ટ શરૂ કરો
-  const supabase = await createClient();
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [authenticated, setAuthenticated] = useState(false);
 
-  // ૨. યુઝરનું લૉગિન સેશન વેરિફાઈ કરો
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  useEffect(() => {
+    async function checkAuth() {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-  // ૩. જો યુઝર લોગિન ન હોય તો સીધા /login પેજ પર મોકલી દો
-  if (!user) {
-    redirect('/login');
+      if (!session) {
+        router.replace('/login');
+      } else {
+        setAuthenticated(true);
+      }
+      setLoading(false);
+    }
+
+    checkAuth();
+  }, [router]);
+
+  // લૉગિન ચેક થાય ત્યાં સુધી સ્ક્રીન લોડિંગ બતાવશે
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="text-sm font-semibold text-gray-600">
+          સુરક્ષા ચકાસણી થઈ રહી છે...
+        </div>
+      </div>
+    );
   }
 
-  // ૪. જો યુઝર અધિકૃત હોય તો જ એડમિન પેનલ દેખાશે
+  // જો લોગિન ન હોય તો પેજનો ડેટા બતાવશે નહીં
+  if (!authenticated) {
+    return null;
+  }
+
   return (
     <div className="flex min-h-screen bg-gray-50 font-sans antialiased">
       {/* Permanent Admin Navigation */}
