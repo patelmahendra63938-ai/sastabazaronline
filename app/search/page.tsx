@@ -1,4 +1,5 @@
 import Header from '@/components/Header';
+export const dynamic = 'force-dynamic';
 import { supabase } from '@/lib/supabase';
 import ProductCard, { Product } from '@/components/ProductCard';
 import Link from 'next/link';
