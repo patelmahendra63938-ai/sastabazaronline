@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Safe HTTPS fallback prevents build-time evaluation crashes on Vercel
+// Safe HTTPS fallback prevents build-time evaluation crashes during Vercel static page generation
 const supabaseUrl =
   process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ozzxrzyahbnavldyrlms.supabase.co';
 const supabaseAnonKey =
@@ -14,7 +14,7 @@ if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_A
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    persistSession: true, // Retains authentication state across sessions and RLS policies
+    persistSession: true, // Retains authentication state across sessions and satisfies RLS policies
     autoRefreshToken: true,
     detectSessionInUrl: true,
   },
