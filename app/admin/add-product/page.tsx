@@ -160,6 +160,7 @@ export default function AdminAddProductPage() {
     mrp: '',
     hsn_code: '6204',
     gst_rate: '5',
+    net_weight_grams: '',
     status: 'Active',
     amazon_url: '',
     flipkart_url: '',
@@ -439,6 +440,7 @@ export default function AdminAddProductPage() {
   const totalStock = useMemo(() => variants.reduce((acc, curr) => acc + (Number(curr.stock) || 0), 0), [variants]);
   const mrpNum = parseFloat(formData.mrp) || 0;
   const priceNum = parseFloat(formData.price) || 0;
+  const netWeightGramsNum = Number(formData.net_weight_grams);
   const discountPercent = mrpNum > priceNum && mrpNum > 0 ? Math.round(((mrpNum - priceNum) / mrpNum) * 100) : 0;
   const savingsAmount = mrpNum > priceNum ? (mrpNum - priceNum).toFixed(2) : 0;
 
@@ -484,6 +486,17 @@ export default function AdminAddProductPage() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
+
+    if (
+      !formData.net_weight_grams.trim() ||
+      !Number.isInteger(netWeightGramsNum) ||
+      netWeightGramsNum <= 0
+    ) {
+      setErrorMsg('Exact product weight in whole grams is required and must be greater than 0.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     if (photoUrls.length === 0) {
       setErrorMsg('Please upload at least 1 product image.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -512,6 +525,7 @@ export default function AdminAddProductPage() {
         stock: totalStock,
         hsn_code: formData.hsn_code.trim() || '6204',
         gst_rate: parseFloat(formData.gst_rate) || 5.00,
+        net_weight_grams: netWeightGramsNum,
         images: photoUrls,
         is_active: formData.status === 'Active',
         amazon_url: sanitizeMarketplaceUrl(formData.amazon_url),
@@ -801,6 +815,27 @@ export default function AdminAddProductPage() {
                     className="w-full px-3.5 py-2.5 text-xs font-mono border border-gray-300 rounded-xl bg-gray-50 focus:bg-white"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
+                  Exact Product Weight (grams) *
+                </label>
+                <input
+                  type="number"
+                  name="net_weight_grams"
+                  required
+                  min="1"
+                  step="1"
+                  inputMode="numeric"
+                  value={formData.net_weight_grams}
+                  onChange={handleChange}
+                  placeholder="e.g. 650"
+                  className="w-full px-3.5 py-2.5 text-sm font-black border border-gray-300 rounded-xl bg-gray-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-600 focus:outline-hidden transition"
+                />
+                <p className="text-[10px] text-gray-500 mt-1">
+                  Required for NimbusPost shipping. Enter the actual product weight as a whole number of grams.
+                </p>
               </div>
 
               <div>
@@ -1432,6 +1467,7 @@ export default function AdminAddProductPage() {
               <div className="flex justify-between"><span className="text-gray-500">Title:</span> <span className="font-bold text-gray-800 truncate max-w-[200px]">{formData.title}</span></div>
               <div className="flex justify-between"><span className="text-gray-500">Category:</span> <span className="font-bold text-indigo-950">{selectedCategory}</span></div>
               <div className="flex justify-between"><span className="text-gray-500">Price:</span> <span className="font-black text-indigo-950">₹{priceNum}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">Exact Weight:</span> <span className="font-bold text-indigo-950">{formData.net_weight_grams || '—'} g</span></div>
               <div className="flex justify-between"><span className="text-gray-500">Photos:</span> <span className="font-bold">{photoUrls.length} / 5</span></div>
               <div className="flex justify-between"><span className="text-gray-500">Video:</span> <span className="font-bold">{videoUrl ? 'Yes (Optimized)' : 'No (Optional)'}</span></div>
               <div className="flex justify-between"><span className="text-gray-500">Total Stock:</span> <span className="font-bold">{totalStock} Units</span></div>

@@ -1,6 +1,7 @@
 import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
+import Script from 'next/script';
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -49,7 +50,9 @@ export default function RootLayout({
 
         {/* 🌐 Google Translate Integration for Indian Regional Languages */}
         <div id="google_translate_element" style={{ display: 'none' }}></div>
-        <script
+        <Script
+          id="google-translate-init"
+          strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
               function googleTranslateElementInit() {
@@ -62,7 +65,10 @@ export default function RootLayout({
             `,
           }}
         />
-        <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async></script>
+        <Script 
+          src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" 
+          strategy="afterInteractive" 
+        />
       </body>
     </html>
   );

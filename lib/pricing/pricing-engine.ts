@@ -1,10 +1,20 @@
 import { createClient } from '@supabase/supabase-js';
 import { getActiveCampaigns, calculateDiscountedPrice, Campaign } from '@/lib/promotions';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ozzxrzyahbnavldyrlms.supabase.co',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_jXpCXLTZTtwJ6oVeEq8M9g_ZRx0K1ex'
-);
+// Initialize Supabase client with safe build-time fallbacks
+const supabaseUrl =
+  process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ozzxrzyahbnavldyrlms.supabase.co';
+const supabaseKey =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+  'sb_publishable_jXpCXLTZTtwJ6oVeEq8M9g_ZRx0K1ex';
+
+const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+  },
+});
 
 export interface PricingCalculationInput {
   pincode: string;
@@ -85,7 +95,7 @@ export async function calculateAuthoritativeOrderPricing(
     const productIds = Array.from(new Set(cart.map(c => c.product_id || c.id!)));
     const { data: dbProducts } = await supabase
       .from('products')
-      .select('id, title, price, mrp, category, hsn_code, gst_rate')
+      .select('id, title, price, mrp, category, hsn_code, gst_rate, net_weight')
       .in('id', productIds);
 
     const { data: dbInventory } = await supabase
@@ -134,7 +144,7 @@ export async function calculateAuthoritativeOrderPricing(
         item.selected_campaign_id
       );
 
-      const unitWeight = Number(inv.weight_kg || 0.5);
+      const unitWeight = Number(inv.weight_kg || prod.net_weight || 0.5);
       const lineItemTotal = finalPrice * qty;
       const gstRate = Number(prod.gst_rate || 5);
       const taxableAmount = lineItemTotal / (1 + gstRate / 100);
@@ -219,12 +229,14 @@ export async function calculateAuthoritativeOrderPricing(
     const calculatedCustomerCourier = Math.ceil(courierBaseRate * courierMultiplier);
     const courierRiskAdjustment = Math.max(0, calculatedCustomerCourier - courierBaseRate);
 
-    // 8. Admin-Controlled Free Shipping Rule
+    // 8. Admin-Controlled Free Shipping Rule Evaluation
     const freeShippingThreshold = Number(rules.free_shipping_threshold) || 499;
     const isFreeShipping = Boolean(rules.free_shipping_enabled) && (discountedSubtotal >= freeShippingThreshold);
+    
+    // Courier charge applies to BOTH Prepaid and COD (unless Free Shipping qualifies)
     const customerCourierCharge = isFreeShipping ? 0 : calculatedCustomerCourier;
 
-    // 9. COD Fee Separation
+    // 9. COD Fee Separation: COD Fee applies ONLY to COD orders
     const configuredCodCharge = Number(rules.cod_charge) ?? 35.00;
     const finalCodCharge = paymentMethod === 'COD' ? configuredCodCharge : 0;
 

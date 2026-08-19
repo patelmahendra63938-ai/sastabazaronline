@@ -15,6 +15,7 @@ import Link from 'next/link';
 export default function CheckoutPage() {
   const router = useRouter();
   const [cart, setCart] = useState<any[]>([]);
+  const [isCartLoaded, setIsCartLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [locating, setLocating] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
@@ -53,10 +54,11 @@ export default function CheckoutPage() {
           setCart([]);
         }
       }
+      setIsCartLoaded(true);
     }
   }, []);
 
-  // 1. Order Calculations
+  // 1. Order Calculations & Weight-Based Slabs
   let originalProductPriceTotal = 0;
   let discountedSubtotal = 0;
   let primaryOfferName: string | null = null;
@@ -79,7 +81,14 @@ export default function CheckoutPage() {
 
   const hasSaleDiscount = originalProductPriceTotal > discountedSubtotal;
   const discountDeductionAmount = Math.max(0, originalProductPriceTotal - discountedSubtotal);
-  const grandTotal = discountedSubtotal + (shippingCharge ?? 0);
+
+  // COD Charge calculation: < ₹1,000 -> ₹40, >= ₹1,000 -> ₹50 (Only for COD)
+  const codCharge = formData.paymentMethod === 'COD' 
+    ? (discountedSubtotal >= 1000 ? 50 : 40) 
+    : 0;
+
+  const currentShipping = shippingCharge ?? 0;
+  const grandTotal = discountedSubtotal + currentShipping + codCharge;
 
   // 2. Real-Time PIN Code Check with API Route & Fallback
   const handleCheckPincode = useCallback(async (pinToCheck?: string) => {
@@ -112,7 +121,6 @@ export default function CheckoutPage() {
           subtotal: discountedSubtotal,
           paymentType: formData.paymentMethod === 'ONLINE' ? 'PREPAID' : 'COD'
         }),
-        // Set a 5-second timeout so the UI never hangs indefinitely
         signal: AbortSignal.timeout(5000),
       });
 
@@ -125,7 +133,15 @@ export default function CheckoutPage() {
       if (data.serviceable !== false) {
         setPinStatus('available');
         setIsPincodeVerified(true);
-        setShippingCharge(data.rate ?? 0);
+        let resolvedRate = data.rate;
+        if (resolvedRate === undefined || resolvedRate === null || resolvedRate === 0) {
+          const grams = totalActualWeightKg * 1000;
+          if (grams <= 500) resolvedRate = 80;
+          else if (grams <= 1000) resolvedRate = 110;
+          else if (grams <= 2000) resolvedRate = 140;
+          else resolvedRate = 140;
+        }
+        setShippingCharge(resolvedRate);
         setDisplayWeight(data.displayWeight || `${Math.max(0.5, totalActualWeightKg).toFixed(2)} kg`);
         setCourierName(data.courierPartnerName || '');
         setStatusMessage(data.courierPartnerName ? `✓ Delivery available via ${data.courierPartnerName}` : '✓ Delivery available to this PIN');
@@ -137,23 +153,27 @@ export default function CheckoutPage() {
       }
     } catch (err: any) {
       console.warn("PIN check API fallback triggered:", err.message);
-      // Fallback: If live API times out or is unconfigured, allow standard delivery seamlessly
+      let fallbackRate = 80;
+      const grams = totalActualWeightKg * 1000;
+      if (grams <= 500) fallbackRate = 80;
+      else if (grams <= 1000) fallbackRate = 110;
+      else if (grams <= 2000) fallbackRate = 140;
+      else fallbackRate = 140;
+
       setPinStatus('available');
       setIsPincodeVerified(true);
-      setShippingCharge(0);
+      setShippingCharge(fallbackRate);
       setDisplayWeight(`${Math.max(0.5, totalActualWeightKg).toFixed(2)} kg`);
-      setStatusMessage('✓ Delivery available to this PIN (Standard Delivery)');
+      setStatusMessage('✓ Delivery available to this PIN (Standard Weight Slab)');
     } finally {
       setIsCheckingPin(false);
     }
   }, [formData.pincode, formData.paymentMethod, cart.length, totalActualWeightKg, discountedSubtotal]);
 
-  // Invalidate verification on PIN change
   const handlePincodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawVal = e.target.value.replace(/\D/g, '').slice(0, 6);
     setFormData(prev => ({ ...prev, pincode: rawVal }));
     
-    // Invalidate previous verification
     setIsPincodeVerified(false);
     setPinStatus('idle');
     setShippingCharge(null);
@@ -184,7 +204,6 @@ export default function CheckoutPage() {
     window.dispatchEvent(new Event('cartUpdated'));
     setItemToRemove(null);
 
-    // Invalidate previous calculation
     setIsPincodeVerified(false);
     setPinStatus('idle');
     setShippingCharge(null);
@@ -283,7 +302,6 @@ export default function CheckoutPage() {
     }
   };
 
-  // Online UPI Details
   const storeUpiId = 'adhyeybrothers@okicici';
   const upiPaymentUrl = `upi://pay?pa=${storeUpiId}&pn=AdhyeyBrothers&am=${grandTotal}&cu=INR`;
   const qrCodeImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiPaymentUrl)}`;
@@ -321,7 +339,7 @@ export default function CheckoutPage() {
     );
   }
 
-  if (cart.length === 0) {
+  if (isCartLoaded && cart.length === 0) {
     return (
       <main className="min-h-screen bg-[#F8F9FB] flex flex-col justify-between font-sans">
         <Header />
@@ -367,7 +385,7 @@ export default function CheckoutPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             
-            {/* Left: Customer Details & Mandatory PIN Verification */}
+            {/* Left: Customer Details & PIN Verification */}
             <div className="lg:col-span-7 space-y-6">
               <div className="bg-white rounded-3xl border border-gray-200/80 p-6 sm:p-8 shadow-xs space-y-6">
                 <div className="flex items-center justify-between border-b border-gray-100 pb-4">
@@ -459,7 +477,6 @@ export default function CheckoutPage() {
                       />
                     </div>
 
-                    {/* Mandatory PIN Code with Verification Action */}
                     <div>
                       <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
                         Delivery PIN Code *
@@ -497,7 +514,6 @@ export default function CheckoutPage() {
                         </button>
                       </div>
 
-                      {/* Status Feedback Strip */}
                       <div className="mt-2">
                         {pinStatus === 'checking' && (
                           <p className="text-[11px] font-semibold text-gray-500 animate-pulse">
@@ -607,7 +623,7 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            {/* Right: Order Summary with Automated Delivery Charge */}
+            {/* Right: Order Summary with Weight-Based Shipping & Separate COD */}
             <div className="lg:col-span-5">
               <div className="bg-white rounded-3xl border border-gray-200/80 p-6 shadow-sm sticky top-24 space-y-4">
                 <div className="flex justify-between items-center border-b border-gray-100 pb-3">
@@ -660,9 +676,8 @@ export default function CheckoutPage() {
                   })}
                 </div>
 
-                {/* Customer-Facing Price Breakdown */}
+                {/* Price Breakdown */}
                 <div className="border-t border-gray-100 pt-4 space-y-2.5 text-xs">
-                  {/* 1. Product Original Price */}
                   <div className="flex justify-between text-gray-600 font-medium">
                     <span>Product Price</span>
                     <span className="font-bold text-gray-900">
@@ -670,7 +685,6 @@ export default function CheckoutPage() {
                     </span>
                   </div>
 
-                  {/* 2. Sale Promotion Deduction */}
                   {hasSaleDiscount && (
                     <div className="flex justify-between text-green-700 font-bold bg-green-50/80 px-2.5 py-1.5 rounded-xl border border-green-200">
                       <span>{primaryOfferName || 'Festival Sale — 10% OFF'}</span>
@@ -678,7 +692,6 @@ export default function CheckoutPage() {
                     </div>
                   )}
 
-                  {/* 3. Subtotal */}
                   <div className="flex justify-between text-gray-700 font-semibold pt-1 border-t border-gray-100">
                     <span>Subtotal</span>
                     <span className="font-bold text-gray-900">
@@ -686,29 +699,31 @@ export default function CheckoutPage() {
                     </span>
                   </div>
 
-                  {/* 4. Clean Shipment Weight */}
                   <div className="flex justify-between text-gray-500 font-medium">
                     <span>Shipment Weight</span>
                     <span className="font-bold text-gray-800">{displayWeight}</span>
                   </div>
 
-                  {/* 5. Automated Delivery Charge */}
                   <div className="flex justify-between text-gray-500 font-medium">
-                    <span>Shipping</span>
+                    <span>Delivery Charge</span>
                     <span className="font-bold text-gray-900">
                       {isCheckingPin ? (
                         <span className="text-gray-400 font-normal">Calculating...</span>
                       ) : shippingCharge === null ? (
                         <span className="text-orange-600 font-bold">Pending PIN check</span>
-                      ) : shippingCharge === 0 ? (
-                        <strong className="text-green-600 font-black">FREE</strong>
                       ) : (
                         `₹${shippingCharge.toFixed(2)}`
                       )}
                     </span>
                   </div>
 
-                  {/* 6. Total Payable Amount */}
+                  <div className="flex justify-between text-gray-500 font-medium">
+                    <span>COD Charge</span>
+                    <span className="font-bold text-gray-900">
+                      {formData.paymentMethod === 'COD' ? `₹${codCharge}` : '₹0'}
+                    </span>
+                  </div>
+
                   <div className="border-t border-gray-200 pt-3 flex justify-between items-baseline text-sm font-black text-indigo-950">
                     <span>Total Payable Amount</span>
                     <span className="text-base text-orange-600 font-black">
@@ -717,7 +732,6 @@ export default function CheckoutPage() {
                   </div>
                 </div>
 
-                {/* Gated Proceed Button */}
                 <button
                   type="submit"
                   form="checkout-form"
@@ -757,7 +771,6 @@ export default function CheckoutPage() {
         </div>
       </div>
 
-      {/* Item Removal Confirmation Modal */}
       {itemToRemove && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4">

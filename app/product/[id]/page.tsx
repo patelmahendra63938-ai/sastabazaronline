@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import ProductCard, { Product } from '@/components/ProductCard';
+import { SellerMarketplaceTrust } from '@/components/SellerMarketplaceTrust';
 import { supabase } from '@/lib/supabase';
 import { sanitizeMarketplaceUrl, sanitizeMarketplaceName } from '@/lib/utils';
 import { 
@@ -923,66 +924,12 @@ export default function ProductDetailPage({
             </div>
           )}
 
-          {/* CUSTOMER TRUST & BRAND VERIFICATION (EXTERNAL CHANNELS) */}
-          {hasExternalLinks && (
-            <div className="mt-8 bg-white p-6 sm:p-8 rounded-3xl border border-gray-200 shadow-xs space-y-4">
-              <div>
-                <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-1.5">
-                  <Globe size={15} className="text-indigo-600" />
-                  Trusted Shopping & Brand Verification
-                </h4>
-                <p className="text-[11px] text-gray-500">
-                  Find this product from our verified brand on other trusted platforms and official channels.
-                </p>
-              </div>
-
-              <div className="flex flex-wrap gap-3">
-                {amazonUrl && (
-                  <a
-                    href={amazonUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-gray-900 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl transition shadow-2xs"
-                  >
-                    View on Amazon <ExternalLink size={13} className="text-amber-700" />
-                  </a>
-                )}
-
-                {meeshoUrl && (
-                  <a
-                    href={meeshoUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-pink-900 bg-pink-50 hover:bg-pink-100 border border-pink-200 rounded-xl transition shadow-2xs"
-                  >
-                    View on Meesho <ExternalLink size={13} className="text-pink-700" />
-                  </a>
-                )}
-
-                {flipkartUrl && (
-                  <a
-                    href={flipkartUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-blue-900 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl transition shadow-2xs"
-                  >
-                    View on Flipkart <ExternalLink size={13} className="text-blue-700" />
-                  </a>
-                )}
-
-                {otherUrl && (
-                  <a
-                    href={otherUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-gray-800 bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-xl transition shadow-2xs"
-                  >
-                    Visit {otherName} <ExternalLink size={13} className="text-gray-600" />
-                  </a>
-                )}
-              </div>
-            </div>
-          )}
+          {/* Marketplace Trust Component Added Here on Product Page */}
+          <SellerMarketplaceTrust 
+            amazonUrl="https://www.amazon.in/l/27943762031?me=AXKNNYVWLT32Y&tag=ShopReferral_d451e877-492b-4a44-8989-d4151cfc4c54&ref=sf_seller_app_share_new_ls_srb"
+            flipkartUrl="https://www.flipkart.com/adhyey-brothers-women-crop-top-skirt-ethnic-jacket-set/p/itm2881ff260ebcc?pid=ETHHJNJYHKNYXZPM"
+            meeshoUrl="https://www.meesho.com/Adhyey?ms=2"
+          />
 
           {/* SIMILAR PRODUCTS */}
           {similarProducts.length > 0 && (
