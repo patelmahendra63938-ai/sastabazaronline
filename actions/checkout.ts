@@ -112,18 +112,25 @@ export async function processOrderCheckout(formData: CheckoutInput) {
       },
     });
 
-    // Server-side read client. The service role is used only when configured.
-    // Order/items/inventory writes are NOT performed directly by this client.
+    // Server-side database client.
+    // The secure checkout RPC is intentionally executable only by service_role.
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    const dbSupabase = serviceRoleKey
-      ? createClient(supabaseUrl, serviceRoleKey, {
-          auth: {
-            persistSession: false,
-            autoRefreshToken: false,
-            detectSessionInUrl: false,
-          },
-        })
-      : authSupabase;
+
+    if (!serviceRoleKey) {
+      console.error('[CHECKOUT_CONFIG_ERROR] SUPABASE_SERVICE_ROLE_KEY is missing.');
+      return {
+        success: false,
+        error: 'Secure checkout is temporarily unavailable. Please try again later.',
+      };
+    }
+
+    const dbSupabase = createClient(supabaseUrl, serviceRoleKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+    });
 
     const cleanPincode = String(formData.pincode || '').trim();
 
@@ -485,17 +492,30 @@ export async function processOrderCheckout(formData: CheckoutInput) {
       country: 'India',
     };
 
+    // Preserve the logged-in customer relationship when a customer session exists.
+    const {
+      data: { user },
+      error: authUserError,
+    } = await authSupabase.auth.getUser();
+
+    if (authUserError) {
+      console.warn('[CHECKOUT_AUTH_USER_WARNING]', authUserError.message);
+    }
+
+    const customerId = user?.id ?? null;
+
     /*
      * Sole order/inventory write path:
-     * public.place_order_atomic
+     * public.place_order_atomic_secure
      *
      * This function inserts the order, locks inventory rows with FOR UPDATE,
      * validates stock, decrements inventory, writes movements and inserts
      * order_items in one database transaction.
      */
     const { data: rpcResult, error: rpcError } =
-      await authSupabase.rpc('place_order_atomic', {
+      await dbSupabase.rpc('place_order_atomic_secure', {
         p_order_number: orderNumber,
+        p_customer_id: customerId,
         p_customer_name: customerName,
         p_customer_email: customerEmail,
         p_customer_phone: customerPhone,
