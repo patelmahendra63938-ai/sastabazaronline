@@ -24,27 +24,40 @@ import {
   Settings,
   LogOut,
   Menu,
+  SlidersHorizontal,
   X,
 } from 'lucide-react';
 
-const adminNavItems = [
-  { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
-  { name: 'Orders', href: '/admin/orders', icon: ShoppingCart },
-  { name: 'Products', href: '/admin/products', icon: Package },
-  { name: 'Add Products', href: '/admin/add-product', icon: PlusCircle },
-  { name: 'Inventory', href: '/admin/inventory', icon: Warehouse },
-  { name: 'Categories', href: '/admin/categories', icon: Tags },
-  { name: 'Customers', href: '/admin/customers', icon: Users },
-  { name: 'Invoices / GST', href: '/admin/invoices', icon: Receipt },
-  { name: 'Payments', href: '/admin/payments', icon: CreditCard },
-  { name: 'Logistics', href: '/admin/logistics', icon: Navigation },
-  { name: 'Shipping', href: '/admin/shipping', icon: Truck },
-  { name: 'Reports', href: '/admin/reports', icon: BarChart3 },
-  { name: 'Returns', href: '/admin/returns', icon: RotateCcw },
-  { name: 'Reviews', href: '/admin/reviews', icon: MessageSquare },
-  { name: 'Coupons', href: '/admin/coupons', icon: Ticket },
-  { name: 'Integrations', href: '/admin/integrations', icon: Plug },
-  { name: 'Settings', href: '/admin/settings', icon: Settings },
+const adminNavGroups = [
+  { label: 'Overview', items: [{ name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard }] },
+  { label: 'Orders', items: [
+    { name: 'Orders', href: '/admin/orders', icon: ShoppingCart },
+    { name: 'Returns', href: '/admin/returns', icon: RotateCcw },
+    { name: 'Invoices', href: '/admin/invoices', icon: Receipt },
+    { name: 'Payments', href: '/admin/payments', icon: CreditCard },
+    { name: 'Customers', href: '/admin/customers', icon: Users },
+  ] },
+  { label: 'Catalog', items: [
+    { name: 'Products', href: '/admin/products', icon: Package },
+    { name: 'Add Product', href: '/admin/add-product', icon: PlusCircle },
+    { name: 'Inventory', href: '/admin/inventory', icon: Warehouse },
+    { name: 'Categories', href: '/admin/categories', icon: Tags },
+  ] },
+  { label: 'Marketing', items: [
+    { name: 'Coupons', href: '/admin/coupons', icon: Ticket },
+    { name: 'Reviews', href: '/admin/reviews', icon: MessageSquare },
+    { name: 'Discounts', href: '/admin/settings/discounts', icon: Tags },
+  ] },
+  { label: 'Logistics', items: [
+    { name: 'Shipping', href: '/admin/shipping', icon: Truck },
+    { name: 'Logistics', href: '/admin/logistics', icon: Navigation },
+  ] },
+  { label: 'Reports', items: [{ name: 'Reports', href: '/admin/reports', icon: BarChart3 }] },
+  { label: 'System', items: [
+    { name: 'Integrations', href: '/admin/integrations', icon: Plug },
+    { name: 'Settings', href: '/admin/settings', icon: Settings },
+    { name: 'Filters', href: '/admin/settings/filters', icon: SlidersHorizontal },
+  ] },
 ];
 
 export default function AdminSidebar() {
@@ -64,13 +77,19 @@ export default function AdminSidebar() {
   };
 
   const navLinks = (
-    <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-1">
-      {adminNavItems.map((item) => {
+    <nav className="flex-1 overflow-y-auto px-3 py-3">
+      {adminNavGroups.map((group) => (
+        <div key={group.label} className="mb-4 last:mb-0">
+          <p className="mb-1.5 px-3 text-[9px] font-black uppercase tracking-[0.18em] text-indigo-400">{group.label}</p>
+          <div className="space-y-1">
+          {group.items.map((item) => {
         const isActive =
           pathname === item.href ||
-          (item.href !== '/admin/dashboard' && pathname.startsWith(item.href));
+          (item.href !== '/admin/dashboard' &&
+            item.href !== '/admin/settings' &&
+            pathname.startsWith(item.href));
         const Icon = item.icon;
-        return (
+            return (
           <Link
             key={item.href}
             href={item.href}
@@ -84,8 +103,11 @@ export default function AdminSidebar() {
             <Icon size={16} className={isActive ? 'text-white' : 'text-indigo-300'} />
             <span>{item.name}</span>
           </Link>
-        );
-      })}
+            );
+          })}
+          </div>
+        </div>
+      ))}
     </nav>
   );
 

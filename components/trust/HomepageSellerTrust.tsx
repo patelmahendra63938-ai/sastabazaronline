@@ -1,5 +1,3 @@
-'use client';
-
 import React from 'react';
 import { 
   ShieldCheck, 
@@ -16,7 +14,7 @@ export default function HomepageSellerTrust() {
       id: 'amazon',
       platform: 'Amazon',
       sellerName: 'Adhyey Brothers',
-      description: 'Explore our official verified storefront and product catalog on Amazon India.',
+      description: 'Explore the Adhyey Brothers product catalog on Amazon India.',
       url: 'https://www.amazon.in/l/27943762031?me=AXKNNYVWLT32Y&tag=ShopReferral_d451e877-492b-4a44-8989-d4151cfc4c54&ref=sf_seller_app_share_new_ls_srb',
       ctaText: 'View on Amazon',
       accentBorder: 'hover:border-amber-400',
@@ -29,7 +27,7 @@ export default function HomepageSellerTrust() {
       id: 'flipkart',
       platform: 'Flipkart',
       sellerName: 'Adhyey Brothers',
-      description: 'Browse our verified range of quality products and collections on Flipkart.',
+      description: 'Browse Adhyey Brothers products and collections on Flipkart.',
       url: 'https://www.flipkart.com/adhyey-brothers-women-crop-top-skirt-ethnic-jacket-set/p/itm2881ff260ebcc?pid=ETHHJNJYHKNYXZPM',
       ctaText: 'View on Flipkart',
       accentBorder: 'hover:border-blue-400',
@@ -42,7 +40,7 @@ export default function HomepageSellerTrust() {
       id: 'meesho',
       platform: 'Meesho',
       sellerName: 'Adhyey Brothers',
-      description: 'Check out our wholesale merchant supplier profile and catalog on Meesho.',
+      description: 'Find the Adhyey Brothers profile and catalog on Meesho.',
       url: 'https://www.meesho.com/Adhyey?ms=2',
       ctaText: 'View on Meesho',
       accentBorder: 'hover:border-pink-400',
@@ -64,24 +62,24 @@ export default function HomepageSellerTrust() {
         <div className="text-center max-w-2xl mx-auto space-y-2 mb-10">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-950 text-[11px] font-bold tracking-wide uppercase">
             <ShieldCheck size={14} className="text-orange-500" />
-            <span>Official Brand Verification</span>
+            <span>Marketplace Links</span>
           </div>
           <h2 
             id="seller-trust-heading" 
             className="text-2xl sm:text-3xl font-black text-indigo-950 tracking-tight"
           >
-            Shop Adhyey Brothers Everywhere
+            Find Adhyey Brothers on Marketplaces
           </h2>
           <p className="text-xs sm:text-sm text-gray-600 font-medium">
-            Verified seller across leading marketplaces
+            Visit our configured marketplace pages using the links below
           </p>
         </div>
 
         {/* Primary Brand Context Note */}
         <div className="mb-8 p-4 rounded-2xl bg-white border border-gray-200/80 shadow-2xs max-w-3xl mx-auto text-center">
           <p className="text-xs text-gray-600 leading-relaxed">
-            Want to verify <strong className="text-indigo-950 font-bold">Adhyey Brothers</strong>? Check our official seller presence on leading marketplaces below. 
-            For direct factory-wholesale pricing, faster shipping, and exclusive offers, shop right here at <strong className="text-orange-600 font-bold">SASTABAZARONLINE</strong> as your primary destination.
+            You can also find <strong className="text-indigo-950 font-bold">Adhyey Brothers</strong> products on the marketplaces below.
+            To browse the complete SASTABAZARONLINE catalog and current offers, continue shopping on this website.
           </p>
         </div>
 
@@ -101,7 +99,7 @@ export default function HomepageSellerTrust() {
                     </span>
                   </div>
                   <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${item.badgeBg}`}>
-                    Verified Seller
+                    Marketplace Page
                   </span>
                 </div>
 
@@ -139,8 +137,8 @@ export default function HomepageSellerTrust() {
               <Sparkles size={20} />
             </div>
             <div>
-              <p className="text-xs font-bold text-indigo-950">100% Authentic</p>
-              <p className="text-[11px] text-gray-500">Factory-direct items</p>
+              <p className="text-xs font-bold text-indigo-950">Product Information</p>
+              <p className="text-[11px] text-gray-500">Product details shown clearly</p>
             </div>
           </div>
 
@@ -149,7 +147,7 @@ export default function HomepageSellerTrust() {
               <ShieldCheck size={20} />
             </div>
             <div>
-              <p className="text-xs font-bold text-indigo-950">Verified Seller</p>
+              <p className="text-xs font-bold text-indigo-950">Surat Business</p>
               <p className="text-[11px] text-gray-500">Adhyey Brothers Surat</p>
             </div>
           </div>
@@ -159,8 +157,8 @@ export default function HomepageSellerTrust() {
               <ShoppingBag size={18} />
             </div>
             <div>
-              <p className="text-xs font-bold text-indigo-950">Direct Wholesale</p>
-              <p className="text-[11px] text-gray-500">Best price guaranteed</p>
+              <p className="text-xs font-bold text-indigo-950">Online Catalog</p>
+              <p className="text-[11px] text-gray-500">Current prices displayed</p>
             </div>
           </div>
 

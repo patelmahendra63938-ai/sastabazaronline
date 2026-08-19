@@ -12,20 +12,14 @@ interface CampaignBannerProps {
 export default function CampaignBanner({ campaign }: CampaignBannerProps) {
   const [timeLeft, setTimeLeft] = useState<{ d: number; h: number; m: number; s: number } | null>(null);
   const [isExpired, setIsExpired] = useState(false);
-
-  // 🛡️ Safety Guard: Hide if campaign is invalid, missing dates, disabled, or not yet active
-  if (!campaign || !campaign.end_at || !campaign.start_at || !campaign.is_enabled) {
-    return null;
-  }
-
-  const nowTimestamp = new Date().getTime();
-  const startTimestamp = new Date(campaign.start_at).getTime();
-  if (startTimestamp > nowTimestamp) {
-    return null;
-  }
+  const endAt = campaign?.end_at;
 
   useEffect(() => {
-    const target = new Date(campaign.end_at).getTime();
+    if (!endAt) {
+      return;
+    }
+
+    const target = new Date(endAt).getTime();
 
     const updateTimer = () => {
       const now = new Date().getTime();
@@ -33,7 +27,9 @@ export default function CampaignBanner({ campaign }: CampaignBannerProps) {
 
       if (diff <= 0) {
         setIsExpired(true);
+        setTimeLeft(null);
       } else {
+        setIsExpired(false);
         setTimeLeft({
           d: Math.floor(diff / (1000 * 60 * 60 * 24)),
           h: Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
@@ -43,10 +39,24 @@ export default function CampaignBanner({ campaign }: CampaignBannerProps) {
       }
     };
 
-    updateTimer();
+    const initialUpdate = window.setTimeout(updateTimer, 0);
     const interval = setInterval(updateTimer, 1000);
-    return () => clearInterval(interval);
-  }, [campaign.end_at]);
+    return () => {
+      window.clearTimeout(initialUpdate);
+      clearInterval(interval);
+    };
+  }, [endAt]);
+
+  // Safety guard: hooks above always run in the same order.
+  if (!campaign || !campaign.end_at || !campaign.start_at || !campaign.is_enabled) {
+    return null;
+  }
+
+  const nowTimestamp = new Date().getTime();
+  const startTimestamp = new Date(campaign.start_at).getTime();
+  if (startTimestamp > nowTimestamp) {
+    return null;
+  }
 
   if (isExpired) return null;
 

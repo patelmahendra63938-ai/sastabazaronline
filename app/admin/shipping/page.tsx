@@ -1,50 +1,52 @@
-'use client';
+import { AlertTriangle, Settings2, Truck } from 'lucide-react';
+import ShippingSettingsForm from './ShippingSettingsForm';
+import { getShippingRulesSetting } from '@/lib/settings/store-settings';
 
-import React from 'react';
-import { Truck, ShieldCheck, AlertCircle, ExternalLink, RefreshCw } from 'lucide-react';
+export const dynamic = 'force-dynamic';
 
-export default function AdminShippingPage() {
+export default async function AdminShippingPage() {
+  const setting = await getShippingRulesSetting();
+  const hasNimbusCredentials = Boolean(process.env.COURIER_API_KEY || process.env.NIMBUSPOST_API_KEY || process.env.NIMBUSPOST_API_TOKEN);
+
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6">
       <div>
-        <h1 className="text-2xl font-black text-indigo-950">Shipping & Courier Logistics (NimbusPost)</h1>
-        <p className="text-xs text-gray-500 mt-1">Manage automated weight buffers (15%), logistics risk margins (30%), and AWB dispatch.</p>
+        <p className="text-[11px] font-black uppercase tracking-[0.18em] text-orange-600">Store settings</p>
+        <h1 className="mt-1 text-2xl font-black text-indigo-950">Shipping Configuration</h1>
+        <p className="mt-1 text-xs text-gray-500">Manage the normalized, non-secret shipping policy stored in Supabase.</p>
       </div>
 
-      <div className="bg-white rounded-2xl border p-6 shadow-sm space-y-6">
-        <div className="flex items-center justify-between p-4 bg-orange-50 border border-orange-200 rounded-2xl">
+      <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs leading-relaxed text-amber-900">
+        <AlertTriangle size={18} className="mt-0.5 shrink-0" />
+        <p>These settings are saved for the upcoming unified pricing engine. Current checkout charges will continue using the existing checkout logic until Phase B is completed.</p>
+      </div>
+
+      <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-xs sm:p-6">
+        <div className="mb-6 flex flex-col justify-between gap-3 border-b border-gray-100 pb-4 sm:flex-row sm:items-center">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-orange-500 text-white rounded-xl flex items-center justify-center font-bold">
-              <Truck size={20} />
-            </div>
+            <span className="flex size-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-700"><Settings2 size={20} /></span>
             <div>
-              <h3 className="text-sm font-bold text-gray-900">NimbusPost API Integration Status</h3>
-              <p className="text-xs text-orange-800">Ready for configuration. System is currently running on intelligent weight-slab fallback calculations.</p>
+              <h2 className="text-base font-black text-indigo-950">Shipping rules</h2>
+              <p className="text-[11px] text-gray-500">Version {setting.version || 1}</p>
             </div>
           </div>
-          <span className="bg-orange-100 text-orange-800 text-[11px] font-bold px-3 py-1.5 rounded-xl border border-orange-300">
-            Pending API Key
-          </span>
+          {setting.updated_at && <p className="text-[11px] text-gray-400">Last saved {new Date(setting.updated_at).toLocaleString('en-IN')}</p>}
         </div>
+        <ShippingSettingsForm rules={setting.value} />
+      </section>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-          <div className="p-4 border rounded-xl bg-gray-50 space-y-1">
-            <span className="text-[11px] font-bold text-gray-500 uppercase">Packaging Weight Buffer</span>
-            <p className="text-lg font-black text-indigo-950">15%</p>
-            <p className="text-[10px] text-gray-500">Added to actual product weight automatically.</p>
-          </div>
-          <div className="p-4 border rounded-xl bg-gray-50 space-y-1">
-            <span className="text-[11px] font-bold text-gray-500 uppercase">Logistics Cost / RTO Buffer</span>
-            <p className="text-lg font-black text-indigo-950">30%</p>
-            <p className="text-[10px] text-gray-500">Calculated over base courier charges.</p>
-          </div>
-          <div className="p-4 border rounded-xl bg-gray-50 space-y-1">
-            <span className="text-[11px] font-bold text-gray-500 uppercase">Free Shipping Threshold</span>
-            <p className="text-lg font-black text-green-600">₹499</p>
-            <p className="text-[10px] text-gray-500">Orders above ₹499 qualify for free delivery.</p>
+      <section className="rounded-2xl border border-orange-200 bg-orange-50 p-5 sm:p-6">
+        <div className="flex items-start gap-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-orange-500 text-white"><Truck size={20} /></span>
+          <div className="space-y-1">
+            <h2 className="text-sm font-black text-gray-900">NimbusPost pricing status</h2>
+            <p className="text-xs leading-relaxed text-orange-900">
+              Pending official v2 pricing integration. {hasNimbusCredentials ? 'Runtime configuration is detected, but this does not confirm a working pricing connection.' : 'Required runtime configuration is not fully detected.'}
+            </p>
+            <p className="text-[11px] text-orange-800">No credentials or secret values are displayed or stored here.</p>
           </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

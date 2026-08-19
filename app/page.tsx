@@ -1,809 +1,386 @@
-'use client';
-
-import React, { useState, useEffect, useCallback } from 'react';
+import React from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { useRouter } from 'next/navigation';
-import { createVerifiedOrderAction } from '@/actions/checkout';
-import { 
-  ShieldCheck, Truck, CheckCircle2, ArrowLeft, 
-  Loader2, User, Phone, QrCode, Trash2, ShoppingBag, 
-  Navigation, FileText, Tag, AlertCircle, Check, XCircle, RefreshCw 
-} from 'lucide-react';
+import ProductCard from '@/components/ProductCard';
+import ProductFilterPanel, {
+  AvailableFilterOptions,
+  FilterGroupConfig
+} from '@/components/ProductFilterPanel';
+import ActiveFilterChips from '@/components/ActiveFilterChips';
+import CampaignBanner from '@/components/promotions/CampaignBanner';
+import HomepageSellerTrust from '@/components/trust/HomepageSellerTrust';
+import { getActiveCampaigns, Campaign } from '@/lib/promotions';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
+import { Metadata } from 'next';
 import Link from 'next/link';
+import Image from 'next/image';
+import {
+  ArrowRight,
+  FileText,
+  LockKeyhole,
+  MapPinCheck,
+  PackageSearch,
+  ReceiptText,
+  ShoppingBag,
+} from 'lucide-react';
 
-export default function CheckoutPage() {
-  const router = useRouter();
-  const [cart, setCart] = useState<any[]>([]);
-  const [isClientLoaded, setIsClientLoaded] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [locating, setLocating] = useState(false);
-  const [orderPlaced, setOrderPlaced] = useState(false);
-  const [orderId, setOrderId] = useState('');
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [itemToRemove, setItemToRemove] = useState<any | null>(null);
+export const metadata: Metadata = {
+  title: 'SASTABAZARONLINE – Festival Offers & Collections',
+  description: 'Shop curated collections with seasonal and festival discounts at SASTABAZARONLINE.',
+};
 
-  // Form State
-  const [formData, setFormData] = useState({
-    fullName: '',
-    phone: '',
-    email: '',
-    address: '',
-    city: 'Surat',
-    pincode: '',
-    paymentMethod: 'COD',
-    upiRefId: ''
-  });
+interface PageProps {
+  searchParams: Promise<{ [key: string]: string | undefined }>;
+}
 
-  // Courier Rate & Verification States
-  const [isPincodeVerified, setIsPincodeVerified] = useState<boolean>(false);
-  const [isCheckingPin, setIsCheckingPin] = useState<boolean>(false);
-  const [pinStatus, setPinStatus] = useState<'idle' | 'checking' | 'available' | 'unavailable' | 'error'>('idle');
-  const [shippingCharge, setShippingCharge] = useState<number | null>(null);
-  const [displayWeight, setDisplayWeight] = useState<string>('0.50 kg');
-  const [statusMessage, setStatusMessage] = useState<string>('');
+export default async function StorefrontPage({ searchParams }: PageProps) {
+  const resolvedSearchParams = await searchParams;
+  const cookieStore = await cookies();
 
-  // Hydration-safe LocalStorage cart sync
-  useEffect(() => {
-    setIsClientLoaded(true);
-    if (typeof window !== 'undefined') {
-      const savedCart = localStorage.getItem('sastabazar_cart');
-      if (savedCart) {
-        try {
-          setCart(JSON.parse(savedCart));
-        } catch {
-          setCart([]);
-        }
-      }
-    }
-  }, []);
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} } }
+  );
 
-  // 1. Order Calculations & Weight-Based Slabs
-  let originalProductPriceTotal = 0;
-  let discountedSubtotal = 0;
-  let primaryOfferName: string | null = null;
-  let totalActualWeightKg = 0;
+  // Fetch independent homepage configuration in parallel.
+  const [promotionsResult, filterConfigsResult, categoriesResult, homepageCategoriesResult] = await Promise.all([
+    supabase
+      .from('promotions')
+      .select('*')
+      .eq('is_enabled', true),
+    supabase
+      .from('storefront_filter_settings')
+      .select('*')
+      .order('display_order', { ascending: true }),
+    supabase
+      .from('categories')
+      .select('name')
+      .eq('is_active', true)
+      .order('display_order', { ascending: true }),
+    supabase
+      .from('categories')
+      .select('id, name, homepage_featured, homepage_display_order, homepage_image_url, display_order')
+      .eq('is_active', true)
+      .eq('show_on_homepage', true)
+      .order('homepage_featured', { ascending: false })
+      .order('homepage_display_order', { ascending: true })
+      .order('display_order', { ascending: true })
+      .order('name', { ascending: true }),
+  ]);
 
-  for (const item of cart) {
-    const qty = Number(item.quantity) || 1;
-    const origPrice = Number(item.original_price || item.mrp || item.price || 0);
-    const itemPrice = Number(item.price || 0);
-    const unitWeight = Number(item.weight_kg || item.net_weight || 0.5);
+  const rawPromotions = promotionsResult.data;
 
-    originalProductPriceTotal += origPrice * qty;
-    discountedSubtotal += itemPrice * qty;
-    totalActualWeightKg += unitWeight * qty;
+  const activeCampaigns: Campaign[] = getActiveCampaigns((rawPromotions as Campaign[]) || []);
+  
+  // Determine top homepage banner
+  const homepageBannerCampaign = activeCampaigns.find(c => c.is_homepage_visible) || activeCampaigns[0] || null;
 
-    if (item.applied_offer_label && !primaryOfferName) {
-      primaryOfferName = item.applied_offer_label;
-    }
+  const filterConfigs: FilterGroupConfig[] = filterConfigsResult.data || [];
+  const categoriesData = categoriesResult.data;
+
+  const activeCategories = (categoriesData || []).map(c => c.name);
+  const homepageCategories = homepageCategoriesResult.data || [];
+
+  // 4. Build product query
+  let query = supabase
+    .from('products')
+    .select('*, inventory(size, available_quantity)')
+    .eq('is_active', true);
+
+  if (activeCategories.length > 0) {
+    query = query.in('category', activeCategories);
   }
 
-  const hasSaleDiscount = originalProductPriceTotal > discountedSubtotal;
-  const discountDeductionAmount = Math.max(0, originalProductPriceTotal - discountedSubtotal);
-
-  // COD Charge calculation: < ₹1,000 -> ₹40, >= ₹1,000 -> ₹50 (Only for COD)
-  const codCharge = formData.paymentMethod === 'COD' 
-    ? (discountedSubtotal >= 1000 ? 50 : 40) 
-    : 0;
-
-  const currentShipping = shippingCharge ?? 0;
-  const grandTotal = discountedSubtotal + currentShipping + codCharge;
-
-  // 2. Real-Time PIN Code Check with API Route & Fallback
-  const handleCheckPincode = useCallback(async (pinToCheck?: string) => {
-    const targetPin = (pinToCheck || formData.pincode).trim();
-
-    if (!targetPin || targetPin.length !== 6 || !/^\d{6}$/.test(targetPin)) {
-      setPinStatus('error');
-      setStatusMessage('Please enter a valid 6-digit delivery PIN code.');
-      setIsPincodeVerified(false);
-      setShippingCharge(null);
-      return;
-    }
-
-    if (cart.length === 0 || discountedSubtotal <= 0) {
-      return;
-    }
-
-    setIsCheckingPin(true);
-    setPinStatus('checking');
-    setStatusMessage('Checking delivery availability with courier partner...');
-    setErrorMsg(null);
-
-    try {
-      const res = await fetch('/api/shipping/check-pincode', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          pincode: targetPin,
-          totalWeightKg: totalActualWeightKg,
-          subtotal: discountedSubtotal,
-          paymentType: formData.paymentMethod === 'ONLINE' ? 'PREPAID' : 'COD'
-        }),
-        signal: AbortSignal.timeout(5000),
-      });
-
-      if (!res.ok) {
-        throw new Error(`Service check returned ${res.status}`);
-      }
-
-      const data = await res.json();
-
-      if (data.serviceable !== false) {
-        setPinStatus('available');
-        setIsPincodeVerified(true);
-        let resolvedRate = data.rate;
-        if (resolvedRate === undefined || resolvedRate === null || resolvedRate === 0) {
-          const grams = totalActualWeightKg * 1000;
-          if (grams <= 500) resolvedRate = 80;
-          else if (grams <= 1000) resolvedRate = 110;
-          else if (grams <= 2000) resolvedRate = 140;
-          else resolvedRate = 140;
-        }
-        setShippingCharge(resolvedRate);
-        setDisplayWeight(data.displayWeight || `${Math.max(0.5, totalActualWeightKg).toFixed(2)} kg`);
-        setStatusMessage(data.courierPartnerName ? `✓ Delivery available via ${data.courierPartnerName}` : '✓ Delivery available to this PIN');
-      } else {
-        setPinStatus('unavailable');
-        setIsPincodeVerified(false);
-        setShippingCharge(null);
-        setStatusMessage(data.message || '✕ Delivery is not available to this PIN code.');
-      }
-    } catch (err: any) {
-      let fallbackRate = 80;
-      const grams = totalActualWeightKg * 1000;
-      if (grams <= 500) fallbackRate = 80;
-      else if (grams <= 1000) fallbackRate = 110;
-      else if (grams <= 2000) fallbackRate = 140;
-      else fallbackRate = 140;
-
-      setPinStatus('available');
-      setIsPincodeVerified(true);
-      setShippingCharge(fallbackRate);
-      setDisplayWeight(`${Math.max(0.5, totalActualWeightKg).toFixed(2)} kg`);
-      setStatusMessage('✓ Delivery available to this PIN (Standard Weight Slab)');
-    } finally {
-      setIsCheckingPin(false);
-    }
-  }, [formData.pincode, formData.paymentMethod, cart.length, totalActualWeightKg, discountedSubtotal]);
-
-  const handlePincodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const rawVal = e.target.value.replace(/\D/g, '').slice(0, 6);
-    setFormData(prev => ({ ...prev, pincode: rawVal }));
-    
-    setIsPincodeVerified(false);
-    setPinStatus('idle');
-    setShippingCharge(null);
-    setStatusMessage('');
-    setErrorMsg(null);
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handlePaymentMethodChange = (method: 'COD' | 'ONLINE') => {
-    setFormData(prev => ({ ...prev, paymentMethod: method }));
-    if (isPincodeVerified && formData.pincode.length === 6) {
-      handleCheckPincode(formData.pincode);
-    }
-  };
-
-  const handleRemoveItem = (itemToRemoveId: string, itemSize?: string) => {
-    const updatedCart = cart.filter(item => {
-      const idMatch = (item.id || item.product_id) === itemToRemoveId;
-      const sizeMatch = itemSize ? item.size === itemSize : true;
-      return !(idMatch && sizeMatch);
-    });
-    setCart(updatedCart);
-    localStorage.setItem('sastabazar_cart', JSON.stringify(updatedCart));
-    window.dispatchEvent(new Event('storage'));
-    window.dispatchEvent(new Event('cartUpdated'));
-    setItemToRemove(null);
-
-    setIsPincodeVerified(false);
-    setPinStatus('idle');
-    setShippingCharge(null);
-  };
-
-  const handleGetLocation = () => {
-    if (!navigator.geolocation) {
-      alert('Geolocation is not supported by your browser.');
-      return;
-    }
-
-    setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        try {
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.coords.latitude}&lon=${position.coords.longitude}`
-          );
-          const data = await res.json();
-          if (data && data.display_name) {
-            const detectedPin = data.address?.postcode?.replace(/\D/g, '').slice(0, 6) || formData.pincode;
-            setFormData(prev => ({
-              ...prev,
-              address: data.display_name,
-              pincode: detectedPin,
-              city: data.address?.city || data.address?.town || 'Surat'
-            }));
-
-            if (detectedPin.length === 6) {
-              handleCheckPincode(detectedPin);
-            }
-          }
-        } catch {
-          alert('Could not resolve location automatically.');
-        } finally {
-          setLocating(false);
-        }
-      },
-      () => {
-        setLocating(false);
-        alert('Unable to retrieve GPS location.');
-      }
-    );
-  };
-
-  const handlePlaceOrder = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (cart.length === 0) {
-      setErrorMsg('Your cart is empty.');
-      return;
-    }
-
-    if (!isPincodeVerified || pinStatus !== 'available' || shippingCharge === null) {
-      setErrorMsg('Please verify delivery availability for your PIN code before proceeding.');
-      return;
-    }
-
-    if (formData.paymentMethod === 'ONLINE' && !formData.upiRefId.trim()) {
-      setErrorMsg('Please enter your UPI Reference / UTR ID after scanning the QR code.');
-      return;
-    }
-
-    setLoading(true);
-    setErrorMsg(null);
-
-    try {
-      const result = await createVerifiedOrderAction({
-        customer_name: formData.fullName.trim(),
-        fullName: formData.fullName.trim(),
-        phone: formData.phone.trim(),
-        customer_phone: formData.phone.trim(),
-        email: formData.email.trim(),
-        customer_email: formData.email.trim(),
-        address: formData.address.trim(),
-        city: formData.city.trim(),
-        pincode: formData.pincode.trim(),
-        paymentMethod: formData.paymentMethod === 'ONLINE' ? 'ONLINE' : 'COD',
-        upiRefId: formData.upiRefId.trim(),
-        cart
-      });
-
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to place order.');
-      }
-
-      setOrderId(result.orderNumber || '');
-      setOrderPlaced(true);
-      localStorage.removeItem('sastabazar_cart');
-      window.dispatchEvent(new Event('storage'));
-      window.dispatchEvent(new Event('cartUpdated'));
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Failed to place order.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const storeUpiId = 'adhyeybrothers@okicici';
-  const upiPaymentUrl = `upi://pay?pa=${storeUpiId}&pn=AdhyeyBrothers&am=${grandTotal}&cu=INR`;
-  const qrCodeImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiPaymentUrl)}`;
-
-  // Prevent premature empty cart rendering before hydration finishes
-  if (!isClientLoaded) {
-    return (
-      <main className="min-h-screen bg-[#F8F9FB] flex flex-col justify-between font-sans">
-        <Header />
-        <div className="flex-1 flex items-center justify-center">
-          <Loader2 size={32} className="animate-spin text-indigo-950" />
-        </div>
-        <Footer />
-      </main>
-    );
+  // Apply URL filters safely
+  if (resolvedSearchParams.q) {
+    query = query.ilike('title', `%${resolvedSearchParams.q}%`);
   }
 
-  if (orderPlaced) {
-    return (
-      <main className="min-h-screen bg-[#F8F9FB] flex flex-col justify-between font-sans">
-        <Header />
-        <div className="flex-1 max-w-xl mx-auto px-4 py-16 text-center space-y-4">
-          <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
-            <CheckCircle2 size={40} />
-          </div>
-          <h1 className="text-2xl font-black text-indigo-950">Order Placed Successfully!</h1>
-          <p className="text-sm text-gray-600">
-            Thank you for shopping with SASTABAZARONLINE. Your verified order reference is{' '}
-            <span className="font-mono font-bold text-indigo-950">{orderId}</span>.
-          </p>
-          <div className="pt-6 flex flex-col sm:flex-row gap-3 justify-center">
-            <Link 
-              href={`/orders/${orderId}`}
-              className="bg-indigo-950 hover:bg-indigo-900 text-white font-bold py-3.5 px-8 rounded-xl transition shadow-md text-xs uppercase tracking-wider"
-            >
-              Track My Order
-            </Link>
-            <Link 
-              href="/" 
-              className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3.5 px-8 rounded-xl transition shadow-md text-xs uppercase tracking-wider"
-            >
-              Continue Shopping
-            </Link>
-          </div>
-        </div>
-        <Footer />
-      </main>
-    );
+  if (resolvedSearchParams.category) {
+    const cats = resolvedSearchParams.category.split(',');
+    query = query.in('category', cats);
   }
 
-  if (cart.length === 0) {
-    return (
-      <main className="min-h-screen bg-[#F8F9FB] flex flex-col justify-between font-sans">
-        <Header />
-        <div className="flex-1 max-w-md mx-auto px-4 py-24 text-center space-y-4">
-          <div className="w-20 h-20 bg-gray-100 text-gray-400 rounded-full flex items-center justify-center mx-auto mb-4 shadow-2xs">
-            <ShoppingBag size={36} />
-          </div>
-          <h2 className="text-xl font-bold text-gray-800">Your cart is empty</h2>
-          <p className="text-xs text-gray-500">You have no items in your checkout summary.</p>
-          <Link 
-            href="/" 
-            className="inline-block bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-6 rounded-xl transition shadow text-xs uppercase tracking-wider"
-          >
-            Continue Shopping
-          </Link>
-        </div>
-        <Footer />
-      </main>
-    );
+  if (resolvedSearchParams.brand) {
+    const brands = resolvedSearchParams.brand.split(',');
+    query = query.in('brand', brands);
   }
+
+  if (resolvedSearchParams.color) {
+    const colors = resolvedSearchParams.color.split(',');
+    query = query.in('color', colors);
+  }
+
+  if (resolvedSearchParams.fabric) {
+    const fabrics = resolvedSearchParams.fabric.split(',');
+    query = query.in('fabric', fabrics);
+  }
+
+  if (resolvedSearchParams.gender) {
+    const genders = resolvedSearchParams.gender.split(',');
+    query = query.in('gender', genders);
+  }
+
+  if (resolvedSearchParams.fit) {
+    const fits = resolvedSearchParams.fit.split(',');
+    query = query.in('fit', fits);
+  }
+
+  if (resolvedSearchParams.occasion) {
+    const occasions = resolvedSearchParams.occasion.split(',');
+    query = query.in('occasion', occasions);
+  }
+
+  if (resolvedSearchParams.type) {
+    const types = resolvedSearchParams.type.split(',');
+    query = query.in('product_type', types);
+  }
+
+  if (resolvedSearchParams.minPrice) {
+    query = query.gte('price', parseFloat(resolvedSearchParams.minPrice));
+  }
+
+  if (resolvedSearchParams.maxPrice) {
+    query = query.lte('price', parseFloat(resolvedSearchParams.maxPrice));
+  }
+
+  if (resolvedSearchParams.size) {
+    const sizes = resolvedSearchParams.size.split(',');
+    query = query
+      .in('inventory.size', sizes)
+      .gt('inventory.available_quantity', 0);
+  }
+
+  // Apply sorting
+  if (resolvedSearchParams.sort === 'price_asc') {
+    query = query.order('price', { ascending: true });
+  } else if (resolvedSearchParams.sort === 'price_desc') {
+    query = query.order('price', { ascending: false });
+  } else {
+    query = query.order('created_at', { ascending: false });
+  }
+
+  const { data: productsData } = await query;
+  const products = productsData || [];
+  const featuredProducts = products.slice(0, 8);
+
+  // 5. Derive available filter options dynamically from active products
+  const { data: allActiveData } = await supabase
+    .from('products')
+    .select('brand, color, fabric, gender, fit, occasion, product_type, price, inventory(size, available_quantity)')
+    .eq('is_active', true)
+    .in('category', activeCategories);
+
+  const allActive = allActiveData || [];
+
+  const availableOptions: AvailableFilterOptions = {
+    categories: activeCategories,
+    brands: Array.from(new Set(allActive.map(p => p.brand).filter(Boolean))),
+    colors: Array.from(new Set(allActive.map(p => p.color).filter(Boolean))),
+    fabrics: Array.from(new Set(allActive.map(p => p.fabric).filter(Boolean))),
+    genders: Array.from(new Set(allActive.map(p => p.gender).filter(Boolean))),
+    fits: Array.from(new Set(allActive.map(p => p.fit).filter(Boolean))),
+    occasions: Array.from(new Set(allActive.map(p => p.occasion).filter(Boolean))),
+    types: Array.from(new Set(allActive.map(p => p.product_type).filter(Boolean))),
+    sizes: Array.from(
+      new Set(
+        allActive.flatMap(p =>
+          (p.inventory || [])
+            .filter((i: { available_quantity: number; size: string | null }) => i.available_quantity > 0)
+            .map((i: { available_quantity: number; size: string | null }) => i.size)
+        ).filter((size: string | null): size is string => Boolean(size))
+      )
+    ),
+    minPrice: allActive.length ? Math.min(...allActive.map(p => p.price)) : 0,
+    maxPrice: allActive.length ? Math.max(...allActive.map(p => p.price)) : 5000
+  };
 
   return (
-    <main className="min-h-screen bg-[#F8F9FB] flex flex-col justify-between font-sans pb-16">
+    <main className="min-h-screen bg-[#F8F9FB] flex flex-col justify-between font-sans">
       <div>
         <Header />
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-          <Link 
-            href="/cart" 
-            className="inline-flex items-center gap-2 text-xs font-bold text-indigo-950 mb-6 hover:underline bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-2xs"
-          >
-            <ArrowLeft size={16} /> Back to Cart
-          </Link>
-
-          <h1 className="text-2xl font-black text-indigo-950 mb-6">Secure Checkout</h1>
-
-          {errorMsg && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center gap-2 text-xs font-bold text-red-700">
-              <AlertCircle size={16} className="shrink-0" />
-              <span>{errorMsg}</span>
-            </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-10 sm:space-y-14">
+          
+          {/* Top Promotional Sale Banner (Redirects to /sale/[slug]) */}
+          {homepageBannerCampaign && (
+            <CampaignBanner campaign={homepageBannerCampaign} />
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            
-            {/* Left: Customer Details & PIN Verification */}
-            <div className="lg:col-span-7 space-y-6">
-              <div className="bg-white rounded-3xl border border-gray-200/80 p-6 sm:p-8 shadow-xs space-y-6">
-                <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-                  <h2 className="text-sm font-black text-indigo-950 uppercase tracking-wider flex items-center gap-2">
-                    <User size={18} className="text-indigo-600" /> 1. Customer & Delivery Address
+          {/* Active categories only; names come directly from storefront configuration. */}
+          {homepageCategories.length > 0 && (
+            <section aria-labelledby="shop-by-category-heading" className="space-y-5">
+              <div className="flex items-end justify-between gap-4">
+                <div>
+                  <p className="text-[11px] font-black uppercase tracking-[0.2em] text-orange-600">Browse collections</p>
+                  <h2 id="shop-by-category-heading" className="mt-1 text-2xl font-black tracking-tight text-indigo-950 sm:text-3xl">
+                    Shop by Category
                   </h2>
-                  <button
-                    type="button"
-                    onClick={handleGetLocation}
-                    disabled={locating}
-                    className="flex items-center gap-1.5 text-xs font-bold bg-indigo-50 text-indigo-900 hover:bg-indigo-100 px-3 py-2 rounded-xl transition border border-indigo-200 cursor-pointer"
-                  >
-                    {locating ? <Loader2 size={14} className="animate-spin" /> : <Navigation size={14} />}
-                    <span>{locating ? 'Detecting...' : 'Use Current Location'}</span>
-                  </button>
                 </div>
+                <a href="#all-products" className="hidden items-center gap-1 text-xs font-bold text-indigo-900 hover:text-orange-600 sm:flex">
+                  View catalog <ArrowRight size={14} />
+                </a>
+              </div>
 
-                <form onSubmit={handlePlaceOrder} id="checkout-form" className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Full Name *</label>
-                      <div className="relative">
-                        <User size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <input
-                          type="text"
-                          name="fullName"
-                          required
-                          value={formData.fullName}
-                          onChange={handleChange}
-                          placeholder="Recipient full name"
-                          className="w-full pl-9 pr-3 py-2.5 rounded-xl border text-xs font-medium focus:ring-2 focus:ring-indigo-950 focus:outline-hidden bg-gray-50 focus:bg-white"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Phone Number *</label>
-                      <div className="relative">
-                        <Phone size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <input
-                          type="tel"
-                          name="phone"
-                          required
-                          maxLength={10}
-                          value={formData.phone}
-                          onChange={handleChange}
-                          placeholder="10-digit mobile number"
-                          className="w-full pl-9 pr-3 py-2.5 rounded-xl border text-xs font-mono font-medium focus:ring-2 focus:ring-indigo-950 focus:outline-hidden bg-gray-50 focus:bg-white"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Email Address</label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleChange}
-                      placeholder="customer@example.com"
-                      className="w-full px-3 py-2.5 rounded-xl border text-xs font-medium focus:ring-2 focus:ring-indigo-950 focus:outline-hidden bg-gray-50 focus:bg-white"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Delivery Address *</label>
-                    <textarea
-                      name="address"
-                      required
-                      rows={3}
-                      value={formData.address}
-                      onChange={handleChange}
-                      placeholder="Flat/House No, Building, Street, Landmark"
-                      className="w-full px-3 py-2.5 rounded-xl border text-xs font-medium focus:ring-2 focus:ring-indigo-950 focus:outline-hidden bg-gray-50 focus:bg-white"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 uppercase mb-1">City *</label>
-                      <input
-                        type="text"
-                        name="city"
-                        required
-                        value={formData.city}
-                        onChange={handleChange}
-                        className="w-full px-3 py-2.5 rounded-xl border text-xs font-medium focus:ring-2 focus:ring-indigo-950 focus:outline-hidden bg-gray-50 focus:bg-white"
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                {homepageCategories.map((category) => (
+                  <Link
+                    key={category.id}
+                    href={`/category/${encodeURIComponent(category.name)}`}
+                    className={`group relative flex min-h-28 overflow-hidden rounded-2xl border bg-white p-4 shadow-xs transition hover:-translate-y-0.5 hover:border-orange-300 hover:shadow-md ${
+                      category.homepage_featured
+                        ? 'col-span-2 min-h-36 border-orange-200 sm:col-span-2 lg:col-span-2'
+                        : 'border-indigo-100'
+                    }`}
+                  >
+                    {category.homepage_image_url && (
+                      <Image
+                        src={category.homepage_image_url}
+                        alt=""
+                        fill
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 66vw, 33vw"
+                        className="absolute inset-0 size-full object-cover"
                       />
-                    </div>
+                    )}
+                    {category.homepage_image_url && <span className="absolute inset-0 bg-gradient-to-t from-indigo-950/90 via-indigo-950/30 to-transparent" />}
+                    <span className="relative z-10 flex size-full flex-col justify-between">
+                      <ShoppingBag
+                        size={22}
+                        className={category.homepage_image_url ? 'text-white' : 'text-orange-500'}
+                        aria-hidden="true"
+                      />
+                      <span className={`flex items-end justify-between gap-2 text-sm font-black ${category.homepage_image_url ? 'text-white' : 'text-indigo-950'}`}>
+                        {category.name}
+                        <ArrowRight size={14} className="shrink-0 transition-transform group-hover:translate-x-1" aria-hidden="true" />
+                      </span>
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
 
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
-                        Delivery PIN Code *
-                      </label>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          name="pincode"
-                          maxLength={6}
-                          required
-                          value={formData.pincode}
-                          onChange={handlePincodeChange}
-                          placeholder="e.g. 395007"
-                          className="flex-1 px-3 py-2.5 rounded-xl border text-xs font-mono font-bold focus:ring-2 focus:ring-indigo-950 focus:outline-hidden bg-gray-50 focus:bg-white"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleCheckPincode()}
-                          disabled={isCheckingPin || formData.pincode.length !== 6}
-                          className="px-4 py-2.5 bg-indigo-950 hover:bg-indigo-900 text-white font-bold text-xs rounded-xl transition disabled:opacity-40 cursor-pointer shrink-0 flex items-center gap-1.5"
-                        >
-                          {isCheckingPin ? (
-                            <>
-                              <Loader2 size={13} className="animate-spin" />
-                              <span>Checking...</span>
-                            </>
-                          ) : isPincodeVerified ? (
-                            <>
-                              <RefreshCw size={13} />
-                              <span>Recheck</span>
-                            </>
-                          ) : (
-                            <span>Check Delivery</span>
-                          )}
-                        </button>
-                      </div>
+          {featuredProducts.length > 0 && (
+            <section aria-labelledby="featured-products-heading" className="space-y-5 rounded-3xl bg-indigo-950 px-4 py-7 sm:px-6 sm:py-9">
+              <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
+                <div>
+                  <p className="text-[11px] font-black uppercase tracking-[0.2em] text-orange-400">From our active catalog</p>
+                  <h2 id="featured-products-heading" className="mt-1 text-2xl font-black tracking-tight text-white sm:text-3xl">
+                    Featured Products
+                  </h2>
+                  <p className="mt-1 text-xs text-indigo-200">A selection of recently added active products.</p>
+                </div>
+                <a href="#all-products" className="inline-flex items-center gap-1 text-xs font-bold text-orange-300 hover:text-white">
+                  Browse all products <ArrowRight size={14} />
+                </a>
+              </div>
 
-                      <div className="mt-2">
-                        {pinStatus === 'checking' && (
-                          <p className="text-[11px] font-semibold text-gray-500 animate-pulse">
-                            Checking delivery availability with courier partner...
-                          </p>
-                        )}
-                        {pinStatus === 'available' && (
-                          <div className="p-2.5 bg-green-50 border border-green-200 rounded-xl text-green-800 text-xs font-bold flex items-center gap-2">
-                            <Check size={15} className="text-green-600 shrink-0" />
-                            <span>{statusMessage}</span>
-                          </div>
-                        )}
-                        {pinStatus === 'unavailable' && (
-                          <div className="p-2.5 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs font-bold flex items-center gap-2">
-                            <XCircle size={15} className="text-red-600 shrink-0" />
-                            <span>{statusMessage}</span>
-                          </div>
-                        )}
-                        {pinStatus === 'error' && (
-                          <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs font-bold flex items-center gap-2">
-                            <AlertCircle size={15} className="text-amber-600 shrink-0" />
-                            <span>{statusMessage}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                {featuredProducts.map((product) => (
+                  <ProductCard key={`featured-${product.id}`} product={product} activeCampaigns={activeCampaigns} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          <section aria-labelledby="why-shop-heading" className="space-y-5">
+            <div className="text-center">
+              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-orange-600">Clear buying experience</p>
+              <h2 id="why-shop-heading" className="mt-1 text-2xl font-black tracking-tight text-indigo-950 sm:text-3xl">Why Shop With Us</h2>
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              {[
+                { title: 'Secure Checkout', detail: 'Complete your purchase through the existing checkout flow.', icon: LockKeyhole },
+                { title: 'GST Invoice', detail: 'Order records support GST invoice information.', icon: ReceiptText },
+                { title: 'PIN-code Check', detail: 'Verify delivery availability for your PIN code.', icon: MapPinCheck },
+                { title: 'Clear Summary', detail: 'Review item and order totals before confirmation.', icon: FileText },
+                { title: 'Order Tracking', detail: 'View your placed orders from the orders page.', icon: PackageSearch },
+              ].map(({ title, detail, icon: Icon }) => (
+                <div key={title} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-xs">
+                  <div className="mb-4 flex size-10 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
+                    <Icon size={20} aria-hidden="true" />
                   </div>
+                  <h3 className="text-sm font-black text-indigo-950">{title}</h3>
+                  <p className="mt-1 text-xs leading-relaxed text-gray-500">{detail}</p>
+                </div>
+              ))}
+            </div>
+          </section>
 
-                  {/* Payment Method Selector */}
-                  <div className="pt-4 border-t border-gray-100">
-                    <h3 className="text-xs font-bold text-gray-800 uppercase tracking-wider mb-3">
-                      2. Payment Method
-                    </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <label 
-                        onClick={() => handlePaymentMethodChange('COD')}
-                        className={`flex items-center gap-3 p-4 rounded-2xl border-2 cursor-pointer transition ${
-                          formData.paymentMethod === 'COD' ? 'border-indigo-600 bg-indigo-50/50' : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                      >
-                        <input 
-                          type="radio" 
-                          name="paymentMethod" 
-                          value="COD" 
-                          checked={formData.paymentMethod === 'COD'} 
-                          onChange={() => handlePaymentMethodChange('COD')}
-                          className="text-indigo-600"
-                        />
-                        <div>
-                          <span className="block text-xs font-bold text-gray-900">Cash on Delivery</span>
-                          <span className="block text-[10px] text-gray-500">Pay cash at doorstep</span>
-                        </div>
-                      </label>
-
-                      <label 
-                        onClick={() => handlePaymentMethodChange('ONLINE')}
-                        className={`flex items-center gap-3 p-4 rounded-2xl border-2 cursor-pointer transition ${
-                          formData.paymentMethod === 'ONLINE' ? 'border-indigo-600 bg-indigo-50/50' : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                      >
-                        <input 
-                          type="radio" 
-                          name="paymentMethod" 
-                          value="ONLINE" 
-                          checked={formData.paymentMethod === 'ONLINE'} 
-                          onChange={() => handlePaymentMethodChange('ONLINE')}
-                          className="text-indigo-600"
-                        />
-                        <div>
-                          <span className="block text-xs font-bold text-gray-900">Scan QR & Pay Online</span>
-                          <span className="block text-[10px] text-gray-500">GPay, PhonePe, Paytm, UPI</span>
-                        </div>
-                      </label>
-                    </div>
-                  </div>
-
-                  {formData.paymentMethod === 'ONLINE' && (
-                    <div className="p-6 bg-indigo-50/80 border-2 border-indigo-200 rounded-2xl text-center space-y-4">
-                      <div className="flex items-center justify-center gap-2 text-indigo-950 font-bold text-sm">
-                        <QrCode size={20} className="text-orange-500" />
-                        <span>Scan to Pay: <b className="text-orange-600 font-black text-base">₹{grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</b></span>
-                      </div>
-                      <div className="w-48 h-48 bg-white p-2 rounded-xl border mx-auto flex items-center justify-center shadow-sm">
-                        <img src={qrCodeImageUrl} alt="UPI QR" className="w-full h-full object-contain" />
-                      </div>
-                      <p className="text-[11px] text-gray-600">UPI ID: <span className="font-mono font-bold text-indigo-950">{storeUpiId}</span></p>
-                      <div>
-                        <label className="block text-[11px] font-bold text-gray-700 uppercase mb-1">Enter UPI Reference / UTR ID *</label>
-                        <input
-                          type="text"
-                          name="upiRefId"
-                          required={formData.paymentMethod === 'ONLINE'}
-                          value={formData.upiRefId}
-                          onChange={handleChange}
-                          placeholder="e.g. 4235xxxxxxxx"
-                          className="w-full max-w-sm mx-auto px-4 py-2.5 bg-white rounded-xl border text-xs font-mono text-center outline-none focus:ring-2 focus:ring-indigo-950"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </form>
+          <section aria-labelledby="customer-help-heading" className="rounded-3xl border border-indigo-100 bg-white p-6 shadow-xs sm:p-8">
+            <div className="flex flex-col justify-between gap-5 md:flex-row md:items-center">
+              <div>
+                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-orange-600">Customer help</p>
+                <h2 id="customer-help-heading" className="mt-1 text-xl font-black text-indigo-950 sm:text-2xl">Orders, policies and support</h2>
+                <p className="mt-2 max-w-xl text-xs leading-relaxed text-gray-500">Use these customer pages to view orders and read our store policies.</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Link href="/orders" className="rounded-xl bg-indigo-950 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-indigo-900">View Orders</Link>
+                <Link href="/privacy-policy" className="rounded-xl border border-gray-200 px-4 py-2.5 text-xs font-bold text-gray-700 transition hover:border-indigo-300">Privacy Policy</Link>
+                <Link href="/terms" className="rounded-xl border border-gray-200 px-4 py-2.5 text-xs font-bold text-gray-700 transition hover:border-indigo-300">Terms</Link>
               </div>
             </div>
+          </section>
 
-            {/* Right: Order Summary */}
-            <div className="lg:col-span-5">
-              <div className="bg-white rounded-3xl border border-gray-200/80 p-6 shadow-sm sticky top-24 space-y-4">
-                <div className="flex justify-between items-center border-b border-gray-100 pb-3">
-                  <h3 className="text-base font-bold text-gray-900">Order Summary ({cart.length} items)</h3>
-                  <span className="text-[11px] font-mono font-bold bg-gray-100 text-gray-700 px-2.5 py-1 rounded-lg border border-gray-200">
-                    GSTIN: 24AKBPD1704F1Z1
-                  </span>
-                </div>
+          <HomepageSellerTrust />
 
-                {/* Items List */}
-                <div className="divide-y divide-gray-100 max-h-60 overflow-y-auto pr-1">
-                  {cart.map((item) => {
-                    const itemId = item.id || item.product_id;
-                    const itemPrice = Number(item.price) || 0;
-                    const itemQty = Number(item.quantity) || 1;
-                    return (
-                      <div key={`${itemId}-${item.size}`} className="py-3 flex items-center justify-between gap-3 text-xs">
-                        <div className="flex items-center gap-3 overflow-hidden">
-                          <img 
-                            src={item.image || (item.images ? item.images[0] : 'https://via.placeholder.com/150')} 
-                            alt={item.title} 
-                            className="w-12 h-12 object-cover rounded-xl border border-gray-200 shrink-0"
-                          />
-                          <div className="min-w-0">
-                            <h4 className="font-bold text-gray-900 truncate">{item.title}</h4>
-                            <p className="text-[11px] text-gray-500 font-medium">
-                              Size: <span className="font-bold text-gray-800">{item.size || 'Free Size'}</span> • Qty: {itemQty} × ₹{itemPrice.toLocaleString('en-IN')}
-                            </p>
-                            {item.applied_offer_label && (
-                              <span className="text-[10px] font-bold text-green-700 flex items-center gap-1 mt-0.5">
-                                <Tag size={11} /> {item.applied_offer_label}
-                              </span>
-                            )}
-                          </div>
-                        </div>
+          {/* Main Layout: Left Sidebar Filters + Right Catalog Grid */}
+          <section id="all-products" aria-labelledby="all-products-heading" className="scroll-mt-24">
+          <div className="flex flex-col md:flex-row gap-6 pt-2">
+            
+            {/* Desktop & Mobile Left Filter Panel */}
+            <aside className="w-full md:w-64 shrink-0">
+              <ProductFilterPanel
+                availableOptions={availableOptions}
+                filterConfigs={filterConfigs}
+              />
+            </aside>
 
-                        <div className="flex items-center gap-3 shrink-0">
-                          <span className="font-black text-indigo-950">₹{(itemPrice * itemQty).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                          <button
-                            type="button"
-                            onClick={() => setItemToRemove(item)}
-                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition cursor-pointer"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+            {/* Product Catalog Grid Column */}
+            <div className="flex-1 space-y-4">
+              
+              {/* Active Removable Chips */}
+              <ActiveFilterChips />
 
-                {/* Price Breakdown */}
-                <div className="border-t border-gray-100 pt-4 space-y-2.5 text-xs">
-                  <div className="flex justify-between text-gray-600 font-medium">
-                    <span>Product Price</span>
-                    <span className="font-bold text-gray-900">
-                      ₹{originalProductPriceTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                    </span>
-                  </div>
-
-                  {hasSaleDiscount && (
-                    <div className="flex justify-between text-green-700 font-bold bg-green-50/80 px-2.5 py-1.5 rounded-xl border border-green-200">
-                      <span>{primaryOfferName || 'Festival Sale — 10% OFF'}</span>
-                      <span>-₹{discountDeductionAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                    </div>
-                  )}
-
-                  <div className="flex justify-between text-gray-700 font-semibold pt-1 border-t border-gray-100">
-                    <span>Subtotal</span>
-                    <span className="font-bold text-gray-900">
-                      ₹{discountedSubtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between text-gray-500 font-medium">
-                    <span>Shipment Weight</span>
-                    <span className="font-bold text-gray-800">{displayWeight}</span>
-                  </div>
-
-                  <div className="flex justify-between text-gray-500 font-medium">
-                    <span>Delivery Charge</span>
-                    <span className="font-bold text-gray-900">
-                      {isCheckingPin ? (
-                        <span className="text-gray-400 font-normal">Calculating...</span>
-                      ) : shippingCharge === null ? (
-                        <span className="text-orange-600 font-bold">Pending PIN check</span>
-                      ) : (
-                        `₹${shippingCharge.toFixed(2)}`
-                      )}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between text-gray-500 font-medium">
-                    <span>COD Charge</span>
-                    <span className="font-bold text-gray-900">
-                      {formData.paymentMethod === 'COD' ? `₹${codCharge}` : '₹0'}
-                    </span>
-                  </div>
-
-                  <div className="border-t border-gray-200 pt-3 flex justify-between items-baseline text-sm font-black text-indigo-950">
-                    <span>Total Payable Amount</span>
-                    <span className="text-base text-orange-600 font-black">
-                      ₹{grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                    </span>
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  form="checkout-form"
-                  disabled={loading || cart.length === 0 || !isPincodeVerified || pinStatus !== 'available' || isCheckingPin}
-                  className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 rounded-2xl transition shadow-md shadow-orange-500/25 flex items-center justify-center gap-2 text-xs uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer active:scale-98"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 size={16} className="animate-spin" />
-                      <span>Verifying & Placing Order...</span>
-                    </>
-                  ) : !isPincodeVerified ? (
-                    <>
-                      <Truck size={16} />
-                      <span>Verify PIN to Proceed</span>
-                    </>
-                  ) : (
-                    <>
-                      <ShieldCheck size={16} />
-                      <span>Confirm & Place Order (₹{grandTotal.toLocaleString('en-IN')})</span>
-                    </>
-                  )}
-                </button>
-
-                <div className="bg-indigo-50/80 rounded-2xl p-3 border border-indigo-100 text-[11px] text-indigo-950 space-y-1">
-                  <p className="flex items-center gap-1.5 font-bold">
-                    <FileText size={14} className="text-orange-500" /> Tax Breakdown Info:
-                  </p>
-                  <p className="text-gray-600 text-[10px]">
-                    All prices are inclusive of GST. Official tax invoice generated under <b>24AKBPD1704F1Z1</b>.
-                  </p>
-                </div>
+              {/* Toolbar Bar */}
+              <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-gray-200/80 shadow-2xs">
+                <h2 id="all-products-heading" className="text-xs font-black text-indigo-950 uppercase tracking-wider">
+                  {resolvedSearchParams.category ? `${resolvedSearchParams.category} Collection` : 'All Store Products'} ({products.length} Items)
+                </h2>
+                <span className="text-[11px] text-gray-500 font-semibold">
+                  Direct Factory Rates
+                </span>
               </div>
+
+              {/* Products Rendering */}
+              {products.length === 0 ? (
+                <div className="bg-white rounded-3xl border border-gray-200 p-16 text-center space-y-3 shadow-xs">
+                  <h3 className="text-base font-bold text-gray-800">No Products Found</h3>
+                  <p className="text-xs text-gray-500 max-w-sm mx-auto">
+                    Try clearing or adjusting your selected filters and search query.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
+                  {products.map((product) => (
+                    <ProductCard
+                      key={product.id}
+                      product={product}
+                      activeCampaigns={activeCampaigns}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
 
           </div>
+          </section>
         </div>
       </div>
 
-      {itemToRemove && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4">
-            <h3 className="text-base font-bold text-gray-900">Remove from cart?</h3>
-            <p className="text-xs text-gray-600">
-              Are you sure you want to remove <span className="font-bold text-gray-900">{itemToRemove.title} ({itemToRemove.size || 'Free Size'})</span> from your checkout?
-            </p>
-            <div className="flex items-center justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setItemToRemove(null)}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-100 transition cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => handleRemoveItem(itemToRemove.id || itemToRemove.product_id, itemToRemove.size)}
-                className="px-5 py-2 rounded-xl text-xs font-bold bg-red-600 hover:bg-red-700 text-white transition shadow cursor-pointer"
-              >
-                Remove
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <Footer />
+      <Footer categories={activeCategories} />
     </main>
   );
 }

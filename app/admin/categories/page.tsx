@@ -1,17 +1,24 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Tags, Plus, Trash2, Power, Loader2, RefreshCw, AlertCircle } from 'lucide-react';
+import { Tags, Plus, Trash2, Power, Loader2, RefreshCw, AlertCircle, Save } from 'lucide-react';
 
 interface CategoryItem {
   id: string;
   name: string;
   is_active: boolean;
   display_order?: number;
+  show_on_homepage: boolean;
+  homepage_featured: boolean;
+  homepage_display_order: number;
+  homepage_image_url: string | null;
   productCount?: number;
   created_at?: string;
 }
+
+const getErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : 'An unexpected error occurred.';
 
 export default function AdminCategoriesPage() {
   const [categories, setCategories] = useState<CategoryItem[]>([]);
@@ -19,16 +26,19 @@ export default function AdminCategoriesPage() {
   const [newCatName, setNewCatName] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [savingId, setSavingId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // Fetch categories and map associated product counts
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     setLoading(true);
     setErrorMessage(null);
+    setSuccessMessage(null);
     try {
       const { data: catData, error: catError } = await supabase
         .from('categories')
-        .select('*')
+        .select('id, name, is_active, display_order, show_on_homepage, homepage_featured, homepage_display_order, homepage_image_url, created_at')
         .order('display_order', { ascending: true })
         .order('created_at', { ascending: false });
 
@@ -51,17 +61,18 @@ export default function AdminCategoriesPage() {
       }));
 
       setCategories(merged);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error fetching categories:', err);
-      setErrorMessage(err.message || 'Failed to load categories.');
+      setErrorMessage(getErrorMessage(err) || 'Failed to load categories.');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchCategories();
-  }, []);
+    const initialLoad = window.setTimeout(() => void fetchCategories(), 0);
+    return () => window.clearTimeout(initialLoad);
+  }, [fetchCategories]);
 
   // 1. ADD NEW CATEGORY
   const handleAddCategory = async (e: React.FormEvent) => {
@@ -80,6 +91,7 @@ export default function AdminCategoriesPage() {
             name: trimmed,
             is_active: true,
             display_order: categories.length + 1,
+            homepage_display_order: categories.length + 1,
           },
         ]);
 
@@ -87,31 +99,64 @@ export default function AdminCategoriesPage() {
 
       setNewCatName('');
       await fetchCategories();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error adding category:', err);
-      setErrorMessage(err.message || 'Failed to add category. Check database policies.');
+      setErrorMessage(getErrorMessage(err) || 'Failed to add category. Check database policies.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  // 2. TOGGLE CATEGORY STATUS (ON/OFF)
-  const handleToggleStatus = async (id: string, currentStatus: boolean) => {
+  const updateCategory = async (
+    id: string,
+    updates: Partial<Pick<CategoryItem, 'is_active' | 'show_on_homepage' | 'homepage_featured' | 'homepage_display_order' | 'homepage_image_url'>>,
+    successMessage: string
+  ) => {
+    setSavingId(id);
+    setErrorMessage(null);
+    setSuccessMessage(null);
     try {
       const { error } = await supabase
         .from('categories')
-        .update({ is_active: !currentStatus, updated_at: new Date().toISOString() })
+        .update({ ...updates, updated_at: new Date().toISOString() })
         .eq('id', id);
 
       if (error) throw error;
 
       setCategories((prev) =>
-        prev.map((c) => (c.id === id ? { ...c, is_active: !currentStatus } : c))
+        prev.map((category) => (category.id === id ? { ...category, ...updates } : category))
       );
-    } catch (err: any) {
-      console.error('Error updating category status:', err);
-      alert('Failed to update status: ' + err.message);
+      setSuccessMessage(successMessage);
+    } catch (err: unknown) {
+      console.error('Error updating category:', err);
+      setErrorMessage(`Failed to update category: ${getErrorMessage(err)}`);
+      await fetchCategories();
+    } finally {
+      setSavingId(null);
     }
+  };
+
+  const updateDraft = (id: string, updates: Partial<CategoryItem>) => {
+    setCategories((prev) =>
+      prev.map((category) => (category.id === id ? { ...category, ...updates } : category))
+    );
+  };
+
+  const handleSaveMerchandising = async (category: CategoryItem) => {
+    const order = Number(category.homepage_display_order);
+    if (!Number.isInteger(order) || order < 0) {
+      setErrorMessage('Homepage Order must be a whole number of 0 or greater.');
+      return;
+    }
+
+    await updateCategory(
+      category.id,
+      {
+        homepage_display_order: order,
+        homepage_image_url: category.homepage_image_url?.trim() || null,
+      },
+      `${category.name} homepage settings saved.`
+    );
   };
 
   // 3. DELETE / REMOVE CATEGORY
@@ -132,9 +177,9 @@ export default function AdminCategoriesPage() {
       if (error) throw error;
 
       setCategories((prev) => prev.filter((c) => c.id !== id));
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error deleting category:', err);
-      alert('Failed to delete category: ' + err.message);
+      setErrorMessage(`Failed to delete category: ${getErrorMessage(err)}`);
     } finally {
       setDeletingId(null);
     }
@@ -147,7 +192,7 @@ export default function AdminCategoriesPage() {
         <div>
           <h1 className="text-2xl font-black text-indigo-950">Category Management</h1>
           <p className="text-xs text-gray-500 mt-1">
-            Create, toggle visibility, and remove categories for your storefront catalog.
+            Manage storefront availability and homepage category merchandising.
           </p>
         </div>
         <button
@@ -166,6 +211,18 @@ export default function AdminCategoriesPage() {
           <span>{errorMessage}</span>
         </div>
       )}
+
+      {successMessage && (
+        <div className="rounded-xl border border-green-200 bg-green-50 p-3.5 text-xs font-medium text-green-700">
+          {successMessage}
+        </div>
+      )}
+
+      <div className="grid gap-2 rounded-2xl border border-indigo-100 bg-indigo-50/70 p-4 text-xs text-indigo-950 sm:grid-cols-3">
+        <p><strong>Active in Store OFF:</strong> category is hidden from storefront.</p>
+        <p><strong>Show on Homepage OFF:</strong> category remains available in store but does not appear in Shop by Category.</p>
+        <p><strong>Featured:</strong> category may receive a larger or stronger visual card.</p>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Add Category Form */}
@@ -217,62 +274,89 @@ export default function AdminCategoriesPage() {
           ) : (
             <div className="divide-y divide-gray-100 text-xs">
               {categories.map((cat) => (
-                <div key={cat.id} className="p-4 flex items-center justify-between hover:bg-gray-50/80 transition gap-4">
-                  {/* Category Details */}
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div
-                      className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
-                        cat.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-500'
-                      }`}
-                    >
-                      {cat.name.charAt(0).toUpperCase()}
+                <div key={cat.id} className="space-y-4 p-4 transition hover:bg-gray-50/80 sm:p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className={`flex size-10 shrink-0 items-center justify-center rounded-xl text-xs font-bold ${cat.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-500'}`}>
+                        {cat.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="truncate font-bold text-gray-900">{cat.name}</h4>
+                        <p className="text-[10px] text-gray-500">{cat.productCount || 0} products linked</p>
+                      </div>
                     </div>
-                    <div className="truncate">
-                      <h4 className="font-bold text-gray-900 truncate">{cat.name}</h4>
-                      <p className="text-[10px] text-gray-500">
-                        {cat.productCount || 0} active products linked
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Actions: Toggle & Delete */}
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span
-                      className={`hidden sm:inline-block px-2.5 py-1 rounded-full text-[10px] font-bold border ${
-                        cat.is_active
-                          ? 'bg-green-50 text-green-700 border-green-200'
-                          : 'bg-red-50 text-red-700 border-red-200'
-                      }`}
-                    >
-                      {cat.is_active ? 'ACTIVE (ON)' : 'HIDDEN (OFF)'}
-                    </span>
-
-                    {/* Toggle Button */}
                     <button
-                      onClick={() => handleToggleStatus(cat.id, cat.is_active)}
-                      className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 text-xs cursor-pointer ${
-                        cat.is_active
-                          ? 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100'
-                          : 'bg-green-600 text-white hover:bg-green-700'
-                      }`}
-                      title={cat.is_active ? 'Hide from storefront' : 'Show on storefront'}
-                    >
-                      <Power size={12} />
-                      <span className="hidden md:inline">{cat.is_active ? 'Turn OFF' : 'Turn ON'}</span>
-                    </button>
-
-                    {/* Delete / Remove Button */}
-                    <button
+                      type="button"
                       onClick={() => handleDeleteCategory(cat.id, cat.name, cat.productCount || 0)}
-                      disabled={deletingId === cat.id}
-                      className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition border border-red-100 cursor-pointer disabled:opacity-40"
+                      disabled={deletingId === cat.id || savingId === cat.id}
+                      className="cursor-pointer rounded-xl border border-red-100 bg-red-50 p-2 text-red-600 transition hover:bg-red-100 disabled:opacity-40"
                       title="Delete category"
                     >
-                      {deletingId === cat.id ? (
-                        <Loader2 size={14} className="animate-spin" />
-                      ) : (
-                        <Trash2 size={14} />
-                      )}
+                      {deletingId === cat.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <button
+                      type="button"
+                      onClick={() => updateCategory(cat.id, { is_active: !cat.is_active }, `${cat.name} storefront status updated.`)}
+                      disabled={savingId === cat.id}
+                      aria-pressed={cat.is_active}
+                      className={`flex items-center justify-between rounded-xl border px-3 py-2.5 text-left font-bold transition disabled:opacity-50 ${cat.is_active ? 'border-green-200 bg-green-50 text-green-800' : 'border-gray-200 bg-gray-100 text-gray-600'}`}
+                    >
+                      <span>Active in Store</span>
+                      <Power size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updateCategory(cat.id, { show_on_homepage: !cat.show_on_homepage }, `${cat.name} homepage visibility updated.`)}
+                      disabled={savingId === cat.id}
+                      aria-pressed={cat.show_on_homepage}
+                      className={`rounded-xl border px-3 py-2.5 text-left font-bold transition disabled:opacity-50 ${cat.show_on_homepage ? 'border-indigo-200 bg-indigo-50 text-indigo-900' : 'border-gray-200 bg-gray-100 text-gray-600'}`}
+                    >
+                      Show on Homepage: {cat.show_on_homepage ? 'ON' : 'OFF'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updateCategory(cat.id, { homepage_featured: !cat.homepage_featured }, `${cat.name} featured status updated.`)}
+                      disabled={savingId === cat.id}
+                      aria-pressed={cat.homepage_featured}
+                      className={`rounded-xl border px-3 py-2.5 text-left font-bold transition disabled:opacity-50 ${cat.homepage_featured ? 'border-orange-200 bg-orange-50 text-orange-800' : 'border-gray-200 bg-gray-100 text-gray-600'}`}
+                    >
+                      Featured: {cat.homepage_featured ? 'ON' : 'OFF'}
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-[140px_minmax(0,1fr)_auto]">
+                    <label className="space-y-1.5 font-bold text-gray-700">
+                      <span className="block">Homepage Order</span>
+                      <input
+                        type="number"
+                        min={0}
+                        step={1}
+                        value={cat.homepage_display_order}
+                        onChange={(event) => updateDraft(cat.id, { homepage_display_order: Number(event.target.value) })}
+                        className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 outline-hidden focus:ring-2 focus:ring-indigo-600"
+                      />
+                    </label>
+                    <label className="space-y-1.5 font-bold text-gray-700">
+                      <span className="block">Homepage Image URL <span className="font-normal text-gray-400">(optional)</span></span>
+                      <input
+                        type="url"
+                        value={cat.homepage_image_url || ''}
+                        onChange={(event) => updateDraft(cat.id, { homepage_image_url: event.target.value })}
+                        placeholder="https://..."
+                        className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 outline-hidden focus:ring-2 focus:ring-indigo-600"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => handleSaveMerchandising(cat)}
+                      disabled={savingId === cat.id}
+                      className="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-indigo-950 px-4 py-2.5 font-bold text-white transition hover:bg-indigo-900 disabled:opacity-50"
+                    >
+                      {savingId === cat.id ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                      Save
                     </button>
                   </div>
                 </div>
