@@ -3,7 +3,11 @@
 import { createServerClient } from '@supabase/ssr';
 import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
-import { getActiveCampaigns, calculateDiscountedPrice, Campaign } from '@/lib/promotions';
+import {
+  getActiveCampaigns,
+  calculateDiscountedPrice,
+  Campaign,
+} from '@/lib/promotions';
 import { checkPincodeShippingRate } from '@/lib/shipping/serviceability';
 import { dispatchOrderNotifications } from '@/lib/notifications/dispatcher';
 
@@ -46,12 +50,28 @@ export interface CheckoutInput {
   shipping_address?: any;
 }
 
+interface VerifiedCheckoutItem {
+  product_id: string;
+  product_title: string;
+  size: string;
+  sku: string;
+  hsn_code: string;
+  gst_rate: number;
+  unit_price: number;
+  original_price: number;
+  applied_offer_label: string | null;
+  discount_reduction: number;
+  weight_kg: number;
+  quantity: number;
+  line_total: number;
+}
+
 export async function createVerifiedOrderAction(formData: CheckoutInput) {
-  return await processOrderCheckout(formData);
+  return processOrderCheckout(formData);
 }
 
 export async function placeOrderAction(formData: CheckoutInput) {
-  return await processOrderCheckout(formData);
+  return processOrderCheckout(formData);
 }
 
 export async function processSecureCheckout(payload: {
@@ -59,11 +79,12 @@ export async function processSecureCheckout(payload: {
   coupon_code?: string;
   shipping_address?: any;
 }) {
-  return await processOrderCheckout({
+  return processOrderCheckout({
     cart: payload.cart,
     coupon_code: payload.coupon_code,
     address: payload.shipping_address?.address || '',
     city: payload.shipping_address?.city || '',
+    state: payload.shipping_address?.state || '',
     pincode: payload.shipping_address?.pincode || '',
     paymentMethod: 'COD',
   });
@@ -73,282 +94,467 @@ export async function processOrderCheckout(formData: CheckoutInput) {
   try {
     const cookieStore = await cookies();
 
-    // 1. Client A: SSR cookie-based client for authenticated user session
-    const authSupabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      { cookies: { getAll: () => cookieStore.getAll() } }
-    );
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-    // 2. Client B: Separate plain Supabase client using service-role key for backend admin operations
+    if (!supabaseUrl || !anonKey) {
+      return {
+        success: false,
+        error: 'Store database configuration is unavailable.',
+      };
+    }
+
+    // Auth/session client. This client is used for the atomic RPC so auth.uid()
+    // inside place_order_atomic can resolve the logged-in customer when present.
+    const authSupabase = createServerClient(supabaseUrl, anonKey, {
+      cookies: {
+        getAll: () => cookieStore.getAll(),
+      },
+    });
+
+    // Server-side read client. The service role is used only when configured.
+    // Order/items/inventory writes are NOT performed directly by this client.
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     const dbSupabase = serviceRoleKey
-      ? createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceRoleKey, {
-          auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+      ? createClient(supabaseUrl, serviceRoleKey, {
+          auth: {
+            persistSession: false,
+            autoRefreshToken: false,
+            detectSessionInUrl: false,
+          },
         })
-      : authSupabase; // Fallback safely if service key is missing in development
+      : authSupabase;
 
-    const cleanPincode = (formData.pincode || '').trim();
-    if (!cleanPincode || cleanPincode.length !== 6 || !/^\d{6}$/.test(cleanPincode)) {
-      return { success: false, error: 'Please enter a valid 6-digit postal PIN code.' };
+    const cleanPincode = String(formData.pincode || '').trim();
+
+    if (!/^\d{6}$/.test(cleanPincode)) {
+      return {
+        success: false,
+        error: 'Please enter a valid 6-digit postal PIN code.',
+      };
     }
 
-    if (!formData.cart || formData.cart.length === 0) {
-      return { success: false, error: 'Your cart is empty.' };
+    if (!Array.isArray(formData.cart) || formData.cart.length === 0) {
+      return {
+        success: false,
+        error: 'Your cart is empty.',
+      };
     }
 
-    const customerName = formData.customer_name || formData.customerName || formData.fullName || 'Customer';
-    const customerEmail = formData.customer_email || formData.customerEmail || formData.email || 'customer@sastabazaronline.in';
-    const customerPhone = formData.customer_phone || formData.customerPhone || formData.phone || '';
-    const rawPaymentMethod = formData.payment_method || formData.paymentMethod || 'COD';
-    const paymentMethod = rawPaymentMethod.startsWith('ONLINE') || rawPaymentMethod.startsWith('Online UPI')
-      ? 'ONLINE'
-      : (rawPaymentMethod === 'UPI_QR' || rawPaymentMethod === 'QR' ? 'UPI_QR' : 'COD');
+    const customerName = (
+      formData.customer_name ||
+      formData.customerName ||
+      formData.fullName ||
+      ''
+    ).trim();
 
-    // 3. Authoritative Product Catalog Lookup using Admin Database Client
-    const productIds = formData.cart.map(c => c.product_id || c.id).filter(Boolean);
-    const { data: dbProducts, error: prodErr } = await dbSupabase
+    const customerEmail = (
+      formData.customer_email ||
+      formData.customerEmail ||
+      formData.email ||
+      ''
+    ).trim();
+
+    const customerPhone = (
+      formData.customer_phone ||
+      formData.customerPhone ||
+      formData.phone ||
+      ''
+    ).trim();
+
+    if (!customerName) {
+      return {
+        success: false,
+        error: 'Customer name is required.',
+      };
+    }
+
+    if (!customerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) {
+      return {
+        success: false,
+        error: 'A valid customer email address is required.',
+      };
+    }
+
+    if (!customerPhone) {
+      return {
+        success: false,
+        error: 'Customer phone number is required.',
+      };
+    }
+
+    if (!formData.address?.trim() || !formData.city?.trim()) {
+      return {
+        success: false,
+        error: 'Complete delivery address and city are required.',
+      };
+    }
+
+    const rawPaymentMethod =
+      formData.payment_method ||
+      formData.paymentMethod ||
+      'COD';
+
+    const paymentMethod =
+      rawPaymentMethod.startsWith('ONLINE') ||
+      rawPaymentMethod.startsWith('Online UPI')
+        ? 'ONLINE'
+        : rawPaymentMethod === 'UPI_QR' || rawPaymentMethod === 'QR'
+          ? 'UPI_QR'
+          : 'COD';
+
+    // Collect unique product IDs from the customer cart.
+    const productIds = Array.from(
+      new Set(
+        formData.cart
+          .map((item) => item.product_id || item.id)
+          .filter((id): id is string => Boolean(id))
+      )
+    );
+
+    if (productIds.length === 0) {
+      return {
+        success: false,
+        error: 'No valid product references were found in the cart.',
+      };
+    }
+
+    // Product prices, tax and exact physical weight always come from the server.
+    const { data: dbProducts, error: productError } = await dbSupabase
       .from('products')
-      .select('id, title, price, mrp, category, hsn_code, gst_rate, net_weight')
+      .select(
+        'id, title, price, mrp, category, hsn_code, gst_rate, net_weight_grams'
+      )
       .in('id', productIds);
 
-    if (prodErr || !dbProducts) {
-      console.error('[SUPABASE_PROD_QUERY_ERROR] Details:', {
-        message: prodErr?.message,
-        code: prodErr?.code,
-        details: prodErr?.details,
-        hint: prodErr?.hint,
-        queriedIds: productIds
-      });
-      return { success: false, error: 'Failed to retrieve catalog products from database.' };
+    if (productError || !dbProducts) {
+      console.error('[CHECKOUT_PRODUCT_QUERY_ERROR]', productError);
+      return {
+        success: false,
+        error: 'Failed to retrieve catalog products from database.',
+      };
     }
 
-    // 4. Authoritative Inventory Variant Lookup
-    const { data: dbInventory, error: invErr } = await dbSupabase
+    // Inventory is used only for size/SKU/stock verification here.
+    // Shipping weight does NOT come from inventory.weight_kg.
+    const { data: dbInventory, error: inventoryError } = await dbSupabase
       .from('inventory')
-      .select('product_id, size, sku, weight_kg, available_quantity, sold_quantity')
+      .select(
+        'product_id, size, sku, available_quantity, sold_quantity'
+      )
       .in('product_id', productIds);
 
-    if (invErr || !dbInventory) {
-      console.error('[SUPABASE_INV_QUERY_ERROR] Details:', {
-        message: invErr?.message,
-        code: invErr?.code,
-        details: invErr?.details,
-        hint: invErr?.hint,
-        queriedIds: productIds
-      });
-      return { success: false, error: 'Failed to retrieve inventory records.' };
+    if (inventoryError || !dbInventory) {
+      console.error('[CHECKOUT_INVENTORY_QUERY_ERROR]', inventoryError);
+      return {
+        success: false,
+        error: 'Failed to retrieve inventory records.',
+      };
     }
 
-    // 5. Active Promotions Lookup
-    const { data: rawPromotions } = await dbSupabase
+    const { data: rawPromotions, error: promotionsError } = await dbSupabase
       .from('promotions')
       .select('*')
       .eq('is_enabled', true);
 
-    const activeCampaigns = getActiveCampaigns((rawPromotions as Campaign[]) || []);
+    if (promotionsError) {
+      console.warn('[CHECKOUT_PROMOTIONS_QUERY_WARNING]', promotionsError);
+    }
 
-    // 6. Calculate Verified Subtotals, Discounts, and Weight
+    const activeCampaigns = getActiveCampaigns(
+      (rawPromotions as Campaign[]) || []
+    );
+
     let serverOriginalTotal = 0;
     let serverSubtotal = 0;
     let serverTotalDiscount = 0;
     let totalTax = 0;
-    let totalActualWeightKg = 0;
+    let totalActualWeightGrams = 0;
     let primaryOfferLabel: string | null = null;
-    const verifiedItems = [];
+
+    const verifiedItems: VerifiedCheckoutItem[] = [];
 
     for (const cartItem of formData.cart) {
-      const pId = cartItem.product_id || cartItem.id;
+      const productId = cartItem.product_id || cartItem.id;
       const itemSize = cartItem.size || 'Free Size';
-      const prod = dbProducts.find(p => p.id === pId);
-      const inv = dbInventory.find(i => i.product_id === pId && i.size === itemSize);
 
-      if (!prod) return { success: false, error: `Product reference (${pId}) is no longer available.` };
-      if (!inv) return { success: false, error: `Size "${itemSize}" for "${prod.title}" is unavailable.` };
-
-      const qty = Math.max(1, Number(cartItem.quantity) || 1);
-      if (inv.available_quantity < qty) {
+      if (!productId) {
         return {
           success: false,
-          error: `Insufficient stock for "${prod.title}" (Size: ${itemSize}). Available: ${inv.available_quantity}, Requested: ${qty}`
+          error: 'A cart item is missing its product reference.',
         };
       }
 
-      const originalUnitPrice = Number(prod.price || 0);
-      const { finalPrice, appliedOffer } = calculateDiscountedPrice(
-        originalUnitPrice,
-        activeCampaigns,
-        prod.category,
-        prod.id,
-        formData.coupon_code,
-        cartItem.selected_campaign_id
+      const product = dbProducts.find((row) => row.id === productId);
+      const inventory = dbInventory.find(
+        (row) =>
+          row.product_id === productId &&
+          row.size === itemSize
       );
 
-      const itemOriginalTotal = originalUnitPrice * qty;
-      const itemFinalTotal = finalPrice * qty;
-      const itemDiscountAmount = Math.max(0, itemOriginalTotal - itemFinalTotal);
+      if (!product) {
+        return {
+          success: false,
+          error: `Product reference (${productId}) is no longer available.`,
+        };
+      }
 
-      const gstRate = Number(prod.gst_rate || 5);
-      const taxableVal = itemFinalTotal / (1 + gstRate / 100);
-      const gstAmount = itemFinalTotal - taxableVal;
-      const weightKg = Number(inv.weight_kg || prod.net_weight || 0.5);
+      if (!inventory) {
+        return {
+          success: false,
+          error: `Size "${itemSize}" for "${product.title}" is unavailable.`,
+        };
+      }
+
+      const quantity = Number(cartItem.quantity);
+
+      if (!Number.isInteger(quantity) || quantity <= 0) {
+        return {
+          success: false,
+          error: `Invalid quantity for "${product.title}".`,
+        };
+      }
+
+      if (Number(inventory.available_quantity) < quantity) {
+        return {
+          success: false,
+          error: `Insufficient stock for "${product.title}" (Size: ${itemSize}). Available: ${inventory.available_quantity}, Requested: ${quantity}`,
+        };
+      }
+
+      const exactWeightGrams = Number(product.net_weight_grams);
+
+      if (
+        !Number.isInteger(exactWeightGrams) ||
+        exactWeightGrams <= 0
+      ) {
+        return {
+          success: false,
+          error: `Exact physical weight is missing for "${product.title}". Please update this product in Admin before checkout.`,
+        };
+      }
+
+      const originalUnitPrice = Number(product.price);
+
+      if (!Number.isFinite(originalUnitPrice) || originalUnitPrice < 0) {
+        return {
+          success: false,
+          error: `Invalid server price for "${product.title}".`,
+        };
+      }
+
+      const { finalPrice, appliedOffer } =
+        calculateDiscountedPrice(
+          originalUnitPrice,
+          activeCampaigns,
+          product.category,
+          product.id,
+          formData.coupon_code,
+          cartItem.selected_campaign_id
+        );
+
+      const itemOriginalTotal = originalUnitPrice * quantity;
+      const itemFinalTotal = Number(finalPrice) * quantity;
+      const itemDiscountAmount = Math.max(
+        0,
+        itemOriginalTotal - itemFinalTotal
+      );
+
+      const gstRate = Number(product.gst_rate || 5);
+      const taxableValue =
+        itemFinalTotal / (1 + gstRate / 100);
+      const gstAmount =
+        itemFinalTotal - taxableValue;
+
+      const itemWeightKg = exactWeightGrams / 1000;
 
       serverOriginalTotal += itemOriginalTotal;
       serverSubtotal += itemFinalTotal;
       serverTotalDiscount += itemDiscountAmount;
       totalTax += gstAmount;
-      totalActualWeightKg += weightKg * qty;
+      totalActualWeightGrams += exactWeightGrams * quantity;
 
       if (appliedOffer && !primaryOfferLabel) {
         primaryOfferLabel = appliedOffer.offerLabel;
       }
 
       verifiedItems.push({
-        product_id: prod.id,
-        product_title: prod.title,
+        product_id: product.id,
+        product_title: product.title,
         size: itemSize,
-        sku: inv.sku || `SKU-${prod.id.slice(0, 4)}-${itemSize}`,
-        hsn_code: prod.hsn_code || '6204',
+        sku:
+          inventory.sku ||
+          `SKU-${product.id.slice(0, 4)}-${itemSize}`,
+        hsn_code: product.hsn_code || '6204',
         gst_rate: gstRate,
-        unit_price: finalPrice,
+        unit_price: Number(finalPrice),
         original_price: originalUnitPrice,
-        applied_offer_label: appliedOffer ? appliedOffer.offerLabel : null,
+        applied_offer_label: appliedOffer
+          ? appliedOffer.offerLabel
+          : null,
         discount_reduction: itemDiscountAmount,
-        weight_kg: weightKg,
-        quantity: qty,
-        line_total: itemFinalTotal
+        weight_kg: itemWeightKg,
+        quantity,
+        line_total: itemFinalTotal,
       });
     }
 
-    // 7. Shipping Slab Calculation (NO FREE SHIPPING, exact weight boundaries)
-    const chargeableGrams = totalActualWeightKg * 1000;
-    let customerShippingCharge = 80;
-    if (chargeableGrams <= 500) {
+    const totalActualWeightKg =
+      totalActualWeightGrams / 1000;
+
+    /*
+     * TEMPORARY SHIPPING POLICY
+     * -------------------------
+     * NimbusPost Partner API v2 serviceability/rate response contract is
+     * still awaiting official confirmation.
+     *
+     * We keep the existing no-free-shipping slab behavior temporarily so
+     * today's atomicity/exact-weight fix does not invent undocumented v2
+     * fields. This block must be replaced by the verified NimbusPost v2 quote
+     * adapter before production shipping is considered final.
+     */
+    let customerShippingCharge: number;
+
+    if (totalActualWeightGrams <= 500) {
       customerShippingCharge = 80;
-    } else if (chargeableGrams <= 1000) {
+    } else if (totalActualWeightGrams <= 1000) {
       customerShippingCharge = 110;
-    } else if (chargeableGrams <= 2000) {
+    } else if (totalActualWeightGrams <= 2000) {
       customerShippingCharge = 140;
     } else {
-      return { success: false, error: 'Weight exceeds maximum supported 2 kg shipping slab. Please contact support.' };
+      return {
+        success: false,
+        error:
+          'Weight exceeds the temporary supported shipping range. NimbusPost v2 live pricing will replace this rule after the official API contract is confirmed.',
+      };
     }
 
-    // 8. COD Charge Calculation (Separate from delivery)
-    // < ₹1,000 -> ₹40, >= ₹1,000 -> ₹50 (including exactly ₹1,000)
-    const appliedCodCharge = paymentMethod === 'COD'
-      ? (serverSubtotal >= 1000 ? 50 : 40)
-      : 0;
+    // Temporary existing store COD policy.
+    // NimbusPost COD pricing will replace this when the verified v2 rate
+    // response is integrated.
+    const appliedCodCharge =
+      paymentMethod === 'COD'
+        ? serverSubtotal >= 1000
+          ? 50
+          : 40
+        : 0;
 
-    // 9. Final PIN-Code Validation with NimbusPost
-    const shippingAssessment = await checkPincodeShippingRate(
-      cleanPincode,
-      totalActualWeightKg,
-      serverSubtotal,
-      paymentMethod === 'COD' ? 'COD' : 'PREPAID'
-    );
+    // Existing adapter is used only for PIN/serviceability gating today.
+    // Its implementation will be replaced after NimbusPost confirms v2.
+    const shippingAssessment =
+      await checkPincodeShippingRate(
+        cleanPincode,
+        totalActualWeightKg,
+        serverSubtotal,
+        paymentMethod === 'COD'
+          ? 'COD'
+          : 'PREPAID'
+      );
 
     if (!shippingAssessment.isServiceable) {
       return {
         success: false,
-        error: 'Delivery is currently unavailable for this PIN code. Please select an alternative address.'
+        error:
+          shippingAssessment.message ||
+          'Delivery is currently unavailable for this PIN code.',
       };
     }
 
-    const grandTotal = serverSubtotal + customerShippingCharge + appliedCodCharge;
+    const roundedTaxAmount =
+      Math.round(totalTax * 100) / 100;
+
+    const grandTotal =
+      serverSubtotal +
+      customerShippingCharge +
+      appliedCodCharge;
+
     const currentYear = new Date().getFullYear();
-    const orderNumber = `SBZ-${currentYear}-${Math.floor(100000 + Math.random() * 900000)}`;
-    const fullAddress = `${formData.address.trim()}, ${formData.city.trim()} - ${cleanPincode}`;
+    const orderNumber =
+      `SBZ-${currentYear}-${Math.floor(
+        100000 + Math.random() * 900000
+      )}`;
+
+    const fullAddress =
+      `${formData.address.trim()}, ${formData.city.trim()} - ${cleanPincode}`;
 
     const shippingAddressJson = {
       address: formData.address.trim(),
       city: formData.city.trim(),
       state: formData.state?.trim() || 'Gujarat',
-      pincode: cleanPincode
+      pincode: cleanPincode,
+      country: 'India',
     };
 
-    // 10. Get Authenticated User from Auth Client
-    const { data: { user } } = await authSupabase.auth.getUser();
-
-    // 11. Atomic Order Record Creation via Admin Database Client
-    const { data: newOrder, error: orderInsertError } = await dbSupabase
-      .from('orders')
-      .insert({
-        order_number: orderNumber,
-        customer_id: user ? user.id : null,
-        customer_name: customerName,
-        customer_email: customerEmail,
-        customer_phone: customerPhone,
-        address: fullAddress,
-        shipping_address: shippingAddressJson,
-        billing_address: shippingAddressJson,
-        original_total: serverOriginalTotal,
-        discount_total: serverTotalDiscount,
-        applied_promotion_name: primaryOfferLabel,
-        subtotal: serverSubtotal,
-        tax_amount: Math.round(totalTax * 100) / 100,
-        actual_weight_kg: totalActualWeightKg,
-        chargeable_weight_kg: totalActualWeightKg,
-        actual_courier_cost: shippingAssessment.baseCourierCost,
-        shipping_charge: customerShippingCharge,
-        cod_charge: appliedCodCharge,
-        courier_partner: shippingAssessment.courierPartnerName,
-        grand_total: grandTotal,
-        payment_method: paymentMethod,
-        payment_status: paymentMethod.includes('ONLINE') || paymentMethod.includes('QR') ? 'PAID' : 'COD_PENDING',
-        order_status: 'CONFIRMED'
-      })
-      .select('id, order_number')
-      .single();
-
-    if (orderInsertError || !newOrder) {
-      console.error('Order Insert Error:', orderInsertError);
-      return { success: false, error: orderInsertError?.message || 'Order registration failed in database.' };
-    }
-
-    // 12. Insert Order Line Items & Decrement Inventory
-    for (const item of verifiedItems) {
-      await dbSupabase.from('order_items').insert({
-        order_id: newOrder.id,
-        product_id: item.product_id,
-        product_title: item.product_title,
-        size: item.size,
-        sku: item.sku,
-        hsn_code: item.hsn_code,
-        gst_rate: item.gst_rate,
-        unit_price: item.unit_price,
-        mrp: item.original_price,
-        applied_offer_label: item.applied_offer_label,
-        weight_kg: item.weight_kg,
-        quantity: item.quantity,
-        line_total: item.line_total
+    /*
+     * Sole order/inventory write path:
+     * public.place_order_atomic
+     *
+     * This function inserts the order, locks inventory rows with FOR UPDATE,
+     * validates stock, decrements inventory, writes movements and inserts
+     * order_items in one database transaction.
+     */
+    const { data: rpcResult, error: rpcError } =
+      await authSupabase.rpc('place_order_atomic', {
+        p_order_number: orderNumber,
+        p_customer_name: customerName,
+        p_customer_email: customerEmail,
+        p_customer_phone: customerPhone,
+        p_shipping_address: shippingAddressJson,
+        p_subtotal: serverSubtotal,
+        p_tax_amount: roundedTaxAmount,
+        p_actual_weight_kg: totalActualWeightKg,
+        p_chargeable_weight_kg:
+          Number(shippingAssessment.chargeableWeightKg) ||
+          totalActualWeightKg,
+        p_actual_courier_cost:
+          Number(shippingAssessment.baseCourierCost) || 0,
+        p_shipping_charge: customerShippingCharge,
+        p_grand_total: grandTotal,
+        p_payment_method: paymentMethod,
+        p_items: verifiedItems.map((item) => ({
+          product_id: item.product_id,
+          product_title: item.product_title,
+          size: item.size,
+          sku: item.sku,
+          hsn_code: item.hsn_code,
+          gst_rate: item.gst_rate,
+          unit_price: item.unit_price,
+          weight_kg: item.weight_kg,
+          quantity: item.quantity,
+          line_total: item.line_total,
+        })),
       });
 
-      const invRow = dbInventory.find(i => i.product_id === item.product_id && i.size === item.size);
-      if (invRow) {
-        await dbSupabase
-          .from('inventory')
-          .update({
-            available_quantity: Math.max(0, invRow.available_quantity - item.quantity),
-            sold_quantity: (invRow.sold_quantity || 0) + item.quantity,
-            updated_at: new Date().toISOString()
-          })
-          .eq('product_id', item.product_id)
-          .eq('size', item.size);
+    if (rpcError) {
+      console.error('[PLACE_ORDER_ATOMIC_ERROR]', rpcError);
 
-        await dbSupabase.from('inventory_movements').insert({
-          product_id: item.product_id,
-          size: item.size,
-          quantity: -item.quantity,
-          movement_type: 'SALE',
-          previous_quantity: invRow.available_quantity,
-          new_quantity: Math.max(0, invRow.available_quantity - item.quantity),
-          notes: `Order: ${orderNumber}`,
-          created_by: 'CHECKOUT_ENGINE'
-        });
-      }
+      return {
+        success: false,
+        error:
+          rpcError.message ||
+          'Order could not be completed safely.',
+      };
     }
 
-    // 13. Non-Blocking Notifications
+    if (
+      !rpcResult ||
+      rpcResult.success !== true ||
+      !rpcResult.order_number
+    ) {
+      console.error(
+        '[PLACE_ORDER_ATOMIC_INVALID_RESULT]',
+        rpcResult
+      );
+
+      return {
+        success: false,
+        error:
+          'Order transaction returned an invalid response.',
+      };
+    }
+
+    // Notifications are intentionally outside the atomic database transaction.
+    // A notification failure must not undo an otherwise successful order.
     try {
       await dispatchOrderNotifications({
         orderNumber,
@@ -356,35 +562,54 @@ export async function processOrderCheckout(formData: CheckoutInput) {
         customerEmail,
         customerPhone,
         shippingAddress: fullAddress,
-        paymentMethod: paymentMethod === 'ONLINE' ? `Online UPI (UTR: ${formData.upiRefId || 'N/A'})` : paymentMethod,
+        paymentMethod:
+          paymentMethod === 'ONLINE'
+            ? `Online UPI (UTR: ${formData.upiRefId || 'N/A'})`
+            : paymentMethod,
         grandTotal,
         subtotal: serverSubtotal,
         shippingCharge: customerShippingCharge,
-        taxAmount: Math.round(totalTax * 100) / 100,
-        items: verifiedItems
+        taxAmount: roundedTaxAmount,
+        items: verifiedItems,
       });
-    } catch (notifErr) {
-      console.warn('Notification non-blocking alert:', notifErr);
+    } catch (notificationError) {
+      console.warn(
+        '[ORDER_NOTIFICATION_WARNING]',
+        notificationError
+      );
     }
 
     return {
       success: true,
-      orderId: newOrder.order_number || orderNumber,
-      orderNumber,
+      orderId: rpcResult.order_number,
+      orderNumber: rpcResult.order_number,
       grandTotal,
       customerBreakdown: {
         original_total: serverOriginalTotal,
         offer_label: primaryOfferLabel,
         discount_amount: serverTotalDiscount,
         subtotal: serverSubtotal,
-        shipment_weight: `${totalActualWeightKg.toFixed(2)} kg`,
-        shipping_charge: `₹${customerShippingCharge.toFixed(2)}`,
-        cod_charge: `₹${appliedCodCharge}`,
-        total_payable: grandTotal
-      }
+        shipment_weight:
+          `${totalActualWeightGrams} g`,
+        shipping_charge:
+          `₹${customerShippingCharge.toFixed(2)}`,
+        cod_charge:
+          `₹${appliedCodCharge.toFixed(2)}`,
+        total_payable: grandTotal,
+      },
     };
-  } catch (err: any) {
-    console.error('[CHECKOUT PROCESSING ERROR]:', err);
-    return { success: false, error: err.message || 'An unexpected error occurred during checkout.' };
+  } catch (error: unknown) {
+    console.error(
+      '[CHECKOUT_PROCESSING_ERROR]',
+      error
+    );
+
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : 'An unexpected error occurred during checkout.',
+    };
   }
 }
