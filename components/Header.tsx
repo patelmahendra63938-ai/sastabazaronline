@@ -46,13 +46,13 @@ export default function Header() {
 
     syncCounts();
     window.addEventListener('storage', syncCounts);
-    
-    // Optional interval fallback to ensure it catches updates instantly
-    const interval = setInterval(syncCounts, 1000);
+    window.addEventListener('cartUpdated', syncCounts);
+    window.addEventListener('wishlistUpdated', syncCounts);
     
     return () => {
       window.removeEventListener('storage', syncCounts);
-      clearInterval(interval);
+      window.removeEventListener('cartUpdated', syncCounts);
+      window.removeEventListener('wishlistUpdated', syncCounts);
     };
   }, []);
 

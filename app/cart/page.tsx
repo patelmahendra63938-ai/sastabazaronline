@@ -34,7 +34,7 @@ export default function CartPage() {
       updated[index].quantity = newQty;
       setCart(updated);
       localStorage.setItem('sastabazar_cart', JSON.stringify(updated));
-      window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new Event('cartUpdated'));
     }
   };
 
@@ -42,7 +42,7 @@ export default function CartPage() {
     const updated = cart.filter((_, i) => i !== index);
     setCart(updated);
     localStorage.setItem('sastabazar_cart', JSON.stringify(updated));
-    window.dispatchEvent(new Event('storage'));
+    window.dispatchEvent(new Event('cartUpdated'));
   };
 
   const subtotal = cart.reduce((sum, item) => sum + (Number(item.price) * (item.quantity || 1)), 0);
@@ -88,7 +88,7 @@ export default function CartPage() {
 
                   return (
                     <div key={idx} className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 shadow-sm flex flex-col sm:flex-row items-center gap-4">
-                      <img src={imageUrl} alt="" className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-xl border flex-shrink-0" />
+                      <img src={imageUrl} alt="" width={96} height={96} loading="lazy" className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-xl border flex-shrink-0" />
                       
                       <div className="flex-1 text-center sm:text-left">
                         <h3 className="text-xs sm:text-sm font-bold text-gray-900">{item.title}</h3>

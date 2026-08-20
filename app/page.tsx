@@ -86,7 +86,7 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
   // 4. Build product query
   let query = supabase
     .from('products')
-    .select('*, inventory(size, available_quantity)')
+    .select('id, title, price, mrp, category, images, image, stock, inventory(size, available_quantity)')
     .eq('is_active', true);
 
   if (activeCategories.length > 0) {
@@ -162,16 +162,57 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
     query = query.order('created_at', { ascending: false });
   }
 
-  const { data: productsData } = await query;
-  const products = productsData || [];
-  const featuredProducts = products.slice(0, 8);
+  let featuredQuery = supabase
+    .from('products')
+    .select('id, title, price, mrp, category, images, image, stock, inventory(size, available_quantity)')
+    .eq('is_active', true);
 
-  // 5. Derive available filter options dynamically from active products
-  const { data: allActiveData } = await supabase
+  if (activeCategories.length > 0) {
+    featuredQuery = featuredQuery.in('category', activeCategories);
+  }
+
+  if (resolvedSearchParams.q) featuredQuery = featuredQuery.ilike('title', `%${resolvedSearchParams.q}%`);
+  if (resolvedSearchParams.category) featuredQuery = featuredQuery.in('category', resolvedSearchParams.category.split(','));
+  if (resolvedSearchParams.brand) featuredQuery = featuredQuery.in('brand', resolvedSearchParams.brand.split(','));
+  if (resolvedSearchParams.color) featuredQuery = featuredQuery.in('color', resolvedSearchParams.color.split(','));
+  if (resolvedSearchParams.fabric) featuredQuery = featuredQuery.in('fabric', resolvedSearchParams.fabric.split(','));
+  if (resolvedSearchParams.gender) featuredQuery = featuredQuery.in('gender', resolvedSearchParams.gender.split(','));
+  if (resolvedSearchParams.fit) featuredQuery = featuredQuery.in('fit', resolvedSearchParams.fit.split(','));
+  if (resolvedSearchParams.occasion) featuredQuery = featuredQuery.in('occasion', resolvedSearchParams.occasion.split(','));
+  if (resolvedSearchParams.type) featuredQuery = featuredQuery.in('product_type', resolvedSearchParams.type.split(','));
+  if (resolvedSearchParams.minPrice) featuredQuery = featuredQuery.gte('price', parseFloat(resolvedSearchParams.minPrice));
+  if (resolvedSearchParams.maxPrice) featuredQuery = featuredQuery.lte('price', parseFloat(resolvedSearchParams.maxPrice));
+  if (resolvedSearchParams.size) {
+    featuredQuery = featuredQuery
+      .in('inventory.size', resolvedSearchParams.size.split(','))
+      .gt('inventory.available_quantity', 0);
+  }
+
+  if (resolvedSearchParams.sort === 'price_asc') {
+    featuredQuery = featuredQuery.order('price', { ascending: true });
+  } else if (resolvedSearchParams.sort === 'price_desc') {
+    featuredQuery = featuredQuery.order('price', { ascending: false });
+  } else {
+    featuredQuery = featuredQuery.order('created_at', { ascending: false });
+  }
+  featuredQuery = featuredQuery.limit(8);
+
+  const allActiveQuery = supabase
     .from('products')
     .select('brand, color, fabric, gender, fit, occasion, product_type, price, inventory(size, available_quantity)')
     .eq('is_active', true)
     .in('category', activeCategories);
+
+  const [{ data: productsData }, { data: featuredData }, { data: allActiveData }] = await Promise.all([
+    query,
+    featuredQuery,
+    allActiveQuery,
+  ]);
+
+  const products = productsData || [];
+  const featuredProducts = featuredData || [];
+
+  // 5. Derive available filter options dynamically from active products
 
   const allActive = allActiveData || [];
 

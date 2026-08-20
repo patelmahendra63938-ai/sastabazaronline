@@ -1,7 +1,6 @@
 import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
-import Script from 'next/script';
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -47,28 +46,6 @@ export default function RootLayout({
         className={`${inter.className} bg-[#F8F9FB] text-gray-900 antialiased min-h-screen flex flex-col selection:bg-orange-500 selection:text-white`}
       >
         {children}
-
-        {/* 🌐 Google Translate Integration for Indian Regional Languages */}
-        <div id="google_translate_element" style={{ display: 'none' }}></div>
-        <Script
-          id="google-translate-init"
-          strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `
-              function googleTranslateElementInit() {
-                new google.translate.TranslateElement({
-                  pageLanguage: 'en',
-                  includedLanguages: 'en,hi,gu,mr,bn,ta,te,kn,ml,pa,ur,or,as',
-                  autoDisplay: false
-                }, 'google_translate_element');
-              }
-            `,
-          }}
-        />
-        <Script 
-          src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" 
-          strategy="afterInteractive" 
-        />
       </body>
     </html>
   );

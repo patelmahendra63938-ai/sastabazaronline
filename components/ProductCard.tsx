@@ -72,7 +72,6 @@ export default function ProductCard({ product, activeCampaigns = [] }: ProductCa
 
       localStorage.setItem('sastabazar_cart', JSON.stringify(existing));
       window.dispatchEvent(new Event('cartUpdated'));
-      window.dispatchEvent(new Event('storage'));
 
       setAdded(true);
       setTimeout(() => setAdded(false), 2000);
@@ -89,6 +88,8 @@ export default function ProductCard({ product, activeCampaigns = [] }: ProductCa
           <img
             src={imageUrl}
             alt={product.title}
+            width={400}
+            height={400}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             loading="lazy"
           />

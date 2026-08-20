@@ -166,7 +166,14 @@ export default function ProductDetailPage({
             const recent = localStorage.getItem('sastabazar_recent');
             let recentList = recent ? JSON.parse(recent) : [];
             recentList = recentList.filter((p: any) => p.id !== prodData.id);
-            recentList.unshift(prodData);
+            recentList.unshift({
+              id: prodData.id,
+              title: prodData.title,
+              price: prodData.price,
+              mrp: prodData.mrp ?? null,
+              category: prodData.category,
+              image: prodData.images?.[0] || prodData.image || initialImg,
+            });
             if (recentList.length > 6) recentList.pop();
             localStorage.setItem('sastabazar_recent', JSON.stringify(recentList));
             setRecentlyViewed(recentList.filter((p: any) => p.id !== prodData.id));
@@ -178,7 +185,8 @@ export default function ProductDetailPage({
         // F. Fetch Similar Category Products
         const { data: similar } = await supabase
           .from('products')
-          .select('*')
+          .select('id, title, price, mrp, category, images, image, stock')
+          .eq('is_active', true)
           .eq('category', prodData.category || 'General')
           .neq('id', productId)
           .limit(4);
@@ -330,7 +338,6 @@ export default function ProductDetailPage({
       }
 
       localStorage.setItem('sastabazar_cart', JSON.stringify(existingCart));
-      window.dispatchEvent(new Event('storage'));
       window.dispatchEvent(new Event('cartUpdated'));
 
       setAddedToCart(true);
@@ -368,7 +375,7 @@ export default function ProductDetailPage({
       }
 
       localStorage.setItem('sastabazar_wishlist', JSON.stringify(wishlist));
-      window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new Event('wishlistUpdated'));
     } catch (e) {
       console.error('Wishlist error:', e);
     }
@@ -495,7 +502,7 @@ export default function ProductDetailPage({
                       }`}
                       aria-label={`View thumbnail ${idx + 1}`}
                     >
-                      <img src={img} alt="" className="w-full h-full object-cover" />
+                      <img src={img} alt="" width={80} height={80} loading="lazy" className="w-full h-full object-cover" />
                     </button>
                   ))}
 

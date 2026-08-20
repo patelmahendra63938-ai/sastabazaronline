@@ -174,7 +174,6 @@ export default function CheckoutPage() {
     });
     setCart(updatedCart);
     localStorage.setItem('sastabazar_cart', JSON.stringify(updatedCart));
-    window.dispatchEvent(new Event('storage'));
     window.dispatchEvent(new Event('cartUpdated'));
     setItemToRemove(null);
 
@@ -267,7 +266,6 @@ export default function CheckoutPage() {
       setOrderId(result.orderNumber || '');
       setOrderPlaced(true);
       localStorage.removeItem('sastabazar_cart');
-      window.dispatchEvent(new Event('storage'));
       window.dispatchEvent(new Event('cartUpdated'));
     } catch (err: any) {
       setErrorMsg(err.message || 'Failed to place order.');
@@ -619,6 +617,9 @@ export default function CheckoutPage() {
                           <img 
                             src={item.image || (item.images ? item.images[0] : 'https://via.placeholder.com/150')} 
                             alt={item.title} 
+                            width={48}
+                            height={48}
+                            loading="lazy"
                             className="w-12 h-12 object-cover rounded-xl border border-gray-200 shrink-0"
                           />
                           <div className="min-w-0">

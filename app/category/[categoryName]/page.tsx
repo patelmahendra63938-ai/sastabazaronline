@@ -8,8 +8,10 @@ async function getProductsByCategory(categoryName: string): Promise<Product[]> {
   const decodedCategory = decodeURIComponent(categoryName);
   const { data, error } = await supabase
     .from('products')
-    .select('*')
-    .ilike('category', `%${decodedCategory}%`);
+    .select('id, title, price, mrp, category, images, image, stock')
+    .eq('is_active', true)
+    .ilike('category', `%${decodedCategory}%`)
+    .order('created_at', { ascending: false });
 
   if (error || !data) return [];
   return data;

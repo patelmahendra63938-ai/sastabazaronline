@@ -11,7 +11,9 @@ async function getSearchResults(query: string, isVisual: boolean): Promise<Produ
       // ડેટાબેઝમાંથી લેટેસ્ટ ૧૨ પ્રોડક્ટ્સ લાવો જેથી યુઝરને "No Products Found" ન દેખાય
       const { data, error } = await supabase
         .from('products')
-        .select('*')
+        .select('id, title, price, mrp, category, images, image, stock')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
         .limit(12);
 
       if (error) {
@@ -23,7 +25,12 @@ async function getSearchResults(query: string, isVisual: boolean): Promise<Produ
 
     // 🔍 ૨. જો સામાન્ય Text Search હોય પણ ખાલી ક્વેરી હોય
     if (!query || query.trim() === '') {
-      const { data } = await supabase.from('products').select('*').limit(12);
+      const { data } = await supabase
+        .from('products')
+        .select('id, title, price, mrp, category, images, image, stock')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(12);
       return data || [];
     }
 
@@ -37,7 +44,8 @@ async function getSearchResults(query: string, isVisual: boolean): Promise<Produ
 
     const { data, error } = await supabase
       .from('products')
-      .select('*')
+      .select('id, title, price, mrp, category, images, image, stock')
+      .eq('is_active', true)
       .or(conditions);
 
     if (error || !data) {

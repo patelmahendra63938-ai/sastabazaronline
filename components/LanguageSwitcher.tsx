@@ -4,6 +4,58 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Globe, Check, ChevronDown } from 'lucide-react';
 import { SUPPORTED_INDIAN_LANGUAGES, logLanguageError, logLanguageSuccess } from '@/lib/i18n';
 
+const GOOGLE_TRANSLATE_SCRIPT_ID = 'google-translate-script';
+const GOOGLE_TRANSLATE_ELEMENT_ID = 'google_translate_element';
+
+type GoogleTranslateWindow = Window & {
+  google?: {
+    translate?: {
+      TranslateElement: new (
+        options: { pageLanguage: string; includedLanguages: string; autoDisplay: boolean },
+        elementId: string
+      ) => unknown;
+    };
+  };
+  googleTranslateElementInit?: () => void;
+};
+
+function loadGoogleTranslate() {
+  const translateWindow = window as GoogleTranslateWindow;
+
+  if (!document.getElementById(GOOGLE_TRANSLATE_ELEMENT_ID)) {
+    const element = document.createElement('div');
+    element.id = GOOGLE_TRANSLATE_ELEMENT_ID;
+    element.hidden = true;
+    document.body.appendChild(element);
+  }
+
+  const initialize = () => {
+    const TranslateElement = translateWindow.google?.translate?.TranslateElement;
+    if (TranslateElement) {
+      new TranslateElement({
+        pageLanguage: 'en',
+        includedLanguages: 'en,hi,gu,mr,bn,ta,te,kn,ml,pa,ur,or,as',
+        autoDisplay: false,
+      }, GOOGLE_TRANSLATE_ELEMENT_ID);
+    }
+  };
+
+  translateWindow.googleTranslateElementInit = initialize;
+
+  if (translateWindow.google?.translate?.TranslateElement) {
+    initialize();
+    return;
+  }
+
+  if (!document.getElementById(GOOGLE_TRANSLATE_SCRIPT_ID)) {
+    const script = document.createElement('script');
+    script.id = GOOGLE_TRANSLATE_SCRIPT_ID;
+    script.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+    script.async = true;
+    document.head.appendChild(script);
+  }
+}
+
 export default function LanguageSwitcher() {
   const [isOpen, setIsOpen] = useState(false);
   const [currentLang, setCurrentLang] = useState('en');
@@ -15,10 +67,16 @@ export default function LanguageSwitcher() {
       const match = document.cookie.match(/(^|;\s*)googtrans=([^;]*)/);
       if (match) {
         const langCode = match[2].split('/').pop();
-        if (langCode) setCurrentLang(langCode);
+        if (langCode) {
+          setCurrentLang(langCode);
+          if (langCode !== 'en') loadGoogleTranslate();
+        }
       } else {
         const saved = localStorage.getItem('sastabazaronline_lang');
-        if (saved) setCurrentLang(saved);
+        if (saved) {
+          setCurrentLang(saved);
+          if (saved !== 'en') loadGoogleTranslate();
+        }
       }
     } catch (err: any) {
       logLanguageError('Read Language Preference', err.message);
@@ -54,12 +112,17 @@ export default function LanguageSwitcher() {
     }
   };
 
+  const toggleLanguageMenu = () => {
+    if (!isOpen) loadGoogleTranslate();
+    setIsOpen(open => !open);
+  };
+
   const activeLangObj = SUPPORTED_INDIAN_LANGUAGES.find(l => l.code === currentLang) || SUPPORTED_INDIAN_LANGUAGES[0];
 
   return (
     <div className="relative inline-block text-left" ref={dropdownRef}>
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={toggleLanguageMenu}
         className="flex items-center gap-1.5 bg-indigo-900/90 hover:bg-indigo-900 text-white px-3 py-2 rounded-xl text-xs font-bold border border-indigo-700 transition cursor-pointer shadow-2xs"
         aria-label="Select Language"
       >
