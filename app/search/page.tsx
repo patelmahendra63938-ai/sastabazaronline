@@ -3,74 +3,98 @@ export const dynamic = 'force-dynamic';
 import { supabase } from '@/lib/supabase';
 import ProductCard, { Product } from '@/components/ProductCard';
 import Link from 'next/link';
+import Pagination from '@/components/Pagination';
 
-async function getSearchResults(query: string, isVisual: boolean): Promise<Product[]> {
+const SEARCH_PAGE_SIZE = 16;
+
+function parsePage(value?: string) {
+  if (!value) return 1;
+  if (!/^\d+$/.test(value)) return 1;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : 1;
+}
+
+async function getSearchResults(query: string, isVisual: boolean, page: number): Promise<{ products: Product[]; count: number; paginated: boolean }> {
   try {
     // 📸 ૧. જો Visual/Photo Search હોય
     if (isVisual) {
       // ડેટાબેઝમાંથી લેટેસ્ટ ૧૨ પ્રોડક્ટ્સ લાવો જેથી યુઝરને "No Products Found" ન દેખાય
       const { data, error } = await supabase
         .from('products')
-        .select('id, title, price, mrp, category, images, image, stock')
+        .select('id, title, price, mrp, category, images, stock')
         .eq('is_active', true)
         .order('created_at', { ascending: false })
         .limit(12);
 
       if (error) {
-        console.error("Supabase Visual Search Error:", error);
-        return [];
+        console.error('Visual search query failed:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint,
+        });
+        return { products: [], count: 0, paginated: false };
       }
-      return data || [];
+      return { products: data || [], count: data?.length || 0, paginated: false };
     }
 
     // 🔍 ૨. જો સામાન્ય Text Search હોય પણ ખાલી ક્વેરી હોય
     if (!query || query.trim() === '') {
       const { data } = await supabase
         .from('products')
-        .select('id, title, price, mrp, category, images, image, stock')
+        .select('id, title, price, mrp, category, images, stock')
         .eq('is_active', true)
         .order('created_at', { ascending: false })
         .limit(12);
-      return data || [];
+      return { products: data || [], count: data?.length || 0, paginated: false };
     }
 
     // 🔤 ૩. ટેક્સ્ટ સર્ચ કીવર્ડ્સ પ્રમાણે ડેટાબેઝ સર્ચ
     const keywords = query.trim().split(/\s+/).filter(w => w.length > 0);
-    if (keywords.length === 0) return [];
+    if (keywords.length === 0) return { products: [], count: 0, paginated: true };
 
     const conditions = keywords
       .map(w => `title.ilike.%${w}%,category.ilike.%${w}%,description.ilike.%${w}%`)
       .join(',');
 
-    const { data, error } = await supabase
+    const from = (page - 1) * SEARCH_PAGE_SIZE;
+    const { data, error, count } = await supabase
       .from('products')
-      .select('id, title, price, mrp, category, images, image, stock')
+      .select('id, title, price, mrp, category, images, stock', { count: 'exact' })
       .eq('is_active', true)
-      .or(conditions);
+      .or(conditions)
+      .order('created_at', { ascending: false })
+      .range(from, from + SEARCH_PAGE_SIZE - 1);
 
     if (error || !data) {
-      console.error("Search fetch error:", error);
-      return [];
+      if (error) console.error('Search product query failed:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+      });
+      return { products: [], count: 0, paginated: true };
     }
     
-    return data;
+    return { products: data, count: count || 0, paginated: true };
 
   } catch (err) {
     console.error("Search execution error:", err);
-    return [];
+    return { products: [], count: 0, paginated: Boolean(query.trim()) && !isVisual };
   }
 }
 
 export default async function SearchPage({
   searchParams,
 }: {
-  searchParams: { q?: string; visual?: string };
+  searchParams: Promise<{ q?: string; visual?: string; page?: string }> | { q?: string; visual?: string; page?: string };
 }) {
   const resolvedParams = await searchParams;
   const query = resolvedParams?.q || '';
   const isVisual = resolvedParams?.visual === 'true';
+  const currentPage = parsePage(resolvedParams?.page);
 
-  const products = await getSearchResults(query, isVisual);
+  const { products, count, paginated } = await getSearchResults(query, isVisual, currentPage);
 
   return (
     <main className="min-h-screen bg-gray-50 pb-16">
@@ -88,7 +112,7 @@ export default async function SearchPage({
                 : query ? `Search results for "${query}"` : 'All Products'}
             </h1>
             <p className="text-xs text-gray-300 mt-1">
-              Found {products.length} products
+              Found {paginated ? count : products.length} products
             </p>
           </div>
           <Link href="/" className="text-xs font-bold text-orange-400 hover:underline bg-indigo-900 px-4 py-2 rounded-xl">
@@ -109,11 +133,22 @@ export default async function SearchPage({
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {products.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+            {paginated && (
+              <Pagination
+                pathname="/search"
+                searchParams={resolvedParams}
+                currentPage={currentPage}
+                pageSize={SEARCH_PAGE_SIZE}
+                totalCount={count}
+              />
+            )}
+          </>
         )}
       </div>
     </main>

@@ -14,12 +14,10 @@ export interface FilterGroupConfig {
 export interface AvailableFilterOptions {
   categories?: string[];
   brands?: string[];
-  colors?: string[];
   fabrics?: string[];
-  genders?: string[];
+  patterns?: string[];
   fits?: string[];
   occasions?: string[];
-  types?: string[];
   sizes?: string[];
   minPrice?: number;
   maxPrice?: number;
@@ -48,12 +46,10 @@ export function ProductFilterPanel({
   const safeOptions: Required<AvailableFilterOptions> = {
     categories: availableOptions?.categories || categories || [],
     brands: availableOptions?.brands || [],
-    colors: availableOptions?.colors || [],
     fabrics: availableOptions?.fabrics || [],
-    genders: availableOptions?.genders || [],
+    patterns: availableOptions?.patterns || [],
     fits: availableOptions?.fits || [],
     occasions: availableOptions?.occasions || [],
-    types: availableOptions?.types || [],
     sizes: availableOptions?.sizes || [],
     minPrice: availableOptions?.minPrice ?? 0,
     maxPrice: availableOptions?.maxPrice ?? 5000,
@@ -88,6 +84,7 @@ export function ProductFilterPanel({
     } else {
       params.delete(key);
     }
+    params.delete('page');
 
     router.push(`${pathname}?${params.toString()}`, { scroll: false });
   };
@@ -99,6 +96,7 @@ export function ProductFilterPanel({
 
     if (maxPriceInput) params.set('maxPrice', maxPriceInput);
     else params.delete('maxPrice');
+    params.delete('page');
 
     router.push(`${pathname}?${params.toString()}`, { scroll: false });
     if (onCloseMobile) onCloseMobile();
@@ -111,7 +109,8 @@ export function ProductFilterPanel({
     if (onCloseMobile) onCloseMobile();
   };
 
-  const activeParamsCount = Array.from(searchParams.keys()).filter(k => k !== 'q' && k !== 'sort').length;
+  const supportedFilterKeys = new Set(['category', 'price', 'size', 'brand', 'fabric', 'pattern', 'occasion', 'fit']);
+  const activeParamsCount = Array.from(searchParams.keys()).filter(k => supportedFilterKeys.has(k) || k === 'minPrice' || k === 'maxPrice').length;
 
   const renderFilterSection = (config: FilterGroupConfig) => {
     if (!config || !config.is_enabled) return null;
@@ -236,7 +235,14 @@ export function ProductFilterPanel({
 
       default:
         const key = config.filter_key;
-        const optionsList = (safeOptions as any)[`${key}s`] || (safeOptions as any)[key] || [];
+        const optionKey = `${key}s` as keyof typeof safeOptions;
+        const configuredOptions = safeOptions[optionKey];
+        const directOptions = safeOptions[key as keyof typeof safeOptions];
+        const optionsList = Array.isArray(configuredOptions)
+          ? configuredOptions
+          : Array.isArray(directOptions)
+            ? directOptions
+            : [];
         if (!optionsList || !optionsList.length) return null;
 
         const selectedValues = searchParams.get(key)?.split(',') || [];
@@ -271,7 +277,18 @@ export function ProductFilterPanel({
     }
   };
 
-  const sortedConfigs = [...filterConfigs].sort((a, b) => a.display_order - b.display_order);
+  const sortedConfigs = [...filterConfigs]
+    .filter(config => supportedFilterKeys.has(config.filter_key))
+    .sort((a, b) => a.display_order - b.display_order);
+
+  if (safeOptions.patterns.length > 0 && !sortedConfigs.some(config => config.filter_key === 'pattern')) {
+    sortedConfigs.push({
+      filter_key: 'pattern',
+      display_name: 'Pattern',
+      is_enabled: true,
+      display_order: Math.max(0, ...sortedConfigs.map(config => config.display_order)) + 1,
+    });
+  }
 
   // If no database filter config exists, render default Category & Price filters
   const defaultFilterConfigs: FilterGroupConfig[] = [

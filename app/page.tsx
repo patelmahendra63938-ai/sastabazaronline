@@ -15,6 +15,7 @@ import { cookies } from 'next/headers';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
+import Pagination from '@/components/Pagination';
 import {
   ArrowRight,
   FileText,
@@ -32,6 +33,26 @@ export const metadata: Metadata = {
 
 interface PageProps {
   searchParams: Promise<{ [key: string]: string | undefined }>;
+}
+
+interface StorefrontFacets {
+  brands?: string[];
+  fabrics?: string[];
+  patterns?: string[];
+  fits?: string[];
+  occasions?: string[];
+  sizes?: string[];
+  minPrice?: number;
+  maxPrice?: number;
+}
+
+const CATALOG_PAGE_SIZE = 16;
+
+function parsePage(value?: string) {
+  if (!value) return 1;
+  if (!/^\d+$/.test(value)) return 1;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : 1;
 }
 
 export default async function StorefrontPage({ searchParams }: PageProps) {
@@ -82,11 +103,17 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
 
   const activeCategories = (categoriesData || []).map(c => c.name);
   const homepageCategories = homepageCategoriesResult.data || [];
+  const currentPage = parsePage(resolvedSearchParams.page);
+  const rangeFrom = (currentPage - 1) * CATALOG_PAGE_SIZE;
+  const rangeTo = rangeFrom + CATALOG_PAGE_SIZE - 1;
+  const productSelect = resolvedSearchParams.size
+    ? 'id, title, price, mrp, category, images, stock, inventory!inner(size, available_quantity)'
+    : 'id, title, price, mrp, category, images, stock, inventory(size, available_quantity)';
 
   // 4. Build product query
   let query = supabase
     .from('products')
-    .select('id, title, price, mrp, category, images, image, stock, inventory(size, available_quantity)')
+    .select(productSelect, { count: 'exact' })
     .eq('is_active', true);
 
   if (activeCategories.length > 0) {
@@ -108,19 +135,14 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
     query = query.in('brand', brands);
   }
 
-  if (resolvedSearchParams.color) {
-    const colors = resolvedSearchParams.color.split(',');
-    query = query.in('color', colors);
-  }
-
   if (resolvedSearchParams.fabric) {
     const fabrics = resolvedSearchParams.fabric.split(',');
     query = query.in('fabric', fabrics);
   }
 
-  if (resolvedSearchParams.gender) {
-    const genders = resolvedSearchParams.gender.split(',');
-    query = query.in('gender', genders);
+  if (resolvedSearchParams.pattern) {
+    const patterns = resolvedSearchParams.pattern.split(',');
+    query = query.in('pattern', patterns);
   }
 
   if (resolvedSearchParams.fit) {
@@ -131,11 +153,6 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
   if (resolvedSearchParams.occasion) {
     const occasions = resolvedSearchParams.occasion.split(',');
     query = query.in('occasion', occasions);
-  }
-
-  if (resolvedSearchParams.type) {
-    const types = resolvedSearchParams.type.split(',');
-    query = query.in('product_type', types);
   }
 
   if (resolvedSearchParams.minPrice) {
@@ -161,10 +178,11 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
   } else {
     query = query.order('created_at', { ascending: false });
   }
+  query = query.range(rangeFrom, rangeTo);
 
   let featuredQuery = supabase
     .from('products')
-    .select('id, title, price, mrp, category, images, image, stock, inventory(size, available_quantity)')
+    .select(productSelect)
     .eq('is_active', true);
 
   if (activeCategories.length > 0) {
@@ -174,12 +192,10 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
   if (resolvedSearchParams.q) featuredQuery = featuredQuery.ilike('title', `%${resolvedSearchParams.q}%`);
   if (resolvedSearchParams.category) featuredQuery = featuredQuery.in('category', resolvedSearchParams.category.split(','));
   if (resolvedSearchParams.brand) featuredQuery = featuredQuery.in('brand', resolvedSearchParams.brand.split(','));
-  if (resolvedSearchParams.color) featuredQuery = featuredQuery.in('color', resolvedSearchParams.color.split(','));
   if (resolvedSearchParams.fabric) featuredQuery = featuredQuery.in('fabric', resolvedSearchParams.fabric.split(','));
-  if (resolvedSearchParams.gender) featuredQuery = featuredQuery.in('gender', resolvedSearchParams.gender.split(','));
+  if (resolvedSearchParams.pattern) featuredQuery = featuredQuery.in('pattern', resolvedSearchParams.pattern.split(','));
   if (resolvedSearchParams.fit) featuredQuery = featuredQuery.in('fit', resolvedSearchParams.fit.split(','));
   if (resolvedSearchParams.occasion) featuredQuery = featuredQuery.in('occasion', resolvedSearchParams.occasion.split(','));
-  if (resolvedSearchParams.type) featuredQuery = featuredQuery.in('product_type', resolvedSearchParams.type.split(','));
   if (resolvedSearchParams.minPrice) featuredQuery = featuredQuery.gte('price', parseFloat(resolvedSearchParams.minPrice));
   if (resolvedSearchParams.maxPrice) featuredQuery = featuredQuery.lte('price', parseFloat(resolvedSearchParams.maxPrice));
   if (resolvedSearchParams.size) {
@@ -197,45 +213,49 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
   }
   featuredQuery = featuredQuery.limit(8);
 
-  const allActiveQuery = supabase
-    .from('products')
-    .select('brand, color, fabric, gender, fit, occasion, product_type, price, inventory(size, available_quantity)')
-    .eq('is_active', true)
-    .in('category', activeCategories);
+  const facetQuery = supabase.rpc('get_storefront_filter_facets', {
+    p_categories: activeCategories.length > 0 ? activeCategories : null,
+  });
 
-  const [{ data: productsData }, { data: featuredData }, { data: allActiveData }] = await Promise.all([
+  const [
+    { data: productsData, count: productCount, error: productError },
+    { data: featuredData, error: featuredError },
+    { data: facetData, error: facetError },
+  ] = await Promise.all([
     query,
     featuredQuery,
-    allActiveQuery,
+    facetQuery,
   ]);
 
   const products = productsData || [];
   const featuredProducts = featuredData || [];
+  const totalProducts = productCount || 0;
+  const facets = (facetData || {}) as StorefrontFacets;
 
-  // 5. Derive available filter options dynamically from active products
-
-  const allActive = allActiveData || [];
+  if (productError) console.error('Homepage product query failed:', {
+    message: productError.message,
+    code: productError.code,
+    details: productError.details,
+    hint: productError.hint,
+  });
+  if (featuredError) console.error('Homepage featured query failed:', {
+    message: featuredError.message,
+    code: featuredError.code,
+    details: featuredError.details,
+    hint: featuredError.hint,
+  });
+  if (facetError) console.error('Storefront facet lookup failed:', facetError.message);
 
   const availableOptions: AvailableFilterOptions = {
     categories: activeCategories,
-    brands: Array.from(new Set(allActive.map(p => p.brand).filter(Boolean))),
-    colors: Array.from(new Set(allActive.map(p => p.color).filter(Boolean))),
-    fabrics: Array.from(new Set(allActive.map(p => p.fabric).filter(Boolean))),
-    genders: Array.from(new Set(allActive.map(p => p.gender).filter(Boolean))),
-    fits: Array.from(new Set(allActive.map(p => p.fit).filter(Boolean))),
-    occasions: Array.from(new Set(allActive.map(p => p.occasion).filter(Boolean))),
-    types: Array.from(new Set(allActive.map(p => p.product_type).filter(Boolean))),
-    sizes: Array.from(
-      new Set(
-        allActive.flatMap(p =>
-          (p.inventory || [])
-            .filter((i: { available_quantity: number; size: string | null }) => i.available_quantity > 0)
-            .map((i: { available_quantity: number; size: string | null }) => i.size)
-        ).filter((size: string | null): size is string => Boolean(size))
-      )
-    ),
-    minPrice: allActive.length ? Math.min(...allActive.map(p => p.price)) : 0,
-    maxPrice: allActive.length ? Math.max(...allActive.map(p => p.price)) : 5000
+    brands: facets.brands || [],
+    fabrics: facets.fabrics || [],
+    patterns: facets.patterns || [],
+    fits: facets.fits || [],
+    occasions: facets.occasions || [],
+    sizes: facets.sizes || [],
+    minPrice: Number(facets.minPrice ?? 0),
+    maxPrice: Number(facets.maxPrice ?? 5000),
   };
 
   return (
@@ -388,7 +408,7 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
               {/* Toolbar Bar */}
               <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-gray-200/80 shadow-2xs">
                 <h2 id="all-products-heading" className="text-xs font-black text-indigo-950 uppercase tracking-wider">
-                  {resolvedSearchParams.category ? `${resolvedSearchParams.category} Collection` : 'All Store Products'} ({products.length} Items)
+                  {resolvedSearchParams.category ? `${resolvedSearchParams.category} Collection` : 'All Store Products'} ({totalProducts} Items)
                 </h2>
                 <span className="text-[11px] text-gray-500 font-semibold">
                   Direct Factory Rates
@@ -404,15 +424,27 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
-                  {products.map((product) => (
-                    <ProductCard
-                      key={product.id}
-                      product={product}
-                      activeCampaigns={activeCampaigns}
-                    />
-                  ))}
-                </div>
+                <>
+                  <p className="text-[11px] font-semibold text-gray-500">
+                    Showing {rangeFrom + 1}–{Math.min(rangeFrom + products.length, totalProducts)} of {totalProducts}
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
+                    {products.map((product) => (
+                      <ProductCard
+                        key={product.id}
+                        product={product}
+                        activeCampaigns={activeCampaigns}
+                      />
+                    ))}
+                  </div>
+                  <Pagination
+                    pathname="/"
+                    searchParams={resolvedSearchParams}
+                    currentPage={currentPage}
+                    pageSize={CATALOG_PAGE_SIZE}
+                    totalCount={totalProducts}
+                  />
+                </>
               )}
             </div>
 

@@ -10,9 +10,10 @@ export function ActiveFilterChips() {
   const searchParams = useSearchParams();
 
   const chips: { key: string; value: string; label: string }[] = [];
+  const supportedFilterKeys = new Set(['category', 'brand', 'fabric', 'pattern', 'occasion', 'fit', 'size', 'minPrice', 'maxPrice']);
 
   searchParams.forEach((val, key) => {
-    if (key === 'q' || key === 'sort') return;
+    if (!supportedFilterKeys.has(key)) return;
     if (key === 'minPrice') {
       chips.push({ key, value: val, label: `Min ₹${val}` });
     } else if (key === 'maxPrice') {
@@ -40,6 +41,7 @@ export function ActiveFilterChips() {
         params.delete(targetKey);
       }
     }
+    params.delete('page');
     router.push(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
