@@ -7,6 +7,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { supabase } from '@/lib/supabase';
 import { sanitizeMarketplaceUrl } from '@/lib/utils';
+import { normalizeProductPackage, ProductPackageValidationError } from '@/lib/catalog/product-package';
 import { CATEGORY_ENGINE, CategoryAttribute } from '@/lib/category-attributes';
 import { 
   Upload, X, Video, Plus, Trash2, ChevronLeft, ChevronRight, CheckCircle2, 
@@ -161,6 +162,9 @@ export default function AdminAddProductPage() {
     hsn_code: '6204',
     gst_rate: '5',
     net_weight_grams: '',
+    package_length_cm: '',
+    package_width_cm: '',
+    package_height_cm: '',
     status: 'Active',
     amazon_url: '',
     flipkart_url: '',
@@ -440,7 +444,6 @@ export default function AdminAddProductPage() {
   const totalStock = useMemo(() => variants.reduce((acc, curr) => acc + (Number(curr.stock) || 0), 0), [variants]);
   const mrpNum = parseFloat(formData.mrp) || 0;
   const priceNum = parseFloat(formData.price) || 0;
-  const netWeightGramsNum = Number(formData.net_weight_grams);
   const discountPercent = mrpNum > priceNum && mrpNum > 0 ? Math.round(((mrpNum - priceNum) / mrpNum) * 100) : 0;
   const savingsAmount = mrpNum > priceNum ? (mrpNum - priceNum).toFixed(2) : 0;
 
@@ -487,12 +490,15 @@ export default function AdminAddProductPage() {
       return;
     }
 
-    if (
-      !formData.net_weight_grams.trim() ||
-      !Number.isInteger(netWeightGramsNum) ||
-      netWeightGramsNum <= 0
-    ) {
-      setErrorMsg('Exact product weight in whole grams is required and must be greater than 0.');
+    let productPackage;
+    try {
+      productPackage = normalizeProductPackage(formData);
+    } catch (validationError) {
+      setErrorMsg(
+        validationError instanceof ProductPackageValidationError
+          ? validationError.message
+          : 'Valid physical weight and package dimensions are required.'
+      );
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
@@ -525,7 +531,10 @@ export default function AdminAddProductPage() {
         stock: totalStock,
         hsn_code: formData.hsn_code.trim() || '6204',
         gst_rate: parseFloat(formData.gst_rate) || 5.00,
-        net_weight_grams: netWeightGramsNum,
+        net_weight_grams: productPackage.weight,
+        package_length_cm: productPackage.length,
+        package_width_cm: productPackage.width,
+        package_height_cm: productPackage.height,
         images: photoUrls,
         is_active: formData.status === 'Active',
         amazon_url: sanitizeMarketplaceUrl(formData.amazon_url),
@@ -817,25 +826,24 @@ export default function AdminAddProductPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
-                  Exact Product Weight (grams) *
-                </label>
-                <input
-                  type="number"
-                  name="net_weight_grams"
-                  required
-                  min="1"
-                  step="1"
-                  inputMode="numeric"
-                  value={formData.net_weight_grams}
-                  onChange={handleChange}
-                  placeholder="e.g. 650"
-                  className="w-full px-3.5 py-2.5 text-sm font-black border border-gray-300 rounded-xl bg-gray-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-600 focus:outline-hidden transition"
-                />
-                <p className="text-[10px] text-gray-500 mt-1">
-                  Required for NimbusPost shipping. Enter the actual product weight as a whole number of grams.
-                </p>
+              <div className="rounded-2xl border border-orange-200 bg-orange-50/40 p-4 sm:p-5">
+                <h3 className="text-xs font-black uppercase tracking-wider text-indigo-950">Shipping / Package Details</h3>
+                <p className="mt-1 text-[10px] text-gray-500">Enter measured product package values only. No shipping value is inferred from inventory variants.</p>
+                <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <label className="block text-xs font-bold text-gray-700 uppercase sm:col-span-2">Exact Physical Weight (grams) *
+                    <input type="number" name="net_weight_grams" required min="1" step="1" inputMode="numeric" value={formData.net_weight_grams} onChange={handleChange} placeholder="e.g. 720" className="mt-1 w-full px-3.5 py-2.5 text-sm font-black border border-orange-300 rounded-xl bg-white focus:ring-2 focus:ring-orange-500 focus:outline-hidden transition" />
+                    <span className="mt-1 block text-[10px] font-normal normal-case text-gray-500">Enter the exact product weight in grams, e.g. 720 for 720 g.</span>
+                  </label>
+                  <label className="block text-xs font-bold text-gray-700 uppercase">Package Length (cm) *
+                    <input type="number" name="package_length_cm" required min="0.01" step="0.01" inputMode="decimal" value={formData.package_length_cm} onChange={handleChange} placeholder="e.g. 28" className="mt-1 w-full px-3.5 py-2.5 text-sm border border-orange-300 rounded-xl bg-white focus:ring-2 focus:ring-orange-500 focus:outline-hidden transition" />
+                  </label>
+                  <label className="block text-xs font-bold text-gray-700 uppercase">Package Width (cm) *
+                    <input type="number" name="package_width_cm" required min="0.01" step="0.01" inputMode="decimal" value={formData.package_width_cm} onChange={handleChange} placeholder="e.g. 20" className="mt-1 w-full px-3.5 py-2.5 text-sm border border-orange-300 rounded-xl bg-white focus:ring-2 focus:ring-orange-500 focus:outline-hidden transition" />
+                  </label>
+                  <label className="block text-xs font-bold text-gray-700 uppercase sm:col-span-2 sm:max-w-[calc(50%-0.5rem)]">Package Height (cm) *
+                    <input type="number" name="package_height_cm" required min="0.01" step="0.01" inputMode="decimal" value={formData.package_height_cm} onChange={handleChange} placeholder="e.g. 4" className="mt-1 w-full px-3.5 py-2.5 text-sm border border-orange-300 rounded-xl bg-white focus:ring-2 focus:ring-orange-500 focus:outline-hidden transition" />
+                  </label>
+                </div>
               </div>
 
               <div>

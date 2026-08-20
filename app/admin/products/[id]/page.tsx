@@ -6,10 +6,12 @@ import { AlertCircle, ArrowLeft, CheckCircle2, Loader2, Save } from 'lucide-reac
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { supabase } from '@/lib/supabase';
+import { normalizeProductPackage, ProductPackageValidationError } from '@/lib/catalog/product-package';
 
 interface ProductForm {
   title: string; description: string; brand: string; price: string; mrp: string;
   category: string; hsn_code: string; gst_rate: string; net_weight_grams: string;
+  package_length_cm: string; package_width_cm: string; package_height_cm: string;
   is_active: boolean;
 }
 
@@ -17,7 +19,7 @@ interface VariantForm {
   id: string; size: string; sku: string; weight_kg: string; available_quantity: string;
 }
 
-const EMPTY_PRODUCT: ProductForm = { title: '', description: '', brand: '', price: '', mrp: '', category: '', hsn_code: '', gst_rate: '5', net_weight_grams: '', is_active: false };
+const EMPTY_PRODUCT: ProductForm = { title: '', description: '', brand: '', price: '', mrp: '', category: '', hsn_code: '', gst_rate: '5', net_weight_grams: '', package_length_cm: '', package_width_cm: '', package_height_cm: '', is_active: false };
 
 export default function AdminProductEditPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -32,7 +34,7 @@ export default function AdminProductEditPage({ params }: { params: Promise<{ id:
     let active = true;
     async function load() {
       const [productResult, inventoryResult] = await Promise.all([
-        supabase.from('products').select('title, description, brand, price, mrp, category, hsn_code, gst_rate, net_weight_grams, is_active').eq('id', id).single(),
+        supabase.from('products').select('title, description, brand, price, mrp, category, hsn_code, gst_rate, net_weight_grams, package_length_cm, package_width_cm, package_height_cm, is_active').eq('id', id).single(),
         supabase.from('inventory').select('id, size, sku, weight_kg, available_quantity').eq('product_id', id).order('size'),
       ]);
       if (!active) return;
@@ -45,6 +47,9 @@ export default function AdminProductEditPage({ params }: { params: Promise<{ id:
           price: String(product.price ?? ''), mrp: String(product.mrp ?? ''), category: product.category || '',
           hsn_code: product.hsn_code || '', gst_rate: String(product.gst_rate ?? 5),
           net_weight_grams: product.net_weight_grams == null ? '' : String(product.net_weight_grams),
+          package_length_cm: product.package_length_cm == null ? '' : String(product.package_length_cm),
+          package_width_cm: product.package_width_cm == null ? '' : String(product.package_width_cm),
+          package_height_cm: product.package_height_cm == null ? '' : String(product.package_height_cm),
           is_active: Boolean(product.is_active),
         });
         setVariants((inventoryResult.data || []).map((variant) => ({ id: variant.id, size: variant.size || '', sku: variant.sku || '', weight_kg: String(variant.weight_kg ?? ''), available_quantity: String(variant.available_quantity ?? 0) })));
@@ -73,6 +78,21 @@ export default function AdminProductEditPage({ params }: { params: Promise<{ id:
       setError('Exact Physical Weight is required and must be a positive whole number of grams.');
       return;
     }
+    const dimensionValues = [form.package_length_cm, form.package_width_cm, form.package_height_cm];
+    const hasAnyDimension = dimensionValues.some((value) => value.trim() !== '');
+    let productPackage = null;
+    if (form.is_active || hasAnyDimension) {
+      try {
+        productPackage = normalizeProductPackage(form);
+      } catch (validationError) {
+        setError(
+          validationError instanceof ProductPackageValidationError
+            ? validationError.message
+            : 'Valid package dimensions are required for an active product.'
+        );
+        return;
+      }
+    }
     const price = Number(form.price); const mrp = Number(form.mrp);
     if (!form.title.trim() || !Number.isFinite(price) || price <= 0) { setError('Product title and a valid positive selling price are required.'); return; }
     if (form.mrp && (!Number.isFinite(mrp) || mrp < price)) { setError('MRP must be a valid amount greater than or equal to the selling price.'); return; }
@@ -85,7 +105,11 @@ export default function AdminProductEditPage({ params }: { params: Promise<{ id:
     const { error: productError } = await supabase.from('products').update({
       title: form.title.trim(), description: form.description.trim() || null, brand: form.brand.trim() || null,
       price, mrp: form.mrp ? mrp : price, category: form.category.trim(), hsn_code: form.hsn_code.trim() || null,
-      gst_rate: Number(form.gst_rate), net_weight_grams: exactWeight, is_active: form.is_active,
+      gst_rate: Number(form.gst_rate), net_weight_grams: exactWeight,
+      package_length_cm: productPackage?.length ?? null,
+      package_width_cm: productPackage?.width ?? null,
+      package_height_cm: productPackage?.height ?? null,
+      is_active: form.is_active,
     }).eq('id', id);
     if (productError) { setError(`Product was not saved: ${productError.message}`); setSaving(false); return; }
 
@@ -96,7 +120,7 @@ export default function AdminProductEditPage({ params }: { params: Promise<{ id:
       })));
       if (inventoryError) { setError(`Product details were saved, but variant stock failed to save: ${inventoryError.message}`); setSaving(false); return; }
     }
-    setSuccess('Product details and exact physical weight saved successfully.');
+    setSuccess('Product details, exact physical weight, and package dimensions saved successfully.');
     setSaving(false);
   }
 
@@ -120,12 +144,24 @@ export default function AdminProductEditPage({ params }: { params: Promise<{ id:
           </section>
 
           <section className="rounded-2xl border border-orange-200 bg-white p-5 shadow-sm">
-            <h2 className="text-sm font-black text-indigo-950">Shipping / Physical Details</h2>
-            <p className="mt-1 text-xs text-gray-500">This product-level value is the authoritative shipping weight. Variant inventory weight is not used for shipping pricing.</p>
-            <label className="mt-4 block max-w-md text-xs font-bold text-gray-700">Exact Physical Weight (grams) *
-              <input type="number" required min="1" step="1" inputMode="numeric" value={form.net_weight_grams} onChange={(e) => updateField('net_weight_grams', e.target.value)} placeholder="e.g. 720" className="mt-1 w-full rounded-xl border border-orange-300 px-3 py-3 text-sm font-black focus:ring-2 focus:ring-orange-500" />
-              <span className="mt-1.5 block font-normal text-gray-500">Enter the exact product weight in grams, e.g. 720 for 720 g.</span>
-            </label>
+            <h2 className="text-sm font-black text-indigo-950">Shipping / Package Details</h2>
+            <p className="mt-1 text-xs text-gray-500">Use measured product-level package values. Inventory weight is not used for shipping pricing, and no dimensions are inferred.</p>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <label className="text-xs font-bold text-gray-700 sm:col-span-2">Exact Physical Weight (grams) *
+                <input type="number" required min="1" step="1" inputMode="numeric" value={form.net_weight_grams} onChange={(e) => updateField('net_weight_grams', e.target.value)} placeholder="e.g. 720" className="mt-1 w-full rounded-xl border border-orange-300 px-3 py-3 text-sm font-black focus:ring-2 focus:ring-orange-500" />
+                <span className="mt-1.5 block font-normal text-gray-500">Enter the exact product weight in grams, e.g. 720 for 720 g.</span>
+              </label>
+              <label className="text-xs font-bold text-gray-700">Package Length (cm) {form.is_active && '*'}
+                <input type="number" required={form.is_active} min="0.01" step="0.01" inputMode="decimal" value={form.package_length_cm} onChange={(e) => updateField('package_length_cm', e.target.value)} placeholder="e.g. 28" className="mt-1 w-full rounded-xl border border-orange-300 px-3 py-3 text-sm focus:ring-2 focus:ring-orange-500" />
+              </label>
+              <label className="text-xs font-bold text-gray-700">Package Width (cm) {form.is_active && '*'}
+                <input type="number" required={form.is_active} min="0.01" step="0.01" inputMode="decimal" value={form.package_width_cm} onChange={(e) => updateField('package_width_cm', e.target.value)} placeholder="e.g. 20" className="mt-1 w-full rounded-xl border border-orange-300 px-3 py-3 text-sm focus:ring-2 focus:ring-orange-500" />
+              </label>
+              <label className="text-xs font-bold text-gray-700">Package Height (cm) {form.is_active && '*'}
+                <input type="number" required={form.is_active} min="0.01" step="0.01" inputMode="decimal" value={form.package_height_cm} onChange={(e) => updateField('package_height_cm', e.target.value)} placeholder="e.g. 4" className="mt-1 w-full rounded-xl border border-orange-300 px-3 py-3 text-sm focus:ring-2 focus:ring-orange-500" />
+              </label>
+            </div>
+            {!form.is_active && <p className="mt-3 text-[11px] text-amber-700">Legacy inactive products may remain empty. All three dimensions are required before this product can be saved as active.</p>}
           </section>
 
           <section className="rounded-2xl border bg-white p-5 shadow-sm">
