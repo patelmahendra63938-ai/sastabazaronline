@@ -7,14 +7,15 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:webhooks": "node --test tests/nimbuspost-webhook.test.mjs"
-    ,"test:pricing": "node --test --experimental-strip-types tests/pricing-engine.test.mjs"
-    ,"test:order-totals": "node --test --experimental-strip-types tests/order-totals.test.mjs"
+    "test:webhooks": "node --test tests/nimbuspost-webhook.test.mjs",
+    "test:pricing": "node --test --experimental-strip-types tests/pricing-engine.test.mjs",
+    "test:order-totals": "node --test --experimental-strip-types tests/order-totals.test.mjs"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.112.3",
+    "@vercel/speed-insights": "^2.0.0",
     "clsx": "^2.1.1",
     "html5-qrcode": "^2.3.8",
     "lucide-react": "^1.31.0",
