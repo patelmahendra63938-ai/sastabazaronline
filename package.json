@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test:webhooks": "node --test tests/nimbuspost-webhook.test.mjs"
+    ,"test:pricing": "node --test --experimental-strip-types tests/pricing-engine.test.mjs"
+    ,"test:order-totals": "node --test --experimental-strip-types tests/order-totals.test.mjs"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

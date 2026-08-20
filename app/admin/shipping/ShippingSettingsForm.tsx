@@ -36,6 +36,8 @@ export default function ShippingSettingsForm({ rules }: { rules: ShippingRules }
 
   return (
     <form action={formAction} className="space-y-6">
+      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs font-bold text-amber-900">Temporary slab pricing is active until verified NimbusPost v2 live pricing is connected.</div>
+      <label className="block space-y-1.5"><span className="block text-xs font-bold text-gray-700">Pricing Mode</span><input name="pricing_mode" value="temporary_slabs" readOnly className="w-full rounded-xl border bg-gray-50 px-3 py-2.5 text-sm" /></label>
       <div className="grid gap-4 lg:grid-cols-2">
         <ToggleField name="free_shipping_enabled" label="Free Shipping Enabled" description="Store the free-shipping policy for the upcoming unified pricing engine." defaultChecked={rules.free_shipping_enabled} />
         <ToggleField name="apply_courier_charge" label="Apply Courier Charge" description="Controls whether the unified pricing engine should charge customers for courier delivery." defaultChecked={rules.apply_courier_charge} />
@@ -46,6 +48,16 @@ export default function ShippingSettingsForm({ rules }: { rules: ShippingRules }
         <NumberField name="courier_markup_pct" label="Courier Markup" defaultValue={rules.courier_markup_pct} suffix="%" />
         <NumberField name="weight_buffer_pct" label="Weight Buffer" defaultValue={rules.weight_buffer_pct} suffix="%" />
       </div>
+
+      <fieldset className="space-y-4 rounded-2xl border border-gray-200 bg-white p-4">
+        <legend className="px-1 text-sm font-black text-indigo-950">Temporary shipping slabs</legend>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <NumberField name="shipping_slab_500g" label="Up to 500 g charge" defaultValue={rules.shipping_slab_500g} suffix="₹" />
+          <NumberField name="shipping_slab_1000g" label="Up to 1 kg charge" defaultValue={rules.shipping_slab_1000g} suffix="₹" />
+          <NumberField name="shipping_slab_2000g" label="Up to 2 kg charge" defaultValue={rules.shipping_slab_2000g} suffix="₹" />
+          <NumberField name="temporary_max_weight_grams" label="Temporary maximum weight" defaultValue={rules.temporary_max_weight_grams} suffix="g" />
+        </div>
+      </fieldset>
 
       <fieldset className="space-y-4 rounded-2xl border border-gray-200 bg-white p-4">
         <legend className="px-1 text-sm font-black text-indigo-950">COD fee rules</legend>

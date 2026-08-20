@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { lookupOrdersAction } from '@/actions/orderLookup';
+import { resolveOrderTotals } from '@/lib/orders/order-totals';
 import { 
   Package, Search, Mail, CheckCircle2, ChevronRight, 
   Truck, Clock, RotateCcw, AlertCircle, Loader2, ArrowRight, ShieldCheck 
@@ -16,6 +17,7 @@ interface Props {
 
 export default function OrdersLookupClient({ isLoggedIn, initialEmail, initialOrders }: Props) {
   const [emailInput, setEmailInput] = useState('');
+  const [phoneInput, setPhoneInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [searchedEmail, setSearchedEmail] = useState<string | null>(initialEmail);
@@ -25,15 +27,15 @@ export default function OrdersLookupClient({ isLoggedIn, initialEmail, initialOr
   // Handle Guest Email Search (Case 2)
   const handleGuestSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!emailInput.trim()) {
-      setErrorMsg('Please enter your email address.');
+    if (!emailInput.trim() || phoneInput.replace(/\D/g, '').length < 10) {
+      setErrorMsg('Please enter the email and phone number used for the order.');
       return;
     }
 
     setLoading(true);
     setErrorMsg(null);
 
-    const res = await lookupOrdersAction(emailInput.trim());
+    const res = await lookupOrdersAction({ email: emailInput.trim(), phone: phoneInput });
 
     if (!res.success) {
       setErrorMsg(res.error || 'Failed to search orders. Please try again.');
@@ -148,6 +150,11 @@ export default function OrdersLookupClient({ isLoggedIn, initialEmail, initialOr
               </div>
             </div>
 
+            <div>
+              <label className="block text-[11px] font-bold text-gray-700 uppercase mb-1">Customer Phone Number *</label>
+              <input type="tel" required inputMode="numeric" value={phoneInput} onChange={(e) => setPhoneInput(e.target.value)} placeholder="Phone used at checkout" className="w-full px-4 py-3 text-sm border rounded-xl focus:ring-2 focus:ring-indigo-600 focus:outline-none" />
+            </div>
+
             <div className="flex items-center justify-between pt-1">
               <p className="text-[11px] text-gray-400">
                 Already have an account? <Link href="/login?redirectTo=/orders" className="text-indigo-700 font-bold hover:underline">Sign In</Link>
@@ -192,7 +199,7 @@ export default function OrdersLookupClient({ isLoggedIn, initialEmail, initialOr
               </p>
               {!isLoggedIn && (
                 <button
-                  onClick={() => { setHasSearched(false); setEmailInput(''); }}
+                  onClick={() => { setHasSearched(false); setEmailInput(''); setPhoneInput(''); }}
                   className="bg-indigo-50 text-indigo-950 text-xs font-bold px-5 py-2.5 rounded-xl border border-indigo-200 hover:bg-indigo-100 transition"
                 >
                   Try Another Email
@@ -257,6 +264,8 @@ export default function OrdersLookupClient({ isLoggedIn, initialEmail, initialOr
                     ) : null}
                   </div>
 
+                  {(() => { const totals = resolveOrderTotals(ord); return <div className="mx-5 mb-4 grid grid-cols-2 gap-x-6 gap-y-1 rounded-xl border bg-gray-50 p-3 text-[11px] text-gray-600 sm:grid-cols-3"><span>Subtotal <b className="float-right text-gray-900">₹{totals.productSubtotal}</b></span>{totals.discountAmount > 0 && <span className="text-green-700">Discount <b className="float-right">-₹{totals.discountAmount}</b></span>}<span>Shipping <b className="float-right text-gray-900">₹{totals.shippingCharge}</b></span>{totals.isCod && <span>COD Charge <b className="float-right text-gray-900">₹{totals.codCharge}</b></span>}<span className="font-black text-indigo-950">Grand Total <b className="float-right">₹{totals.grandTotal}</b></span></div>; })()}
+
                   {/* Order Footer Actions */}
                   <div className="bg-gray-50/50 px-5 py-3 border-t flex flex-wrap items-center justify-between gap-2">
                     <div className="text-xs text-gray-500">
@@ -272,7 +281,7 @@ export default function OrdersLookupClient({ isLoggedIn, initialEmail, initialOr
 
                     <div className="flex items-center gap-2">
                       <Link
-                        href={`/orders/${ord.id}`}
+                        href={`/orders/${ord.order_number}`}
                         className="bg-indigo-950 hover:bg-indigo-900 text-white text-xs font-bold px-4 py-2 rounded-xl transition flex items-center gap-1.5 shadow-xs"
                       >
                         <span>View Details & Tracking</span>

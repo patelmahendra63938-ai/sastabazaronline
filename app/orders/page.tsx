@@ -30,6 +30,8 @@ export default async function OrdersPage() {
         payment_status,
         subtotal,
         shipping_charge,
+        cod_charge,
+        discount_amount,
         grand_total,
         item_count,
         courier_partner,

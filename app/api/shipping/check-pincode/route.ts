@@ -1,49 +1,19 @@
 import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+import { calculateAuthoritativeOrderPricing } from '@/lib/pricing/pricing-engine';
 
 export async function POST(request: Request) {
   try {
-    const { pincode, totalWeightKg, subtotal, paymentType } = await request.json();
-
-    if (!pincode || pincode.length !== 6) {
-      return NextResponse.json({ serviceable: false, message: 'Invalid PIN code format.' }, { status: 400 });
-    }
-
-    // સર્વર-સાઇડ એન્વાયર્નમેન્ટ વેરીએબલમાંથી કી મેળવો (સુરક્ષિત રીતે)
-    const apiToken = process.env.NIMBUSPOST_API_TOKEN;
-
-    // જો તમારી પાસે લાઈવ કુરિયર API કી હોય તો અહીં કુરિયર કંપનીનું API કૉલ કરો:
-    /*
-    const courierRes = await fetch('https://api.nimbuspost.com/v1/shipment/serviceability', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiToken}`
-      },
-      body: JSON.stringify({
-        destination_pincode: pincode,
-        weight: totalWeightKg,
-        payment_type: paymentType
-      })
-    });
-    const courierData = await courierRes.json();
-    */
-
-    // વજન આધારિત સ્લેબ ગણતરી (જે તમારા નિયમ મુજબ છે)
-    const grams = totalWeightKg * 1000;
-    let rate = 80;
-    if (grams <= 500) rate = 80;
-    else if (grams <= 1000) rate = 110;
-    else if (grams <= 2000) rate = 140;
-    else rate = 140;
-
-    return NextResponse.json({
-      serviceable: true,
-      rate: rate,
-      displayWeight: `${Math.max(0.5, totalWeightKg).toFixed(2)} kg`,
-      courierPartnerName: 'Standard Express'
-    });
-
-  } catch (error: any) {
-    return NextResponse.json({ serviceable: false, message: 'Serviceability check failed temporarily.' }, { status: 500 });
+    const body = await request.json();
+    if (!/^\d{6}$/.test(String(body.pincode || '').trim()) || !Array.isArray(body.cart) || !body.cart.length) return NextResponse.json({ serviceable: false, message: 'A valid PIN code and non-empty cart are required.' }, { status: 400 });
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!url || !key) return NextResponse.json({ serviceable: false, message: 'Server pricing is unavailable.' }, { status: 503 });
+    const db = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
+    const quote = await calculateAuthoritativeOrderPricing({ db, pincode: body.pincode, paymentMethod: body.paymentMethod === 'COD' ? 'COD' : 'ONLINE', cart: body.cart, couponCode: body.couponCode });
+    return NextResponse.json(quote);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Pricing could not be verified.';
+    return NextResponse.json({ serviceable: false, message }, { status: 422 });
   }
 }

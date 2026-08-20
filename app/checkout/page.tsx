@@ -39,9 +39,7 @@ export default function CheckoutPage() {
   const [isPincodeVerified, setIsPincodeVerified] = useState<boolean>(false);
   const [isCheckingPin, setIsCheckingPin] = useState<boolean>(false);
   const [pinStatus, setPinStatus] = useState<'idle' | 'checking' | 'available' | 'unavailable' | 'error'>('idle');
-  const [shippingCharge, setShippingCharge] = useState<number | null>(null);
-  const [displayWeight, setDisplayWeight] = useState<string>('0.50 kg');
-  const [courierName, setCourierName] = useState<string>('');
+  const [quote, setQuote] = useState<any | null>(null);
   const [statusMessage, setStatusMessage] = useState<string>('');
 
   useEffect(() => {
@@ -58,57 +56,52 @@ export default function CheckoutPage() {
     }
   }, []);
 
-  // 1. Order Calculations & Weight-Based Slabs
+  // Display-only cart subtotal until the server returns an authoritative quote.
   let originalProductPriceTotal = 0;
   let discountedSubtotal = 0;
   let primaryOfferName: string | null = null;
-  let totalActualWeightKg = 0;
 
   for (const item of cart) {
     const qty = Number(item.quantity) || 1;
     const origPrice = Number(item.original_price || item.mrp || item.price || 0);
     const itemPrice = Number(item.price || 0);
-    const unitWeight = Number(item.weight_kg || item.net_weight || 0.5);
 
     originalProductPriceTotal += origPrice * qty;
     discountedSubtotal += itemPrice * qty;
-    totalActualWeightKg += unitWeight * qty;
 
     if (item.applied_offer_label && !primaryOfferName) {
       primaryOfferName = item.applied_offer_label;
     }
   }
 
-  const hasSaleDiscount = originalProductPriceTotal > discountedSubtotal;
+  const hasSaleDiscount = quote ? quote.discountDeductionAmount > 0 : originalProductPriceTotal > discountedSubtotal;
   const discountDeductionAmount = Math.max(0, originalProductPriceTotal - discountedSubtotal);
 
-  // COD Charge calculation: < ₹1,000 -> ₹40, >= ₹1,000 -> ₹50 (Only for COD)
-  const codCharge = formData.paymentMethod === 'COD' 
-    ? (discountedSubtotal >= 1000 ? 50 : 40) 
-    : 0;
-
-  const currentShipping = shippingCharge ?? 0;
-  const grandTotal = discountedSubtotal + currentShipping + codCharge;
+  const displayOriginalTotal = quote?.originalProductPriceTotal ?? originalProductPriceTotal;
+  const displaySubtotal = quote?.discountedSubtotal ?? discountedSubtotal;
+  const displayDiscount = quote?.discountDeductionAmount ?? discountDeductionAmount;
+  const grandTotal = quote?.totalPayable ?? displaySubtotal;
 
   // 2. Real-Time PIN Code Check with API Route & Fallback
-  const handleCheckPincode = useCallback(async (pinToCheck?: string) => {
+  const handleCheckPincode = useCallback(async (pinToCheck?: string, paymentOverride?: 'COD' | 'ONLINE') => {
     const targetPin = (pinToCheck || formData.pincode).trim();
 
     if (!targetPin || targetPin.length !== 6 || !/^\d{6}$/.test(targetPin)) {
       setPinStatus('error');
       setStatusMessage('Please enter a valid 6-digit delivery PIN code.');
       setIsPincodeVerified(false);
-      setShippingCharge(null);
+      setQuote(null);
       return;
     }
 
-    if (cart.length === 0 || discountedSubtotal <= 0) {
+    if (cart.length === 0) {
       return;
     }
 
     setIsCheckingPin(true);
     setPinStatus('checking');
-    setStatusMessage('Checking delivery availability with courier partner...');
+    setStatusMessage('Verifying authoritative delivery pricing...');
+    setQuote(null);
     setErrorMsg(null);
 
     try {
@@ -117,58 +110,39 @@ export default function CheckoutPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           pincode: targetPin,
-          totalWeightKg: totalActualWeightKg,
-          subtotal: discountedSubtotal,
-          paymentType: formData.paymentMethod === 'ONLINE' ? 'PREPAID' : 'COD'
+          cart: cart.map(item => ({ product_id: item.product_id || item.id, size: item.size, quantity: item.quantity, selected_campaign_id: item.selected_campaign_id })),
+          paymentMethod: paymentOverride || formData.paymentMethod
         }),
         signal: AbortSignal.timeout(5000),
       });
 
       if (!res.ok) {
-        throw new Error(`Service check returned ${res.status}`);
+        const failed = await res.json().catch(() => ({}));
+        throw new Error(failed.message || `Pricing check returned ${res.status}`);
       }
 
       const data = await res.json();
 
-      if (data.serviceable !== false) {
+      if (data.serviceable === true) {
         setPinStatus('available');
         setIsPincodeVerified(true);
-        let resolvedRate = data.rate;
-        if (resolvedRate === undefined || resolvedRate === null || resolvedRate === 0) {
-          const grams = totalActualWeightKg * 1000;
-          if (grams <= 500) resolvedRate = 80;
-          else if (grams <= 1000) resolvedRate = 110;
-          else if (grams <= 2000) resolvedRate = 140;
-          else resolvedRate = 140;
-        }
-        setShippingCharge(resolvedRate);
-        setDisplayWeight(data.displayWeight || `${Math.max(0.5, totalActualWeightKg).toFixed(2)} kg`);
-        setCourierName(data.courierPartnerName || '');
-        setStatusMessage(data.courierPartnerName ? `✓ Delivery available via ${data.courierPartnerName}` : '✓ Delivery available to this PIN');
+        setQuote(data);
+        setStatusMessage(data.message);
       } else {
         setPinStatus('unavailable');
         setIsPincodeVerified(false);
-        setShippingCharge(null);
+        setQuote(null);
         setStatusMessage(data.message || '✕ Delivery is not available to this PIN code. Please enter another delivery PIN code.');
       }
     } catch (err: any) {
-      console.warn("PIN check API fallback triggered:", err.message);
-      let fallbackRate = 80;
-      const grams = totalActualWeightKg * 1000;
-      if (grams <= 500) fallbackRate = 80;
-      else if (grams <= 1000) fallbackRate = 110;
-      else if (grams <= 2000) fallbackRate = 140;
-      else fallbackRate = 140;
-
-      setPinStatus('available');
-      setIsPincodeVerified(true);
-      setShippingCharge(fallbackRate);
-      setDisplayWeight(`${Math.max(0.5, totalActualWeightKg).toFixed(2)} kg`);
-      setStatusMessage('✓ Delivery available to this PIN (Standard Weight Slab)');
+      setPinStatus('error');
+      setIsPincodeVerified(false);
+      setQuote(null);
+      setStatusMessage(err.message || 'Authoritative pricing could not be verified.');
     } finally {
       setIsCheckingPin(false);
     }
-  }, [formData.pincode, formData.paymentMethod, cart.length, totalActualWeightKg, discountedSubtotal]);
+  }, [formData.pincode, formData.paymentMethod, cart]);
 
   const handlePincodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawVal = e.target.value.replace(/\D/g, '').slice(0, 6);
@@ -176,7 +150,7 @@ export default function CheckoutPage() {
     
     setIsPincodeVerified(false);
     setPinStatus('idle');
-    setShippingCharge(null);
+    setQuote(null);
     setStatusMessage('');
     setErrorMsg(null);
   };
@@ -188,7 +162,7 @@ export default function CheckoutPage() {
   const handlePaymentMethodChange = (method: 'COD' | 'ONLINE') => {
     setFormData(prev => ({ ...prev, paymentMethod: method }));
     if (isPincodeVerified && formData.pincode.length === 6) {
-      handleCheckPincode(formData.pincode);
+      handleCheckPincode(formData.pincode, method);
     }
   };
 
@@ -206,7 +180,7 @@ export default function CheckoutPage() {
 
     setIsPincodeVerified(false);
     setPinStatus('idle');
-    setShippingCharge(null);
+    setQuote(null);
   };
 
   const handleGetLocation = () => {
@@ -257,7 +231,7 @@ export default function CheckoutPage() {
       return;
     }
 
-    if (!isPincodeVerified || pinStatus !== 'available' || shippingCharge === null) {
+    if (!isPincodeVerified || pinStatus !== 'available' || !quote) {
       setErrorMsg('Please verify delivery availability for your PIN code before proceeding to payment.');
       return;
     }
@@ -681,27 +655,27 @@ export default function CheckoutPage() {
                   <div className="flex justify-between text-gray-600 font-medium">
                     <span>Product Price</span>
                     <span className="font-bold text-gray-900">
-                      ₹{originalProductPriceTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      ₹{displayOriginalTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                     </span>
                   </div>
 
                   {hasSaleDiscount && (
                     <div className="flex justify-between text-green-700 font-bold bg-green-50/80 px-2.5 py-1.5 rounded-xl border border-green-200">
                       <span>{primaryOfferName || 'Festival Sale — 10% OFF'}</span>
-                      <span>-₹{discountDeductionAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                      <span>-₹{displayDiscount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                     </div>
                   )}
 
                   <div className="flex justify-between text-gray-700 font-semibold pt-1 border-t border-gray-100">
                     <span>Subtotal</span>
                     <span className="font-bold text-gray-900">
-                      ₹{discountedSubtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      ₹{displaySubtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                     </span>
                   </div>
 
                   <div className="flex justify-between text-gray-500 font-medium">
                     <span>Shipment Weight</span>
-                    <span className="font-bold text-gray-800">{displayWeight}</span>
+                    <span className="font-bold text-gray-800">{quote ? `${quote.actualWeightGrams} g` : 'Pending PIN check'}</span>
                   </div>
 
                   <div className="flex justify-between text-gray-500 font-medium">
@@ -709,10 +683,10 @@ export default function CheckoutPage() {
                     <span className="font-bold text-gray-900">
                       {isCheckingPin ? (
                         <span className="text-gray-400 font-normal">Calculating...</span>
-                      ) : shippingCharge === null ? (
+                      ) : !quote ? (
                         <span className="text-orange-600 font-bold">Pending PIN check</span>
                       ) : (
-                        `₹${shippingCharge.toFixed(2)}`
+                        `₹${quote.shippingCharge.toFixed(2)}`
                       )}
                     </span>
                   </div>
@@ -720,7 +694,7 @@ export default function CheckoutPage() {
                   <div className="flex justify-between text-gray-500 font-medium">
                     <span>COD Charge</span>
                     <span className="font-bold text-gray-900">
-                      {formData.paymentMethod === 'COD' ? `₹${codCharge}` : '₹0'}
+                      {quote ? `₹${quote.codCharge.toFixed(2)}` : 'Pending PIN check'}
                     </span>
                   </div>
 
@@ -735,7 +709,7 @@ export default function CheckoutPage() {
                 <button
                   type="submit"
                   form="checkout-form"
-                  disabled={loading || cart.length === 0 || !isPincodeVerified || pinStatus !== 'available' || isCheckingPin}
+                  disabled={loading || cart.length === 0 || !quote || !isPincodeVerified || pinStatus !== 'available' || isCheckingPin}
                   className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 rounded-2xl transition shadow-md shadow-orange-500/25 flex items-center justify-center gap-2 text-xs uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer active:scale-98"
                 >
                   {loading ? (

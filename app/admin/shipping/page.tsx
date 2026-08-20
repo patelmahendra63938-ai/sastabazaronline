@@ -18,7 +18,7 @@ export default async function AdminShippingPage() {
 
       <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs leading-relaxed text-amber-900">
         <AlertTriangle size={18} className="mt-0.5 shrink-0" />
-        <p>These settings are saved for the upcoming unified pricing engine. Current checkout charges will continue using the existing checkout logic until Phase B is completed.</p>
+        <p>Temporary slab pricing is active until verified NimbusPost v2 live pricing is connected.</p>
       </div>
 
       <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-xs sm:p-6">

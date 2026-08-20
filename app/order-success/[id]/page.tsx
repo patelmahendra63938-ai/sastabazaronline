@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { supabase } from '@/lib/supabase';
 import { CheckCircle2, Package, Truck, ArrowRight, ShoppingBag } from 'lucide-react';
 import Link from 'next/link';
+import { resolveOrderTotals } from '@/lib/orders/order-totals';
 
 async function getOrder(id: string) {
   const { data, error } = await supabase
@@ -21,6 +22,7 @@ async function getOrder(id: string) {
 export default async function OrderSuccessPage({ params }: { params: { id: string } }) {
   const resolvedParams = await params;
   const order = await getOrder(resolvedParams.id);
+  const totals = order ? resolveOrderTotals(order) : null;
 
   return (
     <main className="min-h-screen bg-gray-50 pb-16">
@@ -55,11 +57,17 @@ export default async function OrderSuccessPage({ params }: { params: { id: strin
                 </p>
               </div>
 
-              <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex flex-col justify-between">
+              <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
                 <div>
                   <p className="font-bold text-gray-900 mb-2 flex items-center gap-1.5"><Package size={16} className="text-indigo-600" /> Payment Summary</p>
-                  <p className="text-xs text-gray-500">Total Amount Paid</p>
-                  <p className="text-2xl font-black text-gray-900 mt-0.5">₹{order.total_amount}</p>
+                  <div className="space-y-1.5 text-xs text-gray-600">
+                    <div className="flex justify-between"><span>Product Subtotal</span><b>₹{totals?.productSubtotal}</b></div>
+                    {Boolean(totals?.discountAmount) && <div className="flex justify-between text-green-700"><span>Discount</span><b>-₹{totals?.discountAmount}</b></div>}
+                    <div className="flex justify-between"><span>Shipping Charge</span><b>₹{totals?.shippingCharge}</b></div>
+                    {totals?.isCod && <div className="flex justify-between"><span>COD Charge</span><b>₹{totals.codCharge}</b></div>}
+                    <div className="flex justify-between border-t pt-1.5 text-sm font-black text-gray-900"><span>Grand Total</span><span>₹{totals?.grandTotal}</span></div>
+                    <div className="flex justify-between"><span>Payment Mode</span><b>{order.payment_method}</b></div>
+                  </div>
                 </div>
                 <p className="text-[10px] text-green-600 font-semibold mt-2">✓ Verified & GST Invoice Ready</p>
               </div>

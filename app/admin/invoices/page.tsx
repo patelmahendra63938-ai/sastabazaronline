@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Search, FileText, Printer, Loader2, Receipt } from 'lucide-react';
+import { resolveOrderTotals } from '@/lib/orders/order-totals';
 
 export default function AdminInvoicesPage() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -294,6 +295,7 @@ export default function AdminInvoicesPage() {
                           <span>Shipping Charge:</span>
                           <span>₹{selectedInvoice.shipping_charge || 0}</span>
                         </div>
+                        {resolveOrderTotals(selectedInvoice).isCod && <div className="flex justify-between text-gray-600"><span>COD Charge:</span><span>₹{resolveOrderTotals(selectedInvoice).codCharge}</span></div>}
                         <div className="flex justify-between font-black text-indigo-950 text-sm border-t pt-2">
                           <span>Grand Total:</span>
                           <span>₹{selectedInvoice.grand_total}</span>

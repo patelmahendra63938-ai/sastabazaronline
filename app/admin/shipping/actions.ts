@@ -19,11 +19,16 @@ export async function saveShippingRules(
   }
 
   const rules: ShippingRules = parseShippingRules({
+    pricing_mode: 'temporary_slabs',
     free_shipping_enabled: formData.get('free_shipping_enabled') === 'on',
     free_shipping_threshold: formNumber(formData, 'free_shipping_threshold'),
     apply_courier_charge: formData.get('apply_courier_charge') === 'on',
     courier_markup_pct: formNumber(formData, 'courier_markup_pct'),
     weight_buffer_pct: formNumber(formData, 'weight_buffer_pct'),
+    shipping_slab_500g: formNumber(formData, 'shipping_slab_500g'),
+    shipping_slab_1000g: formNumber(formData, 'shipping_slab_1000g'),
+    shipping_slab_2000g: formNumber(formData, 'shipping_slab_2000g'),
+    temporary_max_weight_grams: formNumber(formData, 'temporary_max_weight_grams'),
     cod_fee_type: formData.get('cod_fee_type'),
     cod_fee_flat: formNumber(formData, 'cod_fee_flat'),
     cod_fee_threshold: formNumber(formData, 'cod_fee_threshold'),
@@ -71,5 +76,5 @@ export async function saveShippingRules(
 
   revalidatePath('/admin/shipping');
   revalidatePath('/admin/settings');
-  return { status: 'success', message: 'Shipping settings saved for the upcoming unified pricing engine.' };
+  return { status: 'success', message: 'Authoritative temporary shipping settings saved.' };
 }

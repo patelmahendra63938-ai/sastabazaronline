@@ -231,6 +231,13 @@ export default function AdminProductsPage() {
                         </td>
 
                         <td className="p-4 text-right space-x-1">
+                          <Link
+                            href={`/admin/products/${p.id}`}
+                            className="inline-block p-2 text-orange-700 bg-orange-50 hover:bg-orange-100 rounded-lg transition"
+                            title="Edit Product"
+                          >
+                            <Edit size={16} />
+                          </Link>
                           <Link 
                             href="/admin/inventory"
                             className="inline-block p-2 text-indigo-950 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition font-bold text-xs"

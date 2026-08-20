@@ -27,6 +27,7 @@ export interface EmailOrderPayload {
   items: EmailProductItem[];
   subtotal: number;
   shippingCharge: number;
+  codCharge?: number;
   discount?: number;
   gstAmount?: number;
   grandTotal: number;
@@ -197,7 +198,7 @@ export function buildOrderEmailHtml(type: EmailTemplateType, data: EmailOrderPay
       <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 13px;">
         <tr>
           <td style="padding: 4px 0; color: #64748b;">Items Subtotal:</td>
-          <td style="padding: 4px 0; text-align: right; color: #0f172a;">₹${data.subtotal.toLocaleString('en-IN')}</td>
+          <td style="padding: 4px 0; text-align: right; color: #0f172a;">₹${(data.subtotal + (data.discount || 0)).toLocaleString('en-IN')}</td>
         </tr>
         <tr>
           <td style="padding: 4px 0; color: #64748b;">Shipping Fee:</td>
@@ -211,6 +212,7 @@ export function buildOrderEmailHtml(type: EmailTemplateType, data: EmailOrderPay
             <td style="padding: 4px 0; text-align: right; color: #16a34a; font-weight: bold;">-₹${data.discount.toLocaleString('en-IN')}</td>
           </tr>
         ` : ''}
+        ${data.paymentMethod.toUpperCase().includes('COD') ? `<tr><td style="padding: 4px 0; color: #64748b;">COD Charge:</td><td style="padding: 4px 0; text-align: right; color: #0f172a; font-weight: bold;">₹${Number(data.codCharge || 0).toLocaleString('en-IN')}</td></tr>` : ''}
         <tr>
           <td style="padding: 12px 0 0 0; font-size: 16px; font-weight: 900; color: #0f172a; border-top: 2px solid #e2e8f0;">Grand Total:</td>
           <td style="padding: 12px 0 0 0; font-size: 16px; font-weight: 900; color: #0f172a; text-align: right; border-top: 2px solid #e2e8f0;">₹${data.grandTotal.toLocaleString('en-IN')}</td>

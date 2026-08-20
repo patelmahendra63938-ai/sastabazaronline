@@ -5,6 +5,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { sendTransactionalOrderEmail } from '@/lib/email/emailService';
 import { EmailTemplateType } from '@/lib/email/templates/orderTemplates';
 import { revalidatePath } from 'next/cache';
+import { resolveOrderTotals } from '@/lib/orders/order-totals';
 
 export async function retryOrderEmailAction(notificationId: string) {
   try {
@@ -48,6 +49,7 @@ export async function retryOrderEmailAction(notificationId: string) {
       ? `${order.shipping_address.address}, ${order.shipping_address.city} - ${order.shipping_address.pincode}`
       : order.shipping_address || order.address || 'Address on record';
 
+    const totals = resolveOrderTotals(order);
     const result = await sendTransactionalOrderEmail(
       (notification.template_type as EmailTemplateType) || 'ORDER_CONFIRMED',
       {
@@ -65,6 +67,8 @@ export async function retryOrderEmailAction(notificationId: string) {
         })),
         subtotal: order.subtotal,
         shippingCharge: order.shipping_charge,
+        codCharge: totals.codCharge,
+        discount: totals.discountAmount,
         grandTotal: order.grand_total,
         paymentMethod: order.payment_method,
         orderDate: new Date(order.created_at).toLocaleDateString('en-IN', {

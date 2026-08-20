@@ -3,12 +3,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
-import {
-  getActiveCampaigns,
-  calculateDiscountedPrice,
-  Campaign,
-} from '@/lib/promotions';
-import { checkPincodeShippingRate } from '@/lib/shipping/serviceability';
+import { calculateAuthoritativeOrderPricing } from '@/lib/pricing/pricing-engine';
 import { dispatchOrderNotifications } from '@/lib/notifications/dispatcher';
 
 export interface CheckoutCartItem {
@@ -48,22 +43,6 @@ export interface CheckoutInput {
   cart: CheckoutCartItem[];
   coupon_code?: string;
   shipping_address?: any;
-}
-
-interface VerifiedCheckoutItem {
-  product_id: string;
-  product_title: string;
-  size: string;
-  sku: string;
-  hsn_code: string;
-  gst_rate: number;
-  unit_price: number;
-  original_price: number;
-  applied_offer_label: string | null;
-  discount_reduction: number;
-  weight_kg: number;
-  quantity: number;
-  line_total: number;
 }
 
 export async function createVerifiedOrderAction(formData: CheckoutInput) {
@@ -210,270 +189,17 @@ export async function processOrderCheckout(formData: CheckoutInput) {
           ? 'UPI_QR'
           : 'COD';
 
-    // Collect unique product IDs from the customer cart.
-    const productIds = Array.from(
-      new Set(
-        formData.cart
-          .map((item) => item.product_id || item.id)
-          .filter((id): id is string => Boolean(id))
-      )
-    );
-
-    if (productIds.length === 0) {
-      return {
-        success: false,
-        error: 'No valid product references were found in the cart.',
-      };
-    }
-
-    // Product prices, tax and exact physical weight always come from the server.
-    const { data: dbProducts, error: productError } = await dbSupabase
-      .from('products')
-      .select(
-        'id, title, price, mrp, category, hsn_code, gst_rate, net_weight_grams'
-      )
-      .in('id', productIds);
-
-    if (productError || !dbProducts) {
-      console.error('[CHECKOUT_PRODUCT_QUERY_ERROR]', productError);
-      return {
-        success: false,
-        error: 'Failed to retrieve catalog products from database.',
-      };
-    }
-
-    // Inventory is used only for size/SKU/stock verification here.
-    // Shipping weight does NOT come from inventory.weight_kg.
-    const { data: dbInventory, error: inventoryError } = await dbSupabase
-      .from('inventory')
-      .select(
-        'product_id, size, sku, available_quantity, sold_quantity'
-      )
-      .in('product_id', productIds);
-
-    if (inventoryError || !dbInventory) {
-      console.error('[CHECKOUT_INVENTORY_QUERY_ERROR]', inventoryError);
-      return {
-        success: false,
-        error: 'Failed to retrieve inventory records.',
-      };
-    }
-
-    const { data: rawPromotions, error: promotionsError } = await dbSupabase
-      .from('promotions')
-      .select('*')
-      .eq('is_enabled', true);
-
-    if (promotionsError) {
-      console.warn('[CHECKOUT_PROMOTIONS_QUERY_WARNING]', promotionsError);
-    }
-
-    const activeCampaigns = getActiveCampaigns(
-      (rawPromotions as Campaign[]) || []
-    );
-
-    let serverOriginalTotal = 0;
-    let serverSubtotal = 0;
-    let serverTotalDiscount = 0;
-    let totalTax = 0;
-    let totalActualWeightGrams = 0;
-    let primaryOfferLabel: string | null = null;
-
-    const verifiedItems: VerifiedCheckoutItem[] = [];
-
-    for (const cartItem of formData.cart) {
-      const productId = cartItem.product_id || cartItem.id;
-      const itemSize = cartItem.size || 'Free Size';
-
-      if (!productId) {
-        return {
-          success: false,
-          error: 'A cart item is missing its product reference.',
-        };
-      }
-
-      const product = dbProducts.find((row) => row.id === productId);
-      const inventory = dbInventory.find(
-        (row) =>
-          row.product_id === productId &&
-          row.size === itemSize
-      );
-
-      if (!product) {
-        return {
-          success: false,
-          error: `Product reference (${productId}) is no longer available.`,
-        };
-      }
-
-      if (!inventory) {
-        return {
-          success: false,
-          error: `Size "${itemSize}" for "${product.title}" is unavailable.`,
-        };
-      }
-
-      const quantity = Number(cartItem.quantity);
-
-      if (!Number.isInteger(quantity) || quantity <= 0) {
-        return {
-          success: false,
-          error: `Invalid quantity for "${product.title}".`,
-        };
-      }
-
-      if (Number(inventory.available_quantity) < quantity) {
-        return {
-          success: false,
-          error: `Insufficient stock for "${product.title}" (Size: ${itemSize}). Available: ${inventory.available_quantity}, Requested: ${quantity}`,
-        };
-      }
-
-      const exactWeightGrams = Number(product.net_weight_grams);
-
-      if (
-        !Number.isInteger(exactWeightGrams) ||
-        exactWeightGrams <= 0
-      ) {
-        return {
-          success: false,
-          error: `Exact physical weight is missing for "${product.title}". Please update this product in Admin before checkout.`,
-        };
-      }
-
-      const originalUnitPrice = Number(product.price);
-
-      if (!Number.isFinite(originalUnitPrice) || originalUnitPrice < 0) {
-        return {
-          success: false,
-          error: `Invalid server price for "${product.title}".`,
-        };
-      }
-
-      const { finalPrice, appliedOffer } =
-        calculateDiscountedPrice(
-          originalUnitPrice,
-          activeCampaigns,
-          product.category,
-          product.id,
-          formData.coupon_code,
-          cartItem.selected_campaign_id
-        );
-
-      const itemOriginalTotal = originalUnitPrice * quantity;
-      const itemFinalTotal = Number(finalPrice) * quantity;
-      const itemDiscountAmount = Math.max(
-        0,
-        itemOriginalTotal - itemFinalTotal
-      );
-
-      const gstRate = Number(product.gst_rate || 5);
-      const taxableValue =
-        itemFinalTotal / (1 + gstRate / 100);
-      const gstAmount =
-        itemFinalTotal - taxableValue;
-
-      const itemWeightKg = exactWeightGrams / 1000;
-
-      serverOriginalTotal += itemOriginalTotal;
-      serverSubtotal += itemFinalTotal;
-      serverTotalDiscount += itemDiscountAmount;
-      totalTax += gstAmount;
-      totalActualWeightGrams += exactWeightGrams * quantity;
-
-      if (appliedOffer && !primaryOfferLabel) {
-        primaryOfferLabel = appliedOffer.offerLabel;
-      }
-
-      verifiedItems.push({
-        product_id: product.id,
-        product_title: product.title,
-        size: itemSize,
-        sku:
-          inventory.sku ||
-          `SKU-${product.id.slice(0, 4)}-${itemSize}`,
-        hsn_code: product.hsn_code || '6204',
-        gst_rate: gstRate,
-        unit_price: Number(finalPrice),
-        original_price: originalUnitPrice,
-        applied_offer_label: appliedOffer
-          ? appliedOffer.offerLabel
-          : null,
-        discount_reduction: itemDiscountAmount,
-        weight_kg: itemWeightKg,
-        quantity,
-        line_total: itemFinalTotal,
-      });
-    }
-
-    const totalActualWeightKg =
-      totalActualWeightGrams / 1000;
-
-    /*
-     * TEMPORARY SHIPPING POLICY
-     * -------------------------
-     * NimbusPost Partner API v2 serviceability/rate response contract is
-     * still awaiting official confirmation.
-     *
-     * We keep the existing no-free-shipping slab behavior temporarily so
-     * today's atomicity/exact-weight fix does not invent undocumented v2
-     * fields. This block must be replaced by the verified NimbusPost v2 quote
-     * adapter before production shipping is considered final.
-     */
-    let customerShippingCharge: number;
-
-    if (totalActualWeightGrams <= 500) {
-      customerShippingCharge = 80;
-    } else if (totalActualWeightGrams <= 1000) {
-      customerShippingCharge = 110;
-    } else if (totalActualWeightGrams <= 2000) {
-      customerShippingCharge = 140;
-    } else {
-      return {
-        success: false,
-        error:
-          'Weight exceeds the temporary supported shipping range. NimbusPost v2 live pricing will replace this rule after the official API contract is confirmed.',
-      };
-    }
-
-    // Temporary existing store COD policy.
-    // NimbusPost COD pricing will replace this when the verified v2 rate
-    // response is integrated.
-    const appliedCodCharge =
-      paymentMethod === 'COD'
-        ? serverSubtotal >= 1000
-          ? 50
-          : 40
-        : 0;
-
-    // Existing adapter is used only for PIN/serviceability gating today.
-    // Its implementation will be replaced after NimbusPost confirms v2.
-    const shippingAssessment =
-      await checkPincodeShippingRate(
-        cleanPincode,
-        totalActualWeightKg,
-        serverSubtotal,
-        paymentMethod === 'COD'
-          ? 'COD'
-          : 'PREPAID'
-      );
-
-    if (!shippingAssessment.isServiceable) {
-      return {
-        success: false,
-        error:
-          shippingAssessment.message ||
-          'Delivery is currently unavailable for this PIN code.',
-      };
-    }
-
-    const roundedTaxAmount =
-      Math.round(totalTax * 100) / 100;
-
-    const grandTotal =
-      serverSubtotal +
-      customerShippingCharge +
-      appliedCodCharge;
+    const pricing = await calculateAuthoritativeOrderPricing({ db: dbSupabase, pincode: cleanPincode, paymentMethod, cart: formData.cart, couponCode: formData.coupon_code });
+    const serverOriginalTotal = pricing.originalProductPriceTotal;
+    const serverSubtotal = pricing.discountedSubtotal;
+    const serverTotalDiscount = pricing.discountDeductionAmount;
+    const primaryOfferLabel = pricing.primaryOfferName;
+    const verifiedItems = pricing.verifiedItems;
+    const totalActualWeightKg = pricing.actualWeightGrams / 1000;
+    const customerShippingCharge = pricing.shippingCharge;
+    const appliedCodCharge = pricing.codCharge;
+    const roundedTaxAmount = pricing.totalTaxAmount;
+    const grandTotal = pricing.totalPayable;
 
     const currentYear = new Date().getFullYear();
     const orderNumber =
@@ -523,12 +249,11 @@ export async function processOrderCheckout(formData: CheckoutInput) {
         p_subtotal: serverSubtotal,
         p_tax_amount: roundedTaxAmount,
         p_actual_weight_kg: totalActualWeightKg,
-        p_chargeable_weight_kg:
-          Number(shippingAssessment.chargeableWeightKg) ||
-          totalActualWeightKg,
-        p_actual_courier_cost:
-          Number(shippingAssessment.baseCourierCost) || 0,
+        p_chargeable_weight_kg: pricing.chargeableWeightGrams / 1000,
+        p_actual_courier_cost: 0,
         p_shipping_charge: customerShippingCharge,
+        p_cod_charge: appliedCodCharge,
+        p_discount_amount: serverTotalDiscount,
         p_grand_total: grandTotal,
         p_payment_method: paymentMethod,
         p_items: verifiedItems.map((item) => ({
@@ -589,6 +314,8 @@ export async function processOrderCheckout(formData: CheckoutInput) {
         grandTotal,
         subtotal: serverSubtotal,
         shippingCharge: customerShippingCharge,
+        codCharge: appliedCodCharge,
+        discountAmount: serverTotalDiscount,
         taxAmount: roundedTaxAmount,
         items: verifiedItems,
       });
@@ -610,7 +337,7 @@ export async function processOrderCheckout(formData: CheckoutInput) {
         discount_amount: serverTotalDiscount,
         subtotal: serverSubtotal,
         shipment_weight:
-          `${totalActualWeightGrams} g`,
+          `${pricing.actualWeightGrams} g`,
         shipping_charge:
           `₹${customerShippingCharge.toFixed(2)}`,
         cod_charge:

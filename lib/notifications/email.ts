@@ -10,6 +10,8 @@ export interface EmailOrderPayload {
   grandTotal: number;
   subtotal: number;
   shippingCharge: number;
+  codCharge: number;
+  discountAmount?: number;
   taxAmount: number;
   items: Array<{
     product_title: string;
@@ -118,14 +120,16 @@ function generateOrderEmailHtml(data: EmailOrderPayload): string {
                 <table width="100%" cellpadding="4" cellspacing="0" style="font-size: 12px; color: #475569;">
                   <tr>
                     <td>Subtotal (incl. GST):</td>
-                    <td align="right" style="color: #0f172a; font-weight: 600;">₹${data.subtotal}</td>
+                    <td align="right" style="color: #0f172a; font-weight: 600;">₹${data.subtotal + (data.discountAmount || 0)}</td>
                   </tr>
+                  ${data.discountAmount && data.discountAmount > 0 ? `<tr><td>Discount:</td><td align="right" style="color: #047857; font-weight: 700;">-₹${data.discountAmount}</td></tr>` : ''}
                   <tr>
                     <td>Shipping Charge:</td>
                     <td align="right" style="color: #047857; font-weight: 700;">
                       ${data.shippingCharge === 0 ? 'FREE' : `₹${data.shippingCharge}`}
                     </td>
                   </tr>
+                  ${data.paymentMethod.toUpperCase().includes('COD') ? `<tr><td>COD Charge:</td><td align="right" style="color: #0f172a; font-weight: 600;">₹${data.codCharge}</td></tr>` : ''}
                   <tr>
                     <td>Payment Mode:</td>
                     <td align="right" style="color: #0f172a; font-weight: 600;">${data.paymentMethod}</td>

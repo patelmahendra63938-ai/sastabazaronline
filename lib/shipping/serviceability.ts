@@ -17,6 +17,11 @@ export interface PincodeShippingResult {
   message?: string;
 }
 
+/**
+ * @deprecated Not a pricing authority. Phase B checkout uses the temporary-slabs
+ * pricing engine and local six-digit PIN validation. Retained only for legacy
+ * non-checkout callers until the verified NimbusPost v2 contract is implemented.
+ */
 export async function checkPincodeShippingRate(
   destinationPincode: string,
   totalActualWeightKg: number,

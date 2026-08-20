@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { supabase } from '@/lib/supabase';
+import { resolveOrderTotals } from '@/lib/orders/order-totals';
+import { getVerifiedOrderDetailAction } from '@/actions/orderDetails';
 import { 
   Package, Truck, CheckCircle2, Clock, XCircle, RotateCcw, 
   AlertCircle, ChevronRight, ArrowLeft, Loader2,
@@ -30,6 +32,10 @@ export default function CustomerOrderDetailPage({
   const [actionLoading, setActionLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [requiresVerification, setRequiresVerification] = useState(false);
+  const [canManage, setCanManage] = useState(false);
+  const [verificationEmail, setVerificationEmail] = useState('');
+  const [verificationPhone, setVerificationPhone] = useState('');
 
   // Modals
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -46,54 +52,30 @@ export default function CustomerOrderDetailPage({
   const [customerComment, setCustomerComment] = useState('');
   const [refundUpiId, setRefundUpiId] = useState('');
 
-  const fetchOrderDetails = async () => {
+  const fetchOrderDetails = async (credentials?: { email: string; phone: string }) => {
     if (!orderId) return;
     setLoading(true);
     setErrorMsg(null);
 
     try {
-      // 1. Fetch Order with Items
-      const { data: ordData, error: ordErr } = await supabase
-        .from('orders')
-        .select(`
-          *,
-          order_items (*)
-        `)
-        .or(`id.eq.${orderId},order_number.eq.${orderId}`)
-        .single();
-
-      if (ordErr || !ordData) {
-        throw new Error('Order not found or invalid order reference.');
+      const result = await getVerifiedOrderDetailAction({ orderRef: orderId, email: credentials?.email, phone: credentials?.phone });
+      if (!result.success || !result.order) {
+        setRequiresVerification(Boolean(result.requiresVerification));
+        throw new Error(result.error || 'Order could not be verified.');
       }
-      setOrder(ordData);
-
-      // 2. Fetch Any Existing Return Record
-      const { data: retData } = await supabase
-        .from('returns')
-        .select('*, return_items(*)')
-        .eq('order_id', ordData.id)
-        .maybeSingle();
-
-      if (retData) {
-        setReturnRequest(retData);
-      }
-
-      // 3. Fetch Any Existing Refund Record (for prepaid cancellations or returns)
-      const { data: refData } = await supabase
-        .from('refunds')
-        .select('*')
-        .eq('order_id', ordData.id)
-        .maybeSingle();
-
-      if (refData) {
-        setRefundRecord(refData);
-      }
+      setOrder(result.order); setReturnRequest(result.returnRequest); setRefundRecord(result.refundRecord);
+      setCanManage(Boolean(result.canManage)); setRequiresVerification(false);
     } catch (err: any) {
       console.error('Error loading customer order:', err);
       setErrorMsg(err.message || 'Unable to retrieve order details.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleVerifyGuestOrder = async (event: React.FormEvent) => {
+    event.preventDefault();
+    await fetchOrderDetails({ email: verificationEmail, phone: verificationPhone });
   };
 
   useEffect(() => {
@@ -103,6 +85,7 @@ export default function CustomerOrderDetailPage({
   const isPrepaidOrder = order?.payment_method?.toUpperCase().includes('ONLINE') || 
                          order?.payment_method?.toUpperCase().includes('UPI') || 
                          order?.payment_status === 'PAID';
+  const totals = order ? resolveOrderTotals(order) : null;
 
   // Handle Order Cancellation (with Prepaid Refund support)
   const handleConfirmCancel = async (e: React.FormEvent) => {
@@ -261,6 +244,19 @@ export default function CustomerOrderDetailPage({
   }
 
   if (errorMsg && !order) {
+    if (requiresVerification) return (
+      <main className="min-h-screen bg-[#F8F9FB] flex flex-col justify-between"><Header />
+        <div className="mx-auto w-full max-w-md flex-1 px-4 py-20">
+          <form onSubmit={handleVerifyGuestOrder} className="space-y-4 rounded-3xl border bg-white p-6 shadow-sm">
+            <div><h1 className="text-lg font-black text-indigo-950">Verify Your Order</h1><p className="mt-1 text-xs text-gray-500">Order number <b>{orderId}</b> is not a secret. Enter the same email and phone used at checkout.</p></div>
+            <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">{errorMsg}</div>
+            <label className="block text-xs font-bold text-gray-700">Order Email *<input type="email" required value={verificationEmail} onChange={(e) => setVerificationEmail(e.target.value)} className="mt-1 w-full rounded-xl border px-3 py-2.5" /></label>
+            <label className="block text-xs font-bold text-gray-700">Order Phone *<input type="tel" required inputMode="numeric" value={verificationPhone} onChange={(e) => setVerificationPhone(e.target.value)} className="mt-1 w-full rounded-xl border px-3 py-2.5" /></label>
+            <button type="submit" className="w-full rounded-xl bg-indigo-950 px-5 py-3 text-xs font-bold text-white">Verify & Track Order</button>
+            <Link href="/orders" className="block text-center text-xs font-bold text-indigo-700">Back to My Orders</Link>
+          </form>
+        </div><Footer /></main>
+    );
     return (
       <main className="min-h-screen bg-[#F8F9FB] flex flex-col justify-between">
         <Header />
@@ -363,7 +359,7 @@ export default function CustomerOrderDetailPage({
 
             {/* Action Buttons: Cancel vs Return vs Status Pill */}
             <div className="flex items-center gap-2.5">
-              {isCancellable && (
+              {canManage && isCancellable && (
                 <button
                   onClick={() => setShowCancelModal(true)}
                   className="px-4 py-2 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl transition cursor-pointer shadow-2xs"
@@ -372,7 +368,7 @@ export default function CustomerOrderDetailPage({
                 </button>
               )}
 
-              {isReturnWindowValid && (
+              {canManage && isReturnWindowValid && (
                 <button
                   onClick={() => setShowReturnModal(true)}
                   className="px-4 py-2 text-xs font-bold text-indigo-950 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-xl transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
@@ -519,6 +515,10 @@ export default function CustomerOrderDetailPage({
 
             <div className="bg-gray-50/70 p-4 rounded-2xl space-y-2">
               <p className="font-bold text-gray-500 text-[10px] uppercase">Financial Summary</p>
+              <div className="flex justify-between text-gray-600 text-xs"><span>Product Subtotal:</span><span className="font-bold text-gray-900">₹{totals?.productSubtotal}</span></div>
+              {Boolean(totals?.discountAmount) && <div className="flex justify-between text-green-700 text-xs"><span>Discount:</span><span className="font-bold">-₹{totals?.discountAmount}</span></div>}
+              <div className="flex justify-between text-gray-600 text-xs"><span>Shipping Charge:</span><span className="font-bold text-gray-900">₹{totals?.shippingCharge}</span></div>
+              {totals?.isCod && <div className="flex justify-between text-gray-600 text-xs"><span>COD Charge:</span><span className="font-bold text-gray-900">₹{totals.codCharge}</span></div>}
               <div className="flex justify-between text-gray-600 text-xs">
                 <span>Payment Mode:</span>
                 <span className="font-bold text-gray-900">{order.payment_method || 'COD'}</span>
@@ -537,7 +537,7 @@ export default function CustomerOrderDetailPage({
               <div className="flex justify-between text-sm font-black text-indigo-950 pt-1 border-t border-gray-200">
                 <span>Total Amount:</span>
                 <span className={isCancelled ? 'text-gray-400 line-through' : 'text-orange-600'}>
-                  ₹{order.grand_total || order.total_amount}
+                  ₹{totals?.grandTotal}
                 </span>
               </div>
             </div>

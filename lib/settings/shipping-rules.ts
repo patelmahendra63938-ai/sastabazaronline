@@ -1,11 +1,16 @@
 export type CodFeeType = 'tiered' | 'flat';
 
 export interface ShippingRules {
+  pricing_mode: 'temporary_slabs';
   free_shipping_enabled: boolean;
   free_shipping_threshold: number;
   apply_courier_charge: boolean;
   courier_markup_pct: number;
   weight_buffer_pct: number;
+  shipping_slab_500g: number;
+  shipping_slab_1000g: number;
+  shipping_slab_2000g: number;
+  temporary_max_weight_grams: number;
   cod_fee_type: CodFeeType;
   cod_fee_flat: number;
   cod_fee_threshold: number;
@@ -18,11 +23,16 @@ export interface ShippingActionState {
 }
 
 export const DEFAULT_SHIPPING_RULES: ShippingRules = {
+  pricing_mode: 'temporary_slabs',
   free_shipping_enabled: false,
-  free_shipping_threshold: 499,
+  free_shipping_threshold: 999,
   apply_courier_charge: true,
   courier_markup_pct: 30,
   weight_buffer_pct: 0,
+  shipping_slab_500g: 80,
+  shipping_slab_1000g: 110,
+  shipping_slab_2000g: 140,
+  temporary_max_weight_grams: 2000,
   cod_fee_type: 'tiered',
   cod_fee_flat: 40,
   cod_fee_threshold: 1000,
@@ -51,6 +61,7 @@ export function parseShippingRules(value: unknown): ShippingRules {
   const legacyMarkup = finiteNumber(rules.cost_buffer_pct, DEFAULT_SHIPPING_RULES.courier_markup_pct);
 
   return {
+    pricing_mode: 'temporary_slabs',
     free_shipping_enabled: booleanValue(
       rules.free_shipping_enabled,
       DEFAULT_SHIPPING_RULES.free_shipping_enabled
@@ -68,6 +79,10 @@ export function parseShippingRules(value: unknown): ShippingRules {
       rules.weight_buffer_pct,
       DEFAULT_SHIPPING_RULES.weight_buffer_pct
     ),
+    shipping_slab_500g: finiteNumber(rules.shipping_slab_500g, DEFAULT_SHIPPING_RULES.shipping_slab_500g),
+    shipping_slab_1000g: finiteNumber(rules.shipping_slab_1000g, DEFAULT_SHIPPING_RULES.shipping_slab_1000g),
+    shipping_slab_2000g: finiteNumber(rules.shipping_slab_2000g, DEFAULT_SHIPPING_RULES.shipping_slab_2000g),
+    temporary_max_weight_grams: finiteNumber(rules.temporary_max_weight_grams, DEFAULT_SHIPPING_RULES.temporary_max_weight_grams),
     cod_fee_type: rules.cod_fee_type === 'flat' ? 'flat' : 'tiered',
     cod_fee_flat: finiteNumber(
       rules.cod_fee_flat ?? rules.cod_charge,
@@ -90,6 +105,10 @@ export function validateShippingRules(rules: ShippingRules): string[] {
     ['Free shipping threshold', rules.free_shipping_threshold],
     ['Courier markup', rules.courier_markup_pct],
     ['Weight buffer', rules.weight_buffer_pct],
+    ['500 g shipping slab', rules.shipping_slab_500g],
+    ['1 kg shipping slab', rules.shipping_slab_1000g],
+    ['2 kg shipping slab', rules.shipping_slab_2000g],
+    ['Temporary maximum weight', rules.temporary_max_weight_grams],
     ['COD flat fee', rules.cod_fee_flat],
     ['COD threshold', rules.cod_fee_threshold],
     ['COD fee above threshold', rules.cod_fee_above_threshold],
@@ -104,6 +123,7 @@ export function validateShippingRules(rules: ShippingRules): string[] {
   if (rules.courier_markup_pct > 500 || rules.weight_buffer_pct > 500) {
     errors.push('Percentage values cannot exceed 500%.');
   }
+  if (!Number.isInteger(rules.temporary_max_weight_grams) || rules.temporary_max_weight_grams < 2000) errors.push('Temporary maximum weight must be an integer of at least 2000 g.');
 
   return errors;
 }

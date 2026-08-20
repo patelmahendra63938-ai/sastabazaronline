@@ -15,7 +15,7 @@ export interface OrderLookupResult {
 /**
  * Validates and retrieves orders using authenticated user ID or verified guest email.
  */
-export async function lookupOrdersAction(inputEmail?: string): Promise<OrderLookupResult> {
+export async function lookupOrdersAction(input?: { email?: string; phone?: string }): Promise<OrderLookupResult> {
   try {
     const supabase = await createServerSupabaseClient();
     const { user } = await getCurrentUser();
@@ -38,6 +38,8 @@ export async function lookupOrdersAction(inputEmail?: string): Promise<OrderLook
           payment_status,
           subtotal,
           shipping_charge,
+          cod_charge,
+          discount_amount,
           grand_total,
           item_count,
           courier_partner,
@@ -78,15 +80,17 @@ export async function lookupOrdersAction(inputEmail?: string): Promise<OrderLook
     // =========================================================================
     // CASE 2: GUEST CUSTOMER (EMAIL LOOKUP VIA SECURE RPC)
     // =========================================================================
-    if (!inputEmail || !inputEmail.trim()) {
-      return { success: false, error: 'Please enter the email address used when placing your order.' };
+    if (!input?.email || !input.email.trim() || !input.phone) {
+      return { success: false, error: 'Enter the email and phone number used when placing your order.' };
     }
 
-    const cleanEmail = inputEmail.trim().toLowerCase();
+    const cleanEmail = input.email.trim().toLowerCase();
+    const cleanPhone = input.phone.replace(/\D/g, '');
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(cleanEmail)) {
       return { success: false, error: 'Please enter a valid email address.' };
     }
+    if (cleanPhone.length < 10) return { success: false, error: 'Enter a valid order phone number.' };
 
     // Extract client IP for rate limiting
     const headersList = await headers();
@@ -96,8 +100,9 @@ export async function lookupOrdersAction(inputEmail?: string): Promise<OrderLook
       'anonymous-client';
 
     // Invoke PostgreSQL Security Definer RPC
-    const { data: rpcResponse, error: rpcError } = await supabase.rpc('get_orders_by_guest_email', {
+    const { data: rpcResponse, error: rpcError } = await supabase.rpc('get_orders_by_guest_identity', {
       p_email: cleanEmail,
+      p_phone: cleanPhone,
       p_ip: clientIp
     });
 
