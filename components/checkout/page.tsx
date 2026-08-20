@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { createClient } from '@/lib/supabase/client';
 import { createVerifiedOrderAction } from '@/actions/checkout';
 import LocationPermissionModal, { LocationResult } from '@/components/checkout/LocationPermissionModal';
+import { resolveStorefrontImageSrc } from '@/lib/storefront-image';
 import { 
   ShoppingBag, Truck, ShieldCheck, CreditCard, 
   ArrowRight, MapPin, Navigation, Mail, Lock, AlertCircle 
@@ -359,7 +361,7 @@ export default function CheckoutPage() {
                 {cart.map((item, idx) => (
                   <div key={idx} className="py-2.5 flex items-center justify-between gap-3 text-xs">
                     <div className="flex items-center gap-2">
-                      {item.image && <img src={item.image} alt="" className="w-10 h-10 object-cover rounded-lg border" />}
+                      {item.image && <Image src={resolveStorefrontImageSrc(item.image)} alt="" width={40} height={40} sizes="40px" className="w-10 h-10 object-cover rounded-lg border" />}
                       <div>
                         <p className="font-bold text-gray-800 line-clamp-1">{item.title}</p>
                         <p className="text-[10px] text-gray-400">Qty: {item.quantity || 1}</p>

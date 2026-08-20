@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, use, useCallback } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -9,6 +10,7 @@ import ProductCard, { Product } from '@/components/ProductCard';
 import { SellerMarketplaceTrust } from '@/components/SellerMarketplaceTrust';
 import { supabase } from '@/lib/supabase';
 import { sanitizeMarketplaceUrl, sanitizeMarketplaceName } from '@/lib/utils';
+import { resolveStorefrontImageSrc } from '@/lib/storefront-image';
 import { 
   getActiveCampaigns, 
   calculateDiscountedPrice, 
@@ -122,8 +124,8 @@ export default function ProductDetailPage({
 
         const initialImg = (prodData.images && prodData.images.length > 0)
           ? prodData.images[0]
-          : prodData.image || 'https://images.unsplash.com/photo-1584990347426-c7853cd4afc9?w=600';
-        setSelectedMedia(initialImg);
+          : prodData.image;
+        setSelectedMedia(resolveStorefrontImageSrc(initialImg));
         setMediaType('image');
 
         // B. Fetch active promotions & campaigns
@@ -172,7 +174,7 @@ export default function ProductDetailPage({
               price: prodData.price,
               mrp: prodData.mrp ?? null,
               category: prodData.category,
-              image: prodData.images?.[0] || prodData.image || initialImg,
+              image: resolveStorefrontImageSrc(prodData.images?.[0] || prodData.image || initialImg),
             });
             if (recentList.length > 6) recentList.pop();
             localStorage.setItem('sastabazar_recent', JSON.stringify(recentList));
@@ -185,7 +187,7 @@ export default function ProductDetailPage({
         // F. Fetch Similar Category Products
         const { data: similar } = await supabase
           .from('products')
-          .select('id, title, price, mrp, category, images, image, stock')
+          .select('id, title, price, mrp, category, images, stock')
           .eq('is_active', true)
           .eq('category', prodData.category || 'General')
           .neq('id', productId)
@@ -206,10 +208,10 @@ export default function ProductDetailPage({
 
   // Derived Media Lists
   const imagesList: string[] = product?.images && product.images.length > 0
-    ? product.images
+    ? product.images.map((image: string) => resolveStorefrontImageSrc(image))
     : product?.image
-      ? [product.image]
-      : ['https://images.unsplash.com/photo-1584990347426-c7853cd4afc9?w=600'];
+      ? [resolveStorefrontImageSrc(product.image)]
+      : [resolveStorefrontImageSrc(null)];
 
   const videoSource = product?.video || product?.video_url || null;
 
@@ -495,14 +497,14 @@ export default function ProductDetailPage({
                     <button
                       key={idx}
                       onClick={() => { setSelectedMedia(img); setMediaType('image'); }}
-                      className={`w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden border-2 shrink-0 transition-all duration-200 cursor-pointer ${
+                      className={`relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden border-2 shrink-0 transition-all duration-200 cursor-pointer ${
                         selectedMedia === img && mediaType === 'image'
                           ? 'border-orange-500 ring-2 ring-orange-100 shadow-xs scale-98'
                           : 'border-gray-200 hover:border-gray-300 opacity-80 hover:opacity-100'
                       }`}
                       aria-label={`View thumbnail ${idx + 1}`}
                     >
-                      <img src={img} alt="" width={80} height={80} loading="lazy" className="w-full h-full object-cover" />
+                      <Image src={img} alt="" fill sizes="80px" className="object-cover" />
                     </button>
                   ))}
 
@@ -517,7 +519,6 @@ export default function ProductDetailPage({
                       }`}
                       aria-label="View product demonstration video"
                     >
-                      <video src={videoSource} className="w-full h-full object-cover opacity-50 pointer-events-none" />
                       <PlayCircle className="absolute text-white" size={24} />
                     </button>
                   )}
@@ -535,10 +536,13 @@ export default function ProductDetailPage({
               >
                 {mediaType === 'image' ? (
                   <>
-                    <img 
+                    <Image
                       src={selectedMedia || imagesList[0]} 
                       alt={product.title} 
-                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-103"
+                      fill
+                      sizes="(max-width: 1024px) calc(100vw - 2rem), 42vw"
+                      fetchPriority="high"
+                      className="object-cover transition-transform duration-300 group-hover:scale-103"
                     />
                     <div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-md text-white text-[11px] font-semibold px-3 py-1.5 rounded-xl flex items-center gap-1.5 opacity-90 group-hover:opacity-100 transition shadow-sm">
                       <Eye size={13} /> Click to expand
@@ -1026,16 +1030,20 @@ export default function ProductDetailPage({
             </>
           )}
 
-          <div 
+          <div
             className="w-full h-full p-4 sm:p-12 md:p-20 flex items-center justify-center cursor-zoom-out"
             onClick={closeLightbox}
           >
-            <img 
-              src={imagesList[lightbox.index]} 
-              alt={`Product preview ${lightbox.index + 1}`} 
-              className="max-w-full max-h-full object-contain select-none shadow-2xl transition-transform duration-200" 
-              onClick={(e) => e.stopPropagation()} 
-            />
+            <div className="relative w-full h-full">
+              <Image
+                src={imagesList[lightbox.index]}
+                alt={`Product preview ${lightbox.index + 1}`}
+                fill
+                sizes="100vw"
+                className="object-contain select-none shadow-2xl transition-transform duration-200"
+                onClick={(e) => e.stopPropagation()}
+              />
+            </div>
           </div>
         </div>
       )}

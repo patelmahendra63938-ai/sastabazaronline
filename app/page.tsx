@@ -301,7 +301,9 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
                         src={category.homepage_image_url}
                         alt=""
                         fill
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 66vw, 33vw"
+                        sizes={category.homepage_featured
+                          ? '(max-width: 640px) calc(100vw - 2rem), (max-width: 1024px) 66vw, 33vw'
+                          : '(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 17vw'}
                         className="absolute inset-0 size-full object-cover"
                       />
                     )}

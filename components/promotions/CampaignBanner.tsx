@@ -2,8 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { getImageProps } from 'next/image';
 import { Clock, Ticket, ArrowRight, Sparkles } from 'lucide-react';
 import { Campaign } from '@/lib/promotions';
+import { resolveStorefrontImageSrc } from '@/lib/storefront-image';
 
 interface CampaignBannerProps {
   campaign?: Campaign | null;
@@ -69,6 +71,24 @@ export default function CampaignBanner({ campaign }: CampaignBannerProps) {
 
   const activeTheme = themeClasses[campaign.theme] || themeClasses.Festive;
   const targetUrl = campaign.slug ? `/sale/${campaign.slug}` : `/?category=${encodeURIComponent(campaign.target_category || '')}`;
+  const desktopBanner = getImageProps({
+    src: resolveStorefrontImageSrc(campaign.banner_url || campaign.mobile_banner_url),
+    alt: campaign.name,
+    width: 1200,
+    height: 660,
+    sizes: '(max-width: 768px) 100vw, 42vw',
+    fetchPriority: 'high',
+  }).props;
+  const mobileBanner = campaign.mobile_banner_url
+    ? getImageProps({
+        src: resolveStorefrontImageSrc(campaign.mobile_banner_url),
+        alt: campaign.name,
+        width: 768,
+        height: 440,
+        sizes: '100vw',
+        fetchPriority: 'high',
+      }).props
+    : null;
 
   return (
     <Link
@@ -81,14 +101,14 @@ export default function CampaignBanner({ campaign }: CampaignBannerProps) {
         {(campaign.banner_url || campaign.mobile_banner_url) && (
           <div className="w-full md:w-5/12 h-48 md:h-auto min-h-[220px] relative bg-black/10 overflow-hidden shrink-0">
             <picture>
-              {campaign.mobile_banner_url && (
-                <source media="(max-width: 768px)" srcSet={campaign.mobile_banner_url} />
+              {mobileBanner && (
+                <source media="(max-width: 768px)" srcSet={mobileBanner.srcSet} />
               )}
+              {/* getImageProps keeps art direction while using Next's image optimizer. */}
               <img
-                src={campaign.banner_url || campaign.mobile_banner_url || ''}
+                {...desktopBanner}
                 alt={campaign.name}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                loading="eager"
               />
             </picture>
             <div className="absolute inset-0 bg-gradient-to-t md:bg-gradient-to-r from-black/60 via-transparent to-transparent" />

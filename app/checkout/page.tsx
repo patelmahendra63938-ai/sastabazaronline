@@ -11,6 +11,8 @@ import {
   Navigation, FileText, Tag, AlertCircle, Check, XCircle, RefreshCw 
 } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
+import { resolveStorefrontImageSrc } from '@/lib/storefront-image';
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -574,6 +576,8 @@ export default function CheckoutPage() {
                         <span>Scan to Pay: <b className="text-orange-600 font-black text-base">₹{grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</b></span>
                       </div>
                       <div className="w-48 h-48 bg-white p-2 rounded-xl border mx-auto flex items-center justify-center shadow-sm">
+                        {/* Generated payment QR stays direct; it is not a storefront media asset. */}
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={qrCodeImageUrl} alt="UPI QR" className="w-full h-full object-contain" />
                       </div>
                       <p className="text-[11px] text-gray-600">UPI ID: <span className="font-mono font-bold text-indigo-950">{storeUpiId}</span></p>
@@ -614,12 +618,12 @@ export default function CheckoutPage() {
                     return (
                       <div key={`${itemId}-${item.size}`} className="py-3 flex items-center justify-between gap-3 text-xs">
                         <div className="flex items-center gap-3 overflow-hidden">
-                          <img 
-                            src={item.image || (item.images ? item.images[0] : 'https://via.placeholder.com/150')} 
+                          <Image
+                            src={resolveStorefrontImageSrc(item.image || (item.images ? item.images[0] : null))}
                             alt={item.title} 
                             width={48}
                             height={48}
-                            loading="lazy"
+                            sizes="48px"
                             className="w-12 h-12 object-cover rounded-xl border border-gray-200 shrink-0"
                           />
                           <div className="min-w-0">

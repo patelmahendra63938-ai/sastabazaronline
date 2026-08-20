@@ -1,13 +1,15 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { ShoppingCart, Zap, ShieldCheck, Truck, RotateCcw, Check } from 'lucide-react';
+import { resolveStorefrontImageSrc } from '@/lib/storefront-image';
 
 export default function ProductDetailClient({ product }: { product: any }) {
   const router = useRouter();
   const [selectedImage, setSelectedImage] = useState(
-    product.images?.[0] || product.image || 'https://via.placeholder.com/500'
+    resolveStorefrontImageSrc(product.images?.[0] || product.image)
   );
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
@@ -54,8 +56,8 @@ export default function ProductDetailClient({ product }: { product: any }) {
     <div className="bg-white rounded-3xl border border-gray-200 p-6 sm:p-8 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-8">
       {/* Product Image Gallery */}
       <div className="space-y-4">
-        <div className="aspect-square rounded-2xl overflow-hidden bg-gray-100 border">
-          <img src={selectedImage} alt={product.title} className="w-full h-full object-cover" />
+        <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 border">
+          <Image src={resolveStorefrontImageSrc(selectedImage)} alt={product.title} fill sizes="(max-width: 768px) calc(100vw - 3rem), 50vw" fetchPriority="high" className="object-cover" />
         </div>
 
         {images.length > 1 && (
@@ -64,9 +66,9 @@ export default function ProductDetailClient({ product }: { product: any }) {
               <button
                 key={idx}
                 onClick={() => setSelectedImage(img)}
-                className={`w-16 h-16 rounded-xl border-2 overflow-hidden shrink-0 ${selectedImage === img ? 'border-indigo-600' : 'border-gray-200'}`}
+                className={`relative w-16 h-16 rounded-xl border-2 overflow-hidden shrink-0 ${selectedImage === img ? 'border-indigo-600' : 'border-gray-200'}`}
               >
-                <img src={img} alt="" className="w-full h-full object-cover" />
+                <Image src={resolveStorefrontImageSrc(img)} alt="" fill sizes="64px" className="object-cover" />
               </button>
             ))}
           </div>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" aria-labelledby="title description">
+  <title id="title">Product image unavailable</title>
+  <desc id="description">SASTABAZARONLINE product placeholder</desc>
+  <rect width="400" height="400" fill="#f3f4f6"/>
+  <path d="M146 152h108l14 132H132l14-132Z" fill="#e0e7ff" stroke="#6366f1" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M169 164v-18a31 31 0 0 1 62 0v18" fill="none" stroke="#6366f1" stroke-width="8" stroke-linecap="round"/>
+  <text x="200" y="326" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" font-weight="700" fill="#3730a3">SASTABAZARONLINE</text>
+</svg>

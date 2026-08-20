@@ -5,7 +5,9 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { ShoppingCart, Trash2, Plus, Minus, ArrowLeft, ShieldCheck, Check } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { resolveStorefrontImageSrc } from '@/lib/storefront-image';
 
 export default function CartPage() {
   const router = useRouter();
@@ -84,11 +86,11 @@ export default function CartPage() {
               {/* Cart Items List */}
               <div className="lg:col-span-8 space-y-4">
                 {cart.map((item, idx) => {
-                  const imageUrl = item.image || (item.images && item.images[0]) || 'https://images.unsplash.com/photo-1598033129183-c4f50c736f10?w=600';
+                  const imageUrl = resolveStorefrontImageSrc(item.image || (item.images && item.images[0]));
 
                   return (
                     <div key={idx} className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 shadow-sm flex flex-col sm:flex-row items-center gap-4">
-                      <img src={imageUrl} alt="" width={96} height={96} loading="lazy" className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-xl border flex-shrink-0" />
+                      <Image src={imageUrl} alt="" width={96} height={96} sizes="96px" className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-xl border flex-shrink-0" />
                       
                       <div className="flex-1 text-center sm:text-left">
                         <h3 className="text-xs sm:text-sm font-bold text-gray-900">{item.title}</h3>

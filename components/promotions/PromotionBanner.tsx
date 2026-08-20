@@ -2,8 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { getImageProps } from 'next/image';
 import { Clock, Ticket } from 'lucide-react';
 import { Campaign } from '@/lib/promotions';
+import { resolveStorefrontImageSrc } from '@/lib/storefront-image';
 
 export default function CampaignBanner({ campaign }: { campaign: Campaign }) {
   const [timeLeft, setTimeLeft] = useState<{ d: number, h: number, m: number, s: number } | null>(null);
@@ -42,14 +44,31 @@ export default function CampaignBanner({ campaign }: { campaign: Campaign }) {
     'Clearance': 'bg-red-600 text-white border-red-800'
   };
   const activeTheme = themeColors[campaign.theme] || themeColors['Festive'];
+  const desktopBanner = getImageProps({
+    src: resolveStorefrontImageSrc(campaign.banner_url || campaign.mobile_banner_url),
+    alt: campaign.name,
+    width: 1200,
+    height: 660,
+    sizes: '(max-width: 768px) 100vw, 42vw',
+  }).props;
+  const mobileBanner = campaign.mobile_banner_url
+    ? getImageProps({
+        src: resolveStorefrontImageSrc(campaign.mobile_banner_url),
+        alt: campaign.name,
+        width: 768,
+        height: 440,
+        sizes: '100vw',
+      }).props
+    : null;
 
   return (
     <div className={`w-full rounded-2xl overflow-hidden shadow-lg flex flex-col md:flex-row border ${activeTheme} relative`}>
       {(campaign.banner_url || campaign.mobile_banner_url) && (
         <div className="w-full md:w-5/12 h-40 md:h-auto shrink-0 relative">
           <picture>
-            {campaign.mobile_banner_url && <source media="(max-width: 768px)" srcSet={campaign.mobile_banner_url} />}
-            <img src={campaign.banner_url || campaign.mobile_banner_url || ''} alt={campaign.name} className="w-full h-full object-cover" />
+            {mobileBanner && <source media="(max-width: 768px)" srcSet={mobileBanner.srcSet} />}
+            {/* getImageProps keeps art direction while using Next's image optimizer. */}
+            <img {...desktopBanner} alt={campaign.name} className="w-full h-full object-cover" />
           </picture>
         </div>
       )}

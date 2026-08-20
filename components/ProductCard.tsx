@@ -2,8 +2,10 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ShoppingCart, Check } from 'lucide-react';
 import { Campaign, calculateDiscountedPrice } from '@/lib/promotions';
+import { resolveStorefrontImageSrc } from '@/lib/storefront-image';
 
 export interface Product {
   id: string;
@@ -25,9 +27,10 @@ export default function ProductCard({ product, activeCampaigns = [] }: ProductCa
   const [added, setAdded] = useState(false);
 
   // Safe image resolution supporting both string arrays and single string URLs
-  const imageUrl = Array.isArray(product.images) && product.images.length > 0
+  const rawImageUrl = Array.isArray(product.images) && product.images.length > 0
     ? product.images[0]
-    : product.image || 'https://via.placeholder.com/400x500?text=Product';
+    : product.image;
+  const imageUrl = resolveStorefrontImageSrc(rawImageUrl);
 
   const originalPrice = Number(product.price || product.mrp || 0);
 
@@ -85,13 +88,12 @@ export default function ProductCard({ product, activeCampaigns = [] }: ProductCa
       <Link href={`/product/${product.id}`} className="block relative cursor-pointer">
         {/* Product Media & Top Floating Badge */}
         <div className="aspect-square bg-gray-100 overflow-hidden relative">
-          <img
+          <Image
             src={imageUrl}
             alt={product.title}
-            width={400}
-            height={400}
+            fill
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-            loading="lazy"
           />
           {appliedOffer && (
             <span className="absolute top-2.5 left-2.5 bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded-md shadow-sm">

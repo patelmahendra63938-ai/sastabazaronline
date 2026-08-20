@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: '**', // બધી જ એક્સટર્નલ ઈમેજ લિંક્સને સપોર્ટ કરવા માટે
+        hostname: 'ozzxrzyahbnavldyrlms.supabase.co',
       },
     ],
   },
