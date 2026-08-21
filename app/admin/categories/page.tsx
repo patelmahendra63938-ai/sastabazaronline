@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
 import { Tags, Plus, Trash2, Power, Loader2, RefreshCw, AlertCircle, Save } from 'lucide-react';
+import { addCategoryAction, updateCategoryAction, deleteCategoryAction, listCategoriesAction } from './actions';
 
 interface CategoryItem {
   id: string;
@@ -20,6 +20,13 @@ interface CategoryItem {
 const getErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : 'An unexpected error occurred.';
 
+type CategoryFilter =
+  | 'all'
+  | 'active'
+  | 'inactive'
+  | 'main_on'
+  | 'main_off';
+
 export default function AdminCategoriesPage() {
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,38 +36,23 @@ export default function AdminCategoriesPage() {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
 
-  // Fetch categories and map associated product counts
+  // Fetch ALL categories through authenticated server action.
+  // This is important because inactive categories may be hidden by public/client RLS.
   const fetchCategories = useCallback(async () => {
     setLoading(true);
     setErrorMessage(null);
     setSuccessMessage(null);
+
     try {
-      const { data: catData, error: catError } = await supabase
-        .from('categories')
-        .select('id, name, is_active, display_order, show_on_homepage, homepage_featured, homepage_display_order, homepage_image_url, created_at')
-        .order('display_order', { ascending: true })
-        .order('created_at', { ascending: false });
+      const result = await listCategoriesAction();
 
-      if (catError) throw catError;
+      if (!result.success || !result.categories) {
+        throw new Error(result.error || 'Failed to load categories.');
+      }
 
-      const { data: prodData } = await supabase
-        .from('products')
-        .select('category');
-
-      const counts: Record<string, number> = {};
-      prodData?.forEach((p: { category?: string }) => {
-        if (p.category) {
-          counts[p.category] = (counts[p.category] || 0) + 1;
-        }
-      });
-
-      const merged: CategoryItem[] = (catData || []).map((c: CategoryItem) => ({
-        ...c,
-        productCount: counts[c.name] || 0,
-      }));
-
-      setCategories(merged);
+      setCategories(result.categories as CategoryItem[]);
     } catch (err: unknown) {
       console.error('Error fetching categories:', err);
       setErrorMessage(getErrorMessage(err) || 'Failed to load categories.');
@@ -84,20 +76,18 @@ export default function AdminCategoriesPage() {
     setErrorMessage(null);
 
     try {
-      const { error } = await supabase
-        .from('categories')
-        .insert([
-          {
-            name: trimmed,
-            is_active: true,
-            display_order: categories.length + 1,
-            homepage_display_order: categories.length + 1,
-          },
-        ]);
+      const result = await addCategoryAction({
+        name: trimmed,
+        display_order: categories.length + 1,
+        homepage_display_order: categories.length + 1,
+      });
 
-      if (error) throw error;
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to add category.');
+      }
 
       setNewCatName('');
+      setSuccessMessage(`${trimmed} created successfully.`);
       await fetchCategories();
     } catch (err: unknown) {
       console.error('Error adding category:', err);
@@ -115,17 +105,26 @@ export default function AdminCategoriesPage() {
     setSavingId(id);
     setErrorMessage(null);
     setSuccessMessage(null);
-    try {
-      const { error } = await supabase
-        .from('categories')
-        .update({ ...updates, updated_at: new Date().toISOString() })
-        .eq('id', id);
 
-      if (error) throw error;
+    try {
+      const result = await updateCategoryAction(id, updates);
+
+      if (!result.success || !result.category) {
+        throw new Error(result.error || 'Failed to update category.');
+      }
 
       setCategories((prev) =>
-        prev.map((category) => (category.id === id ? { ...category, ...updates } : category))
+        prev.map((category) =>
+          category.id === id
+            ? {
+                ...category,
+                ...result.category,
+                productCount: category.productCount,
+              }
+            : category
+        )
       );
+
       setSuccessMessage(successMessage);
     } catch (err: unknown) {
       console.error('Error updating category:', err);
@@ -169,14 +168,14 @@ export default function AdminCategoriesPage() {
 
     setDeletingId(id);
     try {
-      const { error } = await supabase
-        .from('categories')
-        .delete()
-        .eq('id', id);
+      const result = await deleteCategoryAction(id);
 
-      if (error) throw error;
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to delete category.');
+      }
 
       setCategories((prev) => prev.filter((c) => c.id !== id));
+      setSuccessMessage(`${name} deleted successfully.`);
     } catch (err: unknown) {
       console.error('Error deleting category:', err);
       setErrorMessage(`Failed to delete category: ${getErrorMessage(err)}`);
@@ -184,6 +183,34 @@ export default function AdminCategoriesPage() {
       setDeletingId(null);
     }
   };
+
+  const categoryCounts = {
+    all: categories.length,
+    active: categories.filter((category) => category.is_active).length,
+    inactive: categories.filter((category) => !category.is_active).length,
+    main_on: categories.filter((category) => category.show_on_homepage).length,
+    main_off: categories.filter((category) => !category.show_on_homepage).length,
+  };
+
+  const filteredCategories = categories.filter((category) => {
+    if (categoryFilter === 'active') return category.is_active;
+    if (categoryFilter === 'inactive') return !category.is_active;
+    if (categoryFilter === 'main_on') return category.show_on_homepage;
+    if (categoryFilter === 'main_off') return !category.show_on_homepage;
+    return true;
+  });
+
+  const filterButtons: Array<{
+    key: CategoryFilter;
+    label: string;
+    count: number;
+  }> = [
+    { key: 'all', label: 'All', count: categoryCounts.all },
+    { key: 'active', label: 'Active', count: categoryCounts.active },
+    { key: 'inactive', label: 'Inactive', count: categoryCounts.inactive },
+    { key: 'main_on', label: 'Main Page ON', count: categoryCounts.main_on },
+    { key: 'main_off', label: 'Main Page OFF', count: categoryCounts.main_off },
+  ];
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto p-4 md:p-6">
@@ -220,8 +247,29 @@ export default function AdminCategoriesPage() {
 
       <div className="grid gap-2 rounded-2xl border border-indigo-100 bg-indigo-50/70 p-4 text-xs text-indigo-950 sm:grid-cols-3">
         <p><strong>Active in Store OFF:</strong> category is hidden from storefront.</p>
-        <p><strong>Show on Homepage OFF:</strong> category remains available in store but does not appear in Shop by Category.</p>
+        <p><strong>Main Page OFF:</strong> category remains available in store but does not appear in Shop by Category.</p>
         <p><strong>Featured:</strong> category may receive a larger or stronger visual card.</p>
+      </div>
+
+      <div className="flex flex-wrap gap-2 rounded-2xl border border-gray-200 bg-white p-3 shadow-xs">
+        {filterButtons.map((filter) => {
+          const selected = categoryFilter === filter.key;
+
+          return (
+            <button
+              key={filter.key}
+              type="button"
+              onClick={() => setCategoryFilter(filter.key)}
+              className={`rounded-xl border px-3 py-2 text-xs font-bold transition ${
+                selected
+                  ? 'border-indigo-950 bg-indigo-950 text-white'
+                  : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-indigo-300 hover:bg-indigo-50'
+              }`}
+            >
+              {filter.label} ({filter.count})
+            </button>
+          );
+        })}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -258,7 +306,7 @@ export default function AdminCategoriesPage() {
         {/* Right Column: Existing Categories List */}
         <div className="lg:col-span-8 bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
           <div className="p-4 border-b border-gray-100 bg-gray-50 font-bold text-xs text-gray-700 uppercase flex justify-between items-center">
-            <span>Store Categories ({categories.length})</span>
+            <span>Store Categories ({filteredCategories.length} shown / {categories.length} total)</span>
             <span className="text-[10px] text-gray-400 font-normal">Real-time Supabase Sync</span>
           </div>
 
@@ -271,9 +319,13 @@ export default function AdminCategoriesPage() {
             <div className="p-12 text-center text-xs text-gray-400">
               No categories found. Use the form on the left to add your first category.
             </div>
+          ) : filteredCategories.length === 0 ? (
+            <div className="p-12 text-center text-xs text-gray-400">
+              No categories match the selected filter.
+            </div>
           ) : (
             <div className="divide-y divide-gray-100 text-xs">
-              {categories.map((cat) => (
+              {filteredCategories.map((cat) => (
                 <div key={cat.id} className="space-y-4 p-4 transition hover:bg-gray-50/80 sm:p-5">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex min-w-0 items-center gap-3">
@@ -309,12 +361,12 @@ export default function AdminCategoriesPage() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => updateCategory(cat.id, { show_on_homepage: !cat.show_on_homepage }, `${cat.name} homepage visibility updated.`)}
+                      onClick={() => updateCategory(cat.id, { show_on_homepage: !cat.show_on_homepage }, `${cat.name} main page visibility updated.`)}
                       disabled={savingId === cat.id}
                       aria-pressed={cat.show_on_homepage}
-                      className={`rounded-xl border px-3 py-2.5 text-left font-bold transition disabled:opacity-50 ${cat.show_on_homepage ? 'border-indigo-200 bg-indigo-50 text-indigo-900' : 'border-gray-200 bg-gray-100 text-gray-600'}`}
+                      className={`flex items-center justify-between rounded-xl border px-3 py-2.5 text-left font-bold transition disabled:opacity-50 ${cat.show_on_homepage ? 'border-indigo-200 bg-indigo-50 text-indigo-900' : 'border-gray-200 bg-gray-100 text-gray-600'}`}
                     >
-                      Show on Homepage: {cat.show_on_homepage ? 'ON' : 'OFF'}
+                      <span>Main Page</span><span>{cat.show_on_homepage ? 'ON' : 'OFF'}</span>
                     </button>
                     <button
                       type="button"

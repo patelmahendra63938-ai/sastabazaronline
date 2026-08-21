@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdminApiSession } from '@/lib/api/admin-authorization';
 
 export const dynamic = 'force-dynamic';
 
@@ -7,8 +8,16 @@ async function handleWhatsAppDispatch(customRecipient?: string) {
   const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
   const token = process.env.WHATSAPP_API_TOKEN || process.env.WHATSAPP_ACCESS_TOKEN;
   
-  // Default to your verified sandbox recipient number
-  const recipientNumber = (customRecipient || '919723268666').replace(/\D/g, '');
+  const recipientNumber = (
+    customRecipient || process.env.TEST_WHATSAPP_RECIPIENT || ''
+  ).replace(/\D/g, '');
+
+  if (!/^\d{8,15}$/.test(recipientNumber)) {
+    return NextResponse.json(
+      { success: false, error: 'A valid international phone number is required.' },
+      { status: 400 }
+    );
+  }
 
   if (!phoneId || !token) {
     return NextResponse.json(
@@ -52,8 +61,7 @@ async function handleWhatsAppDispatch(customRecipient?: string) {
       return NextResponse.json(
         {
           success: false,
-          metaError: data,
-          hint: 'Ensure your recipient number is added & verified in Meta Developer Portal -> WhatsApp -> API Setup -> To field.',
+          error: 'WhatsApp rejected the test message.',
         },
         { status: response.status }
       );
@@ -62,29 +70,35 @@ async function handleWhatsAppDispatch(customRecipient?: string) {
     return NextResponse.json({
       success: true,
       message: `WhatsApp test template delivered successfully to +${recipientNumber}`,
-      metaResponse: data,
+      messageId: data?.messages?.[0]?.id ?? null,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[WhatsApp API Fetch Error]:', error);
     return NextResponse.json(
       {
         success: false,
-        error: error.message || 'Failed to dispatch WhatsApp message via Meta API',
+        error: 'Failed to dispatch the WhatsApp test message.',
       },
       { status: 500 }
     );
   }
 }
 
-// 1. Direct Browser Access Handler (GET /api/test-whatsapp?phone=919723268666)
+// Direct admin-only browser test handler.
 export async function GET(request: Request) {
+  const admin = await requireAdminApiSession();
+  if (!admin.authorized) return admin.response;
+
   const { searchParams } = new URL(request.url);
   const phone = searchParams.get('phone') || undefined;
   return handleWhatsAppDispatch(phone);
 }
 
-// 2. Programmatic API Handler (POST /api/test-whatsapp)
+// Programmatic admin-only test handler.
 export async function POST(request: Request) {
+  const admin = await requireAdminApiSession();
+  if (!admin.authorized) return admin.response;
+
   try {
     const body = await request.json().catch(() => ({}));
     const phone = body?.phone || undefined;

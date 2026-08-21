@@ -1,11 +1,25 @@
 import React from 'react';
+import { redirect } from 'next/navigation';
 import AdminSidebar from '@/components/AdminSidebar';
+import { getAdminSession } from '@/lib/auth';
 
-export default function AdminLayout({
+export const dynamic = 'force-dynamic';
+
+export default async function AdminLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const { user, authorized } = await getAdminSession();
+
+  if (!user) {
+    redirect('/login?redirect=/admin');
+  }
+
+  if (!authorized) {
+    redirect('/?error=unauthorized_admin_access');
+  }
+
   return (
     <div className="flex min-h-screen bg-gray-50 font-sans antialiased">
       {/* Admin navigation */}
