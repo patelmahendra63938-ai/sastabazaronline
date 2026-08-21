@@ -17,7 +17,7 @@ test('Next.js proxy rejects unauthorized admin navigation', async () => {
   const source = await readProjectFile('proxy.ts');
   assert.match(source, /export async function proxy/);
   assert.match(source, /supabase\.auth\.getUser\(\)/);
-  assert.match(source, /canAccessAdmin/);
+  assert.match(source, /ADMIN_ROLES\.includes/);
   assert.match(source, /matcher: \['\/admin\/:path\*', '\/login'\]/);
 });
 
