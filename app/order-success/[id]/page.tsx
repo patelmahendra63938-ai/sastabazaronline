@@ -32,7 +32,7 @@ export default async function OrderSuccessPage({ params }: { params: { id: strin
         <CheckCircle2 size={64} className="mx-auto text-green-600 mb-4 animate-bounce" />
         <h1 className="text-3xl font-black text-gray-900 tracking-tight">Order Placed Successfully!</h1>
         <p className="text-gray-600 mt-2 text-sm sm:text-base">
-          Thank you for shopping with <span className="font-bold text-indigo-950">Sastabazar</span>. Operated by Adhyey Brothers.
+          Thank you for shopping with <span className="font-bold text-indigo-950">SASTABAZARONLINE</span>. SASTABAZARONLINE is owned and operated by ADHYEY BROTHERS.
         </p>
 
         {order ? (
@@ -63,7 +63,7 @@ export default async function OrderSuccessPage({ params }: { params: { id: strin
                   <div className="space-y-1.5 text-xs text-gray-600">
                     <div className="flex justify-between"><span>Product Subtotal</span><b>₹{totals?.productSubtotal}</b></div>
                     {Boolean(totals?.discountAmount) && <div className="flex justify-between text-green-700"><span>Discount</span><b>-₹{totals?.discountAmount}</b></div>}
-                    <div className="flex justify-between"><span>Shipping Charge</span><b>₹{totals?.shippingCharge}</b></div>
+                    <div className="flex justify-between"><span>Delivery Charge</span><b>₹{totals?.shippingCharge}</b></div>
                     {totals?.isCod && <div className="flex justify-between"><span>COD Charge</span><b>₹{totals.codCharge}</b></div>}
                     <div className="flex justify-between border-t pt-1.5 text-sm font-black text-gray-900"><span>Grand Total</span><span>₹{totals?.grandTotal}</span></div>
                     <div className="flex justify-between"><span>Payment Mode</span><b>{order.payment_method}</b></div>

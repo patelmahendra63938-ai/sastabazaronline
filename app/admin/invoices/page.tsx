@@ -292,7 +292,7 @@ export default function AdminInvoicesPage() {
                           <span>₹{breakdown.grandTax.toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between text-gray-600">
-                          <span>Shipping Charge:</span>
+                          <span>Delivery Charge:</span>
                           <span>₹{selectedInvoice.shipping_charge || 0}</span>
                         </div>
                         {resolveOrderTotals(selectedInvoice).isCod && <div className="flex justify-between text-gray-600"><span>COD Charge:</span><span>₹{resolveOrderTotals(selectedInvoice).codCharge}</span></div>}

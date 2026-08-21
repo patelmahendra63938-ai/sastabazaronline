@@ -71,7 +71,7 @@ function generateOrderEmailHtml(data: EmailOrderPayload): string {
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Order Confirmation - SastaBazar</title>
+    <title>Order Confirmation - SASTABAZARONLINE</title>
   </head>
   <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
     <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 24px 0;">
@@ -85,7 +85,7 @@ function generateOrderEmailHtml(data: EmailOrderPayload): string {
                 <h1 style="color: #ffffff; margin: 0; font-size: 22px; font-weight: 900; letter-spacing: -0.5px;">
                   SASTABAZAR<span style="color: #f97316;">.ONLINE</span>
                 </h1>
-                <p style="color: #cbd5e1; margin: 4px 0 0 0; font-size: 11px;">Wholesale Direct • Managed by Adhyey Brothers, Surat</p>
+                <p style="color: #cbd5e1; margin: 4px 0 0 0; font-size: 11px;">Owned and operated by ADHYEY BROTHERS</p>
               </td>
             </tr>
 
@@ -124,7 +124,7 @@ function generateOrderEmailHtml(data: EmailOrderPayload): string {
                   </tr>
                   ${data.discountAmount && data.discountAmount > 0 ? `<tr><td>Discount:</td><td align="right" style="color: #047857; font-weight: 700;">-₹${data.discountAmount}</td></tr>` : ''}
                   <tr>
-                    <td>Shipping Charge:</td>
+                    <td>Delivery Charge:</td>
                     <td align="right" style="color: #047857; font-weight: 700;">
                       ${data.shippingCharge === 0 ? 'FREE' : `₹${data.shippingCharge}`}
                     </td>
@@ -171,7 +171,7 @@ function generateOrderEmailHtml(data: EmailOrderPayload): string {
             <tr>
               <td style="padding: 16px 24px; background-color: #f1f5f9; text-align: center; font-size: 10px; color: #64748b;">
                 <p style="margin: 0 0 4px 0;">Need help with your order? Reach out at <strong>sales@sastabazaronline.in</strong></p>
-                <p style="margin: 0;">SastaBazar Online • Surat, Gujarat - 395007 • GSTIN: 24AKBPD1704F1Z1</p>
+                <p style="margin: 0;">SASTABAZARONLINE is owned and operated by ADHYEY BROTHERS.</p>
               </td>
             </tr>
 
@@ -194,13 +194,13 @@ export async function sendOrderConfirmationEmail(payload: EmailOrderPayload) {
   }
 
   const fromAddress = process.env.EMAIL_FROM_ADDRESS || 'sales@sastabazaronline.in';
-  const fromName = process.env.EMAIL_FROM_NAME || 'SastaBazar Online';
+  const fromName = process.env.EMAIL_FROM_NAME || 'SASTABAZARONLINE';
 
   try {
     const info = await transporter.sendMail({
       from: `"${fromName}" <${fromAddress}>`,
       to: payload.customerEmail,
-      subject: `Order Confirmed: ${payload.orderNumber} (₹${payload.grandTotal}) - SastaBazar`,
+      subject: `Order Confirmed: ${payload.orderNumber} (₹${payload.grandTotal}) - SASTABAZARONLINE`,
       html: generateOrderEmailHtml(payload),
     });
 

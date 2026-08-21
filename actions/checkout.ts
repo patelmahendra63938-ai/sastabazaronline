@@ -5,6 +5,10 @@ import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import { calculateAuthoritativeOrderPricing } from '@/lib/pricing/pricing-engine';
 import { dispatchOrderNotifications } from '@/lib/notifications/dispatcher';
+import {
+  customerServiceabilityError,
+  verifyLiveServiceability,
+} from '@/lib/shipping/live-serviceability';
 
 export interface CheckoutCartItem {
   id?: string;
@@ -189,17 +193,14 @@ export async function processOrderCheckout(formData: CheckoutInput) {
           ? 'UPI_QR'
           : 'COD';
 
-    const pricing = await calculateAuthoritativeOrderPricing({ db: dbSupabase, pincode: cleanPincode, paymentMethod, cart: formData.cart, couponCode: formData.coupon_code });
+    const pricing = await calculateAuthoritativeOrderPricing({ db: dbSupabase, pincode: cleanPincode, paymentMethod, cart: formData.cart, couponCode: formData.coupon_code, useLiveDeliveryPricing: true });
     const serverOriginalTotal = pricing.originalProductPriceTotal;
     const serverSubtotal = pricing.discountedSubtotal;
     const serverTotalDiscount = pricing.discountDeductionAmount;
     const primaryOfferLabel = pricing.primaryOfferName;
     const verifiedItems = pricing.verifiedItems;
     const totalActualWeightKg = pricing.actualWeightGrams / 1000;
-    const customerShippingCharge = pricing.shippingCharge;
-    const appliedCodCharge = pricing.codCharge;
     const roundedTaxAmount = pricing.totalTaxAmount;
-    const grandTotal = pricing.totalPayable;
 
     const currentYear = new Date().getFullYear();
     const orderNumber =
@@ -230,6 +231,49 @@ export async function processOrderCheckout(formData: CheckoutInput) {
 
     const customerId = user?.id ?? null;
 
+    // Rebuild authoritative packages and revalidate live serviceability directly
+    // before the sole atomic order/inventory write. Browser quote metadata is ignored.
+    let liveDelivery;
+    try {
+      liveDelivery = await verifyLiveServiceability({
+        db: dbSupabase,
+        cart: formData.cart,
+        deliveryPincode: cleanPincode,
+        paymentMode: paymentMethod === 'COD' ? 'cod' : 'prepaid',
+        orderValuePaise: Math.round(serverSubtotal * 100),
+      });
+    } catch (serviceabilityError) {
+      return {
+        success: false,
+        error: customerServiceabilityError(serviceabilityError),
+      };
+    }
+
+    if (
+      !liveDelivery.serviceable ||
+      !liveDelivery.selectedCourier ||
+      !liveDelivery.customerPricing ||
+      liveDelivery.actualCourierCost === null
+    ) {
+      return {
+        success: false,
+        error: 'No courier is currently available for this delivery PIN code.',
+      };
+    }
+
+    const customerShippingCharge =
+      liveDelivery.customerPricing.customerDeliveryPaise / 100;
+    const appliedCodCharge =
+      liveDelivery.customerPricing.customerCodPaise / 100;
+    const grandTotalPaise =
+      Math.round(serverSubtotal * 100) +
+      liveDelivery.customerPricing.customerDeliveryPaise +
+      liveDelivery.customerPricing.customerCodPaise;
+    const grandTotal = grandTotalPaise / 100;
+    const courierPartner =
+      liveDelivery.selectedCourier.courierDisplayName ||
+      liveDelivery.selectedCourier.courierName;
+
     /*
      * Sole order/inventory write path:
      * public.place_order_atomic_secure
@@ -250,7 +294,8 @@ export async function processOrderCheckout(formData: CheckoutInput) {
         p_tax_amount: roundedTaxAmount,
         p_actual_weight_kg: totalActualWeightKg,
         p_chargeable_weight_kg: pricing.chargeableWeightGrams / 1000,
-        p_actual_courier_cost: 0,
+        p_actual_courier_cost: liveDelivery.actualCourierCost,
+        p_courier_partner: courierPartner,
         p_shipping_charge: customerShippingCharge,
         p_cod_charge: appliedCodCharge,
         p_discount_amount: serverTotalDiscount,

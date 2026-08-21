@@ -19,8 +19,8 @@ export const metadata: Metadata = {
     default: 'SASTABAZARONLINE – Wholesale Home & Kitchen Items Online',
     template: '%s | SASTABAZARONLINE',
   },
-  description: 'Buy premium home, kitchen, and fashion items at unbeatable wholesale prices online. Managed by Adhyey Brothers from Surat, Gujarat.',
-  keywords: ['wholesale kitchenware', 'home utility', 'Surat wholesale market', 'SASTABAZARONLINE', 'Adhyey Brothers'],
+  description: 'Shop home, kitchen, lifestyle, fashion and other consumer products online from SASTABAZARONLINE, owned and operated by ADHYEY BROTHERS.',
+  keywords: ['online shopping India', 'home products', 'kitchen products', 'SASTABAZARONLINE', 'ADHYEY BROTHERS'],
   openGraph: {
     title: 'SASTABAZARONLINE – Wholesale Home & Kitchen Items Online',
     description: 'Direct factory-rate home and kitchen products delivered across India.',

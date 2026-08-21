@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { useRouter } from 'next/navigation';
@@ -13,6 +13,7 @@ import {
 import Link from 'next/link';
 import Image from 'next/image';
 import { resolveStorefrontImageSrc } from '@/lib/storefront-image';
+import { createCartQuoteSignature, getValidCheckoutQuote, type CheckoutQuoteCache, type CheckoutQuoteData, type CheckoutQuoteMode } from '@/lib/checkout/quote-state';
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -38,11 +39,11 @@ export default function CheckoutPage() {
   });
 
   // Automated NimbusPost Courier Rate & Verification States
-  const [isPincodeVerified, setIsPincodeVerified] = useState<boolean>(false);
   const [isCheckingPin, setIsCheckingPin] = useState<boolean>(false);
   const [pinStatus, setPinStatus] = useState<'idle' | 'checking' | 'available' | 'unavailable' | 'error'>('idle');
-  const [quote, setQuote] = useState<any | null>(null);
+  const [quoteCache, setQuoteCache] = useState<CheckoutQuoteCache>({});
   const [statusMessage, setStatusMessage] = useState<string>('');
+  const selectedModeRef = useRef<CheckoutQuoteMode>('COD');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -76,46 +77,47 @@ export default function CheckoutPage() {
     }
   }
 
+  const cartSignature = useMemo(() => createCartQuoteSignature(cart), [cart]);
+  const activeMode: CheckoutQuoteMode = formData.paymentMethod === 'ONLINE' ? 'ONLINE' : 'COD';
+  const quote = getValidCheckoutQuote(quoteCache, activeMode, formData.pincode.trim(), cartSignature);
+  const isPincodeVerified = Boolean(quote);
   const hasSaleDiscount = quote ? quote.discountDeductionAmount > 0 : originalProductPriceTotal > discountedSubtotal;
   const discountDeductionAmount = Math.max(0, originalProductPriceTotal - discountedSubtotal);
 
   const displayOriginalTotal = quote?.originalProductPriceTotal ?? originalProductPriceTotal;
   const displaySubtotal = quote?.discountedSubtotal ?? discountedSubtotal;
   const displayDiscount = quote?.discountDeductionAmount ?? discountDeductionAmount;
-  const grandTotal = quote?.totalPayable ?? displaySubtotal;
+  const grandTotal = quote?.totalPayable ?? null;
 
   // 2. Real-Time PIN Code Check with API Route & Fallback
-  const handleCheckPincode = useCallback(async (pinToCheck?: string, paymentOverride?: 'COD' | 'ONLINE') => {
+  const handleCheckPincode = useCallback(async (pinToCheck?: string, paymentOverride?: CheckoutQuoteMode) => {
     const targetPin = (pinToCheck || formData.pincode).trim();
+    const requestedMode = paymentOverride || activeMode;
+    const requestedCartSignature = cartSignature;
 
-    if (!targetPin || targetPin.length !== 6 || !/^\d{6}$/.test(targetPin)) {
+    if (!/^\d{6}$/.test(targetPin)) {
       setPinStatus('error');
       setStatusMessage('Please enter a valid 6-digit delivery PIN code.');
-      setIsPincodeVerified(false);
-      setQuote(null);
+      setQuoteCache({});
       return;
     }
-
-    if (cart.length === 0) {
-      return;
-    }
+    if (cart.length === 0) return;
 
     setIsCheckingPin(true);
     setPinStatus('checking');
     setStatusMessage('Verifying authoritative delivery pricing...');
-    setQuote(null);
     setErrorMsg(null);
 
     try {
       const res = await fetch('/api/shipping/check-pincode', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           pincode: targetPin,
           cart: cart.map(item => ({ product_id: item.product_id || item.id, size: item.size, quantity: item.quantity, selected_campaign_id: item.selected_campaign_id })),
-          paymentMethod: paymentOverride || formData.paymentMethod
+          paymentMethod: requestedMode,
         }),
-        signal: AbortSignal.timeout(5000),
+        signal: AbortSignal.timeout(12000),
       });
 
       if (!res.ok) {
@@ -123,36 +125,42 @@ export default function CheckoutPage() {
         throw new Error(failed.message || `Pricing check returned ${res.status}`);
       }
 
-      const data = await res.json();
-
+      const data = await res.json() as CheckoutQuoteData;
       if (data.serviceable === true) {
-        setPinStatus('available');
-        setIsPincodeVerified(true);
-        setQuote(data);
-        setStatusMessage(data.message);
+        setQuoteCache((current) => ({
+          ...current,
+          [requestedMode]: { mode: requestedMode, pincode: targetPin, cartSignature: requestedCartSignature, quote: data },
+        }));
+        if (selectedModeRef.current === requestedMode) {
+          setPinStatus('available');
+          setStatusMessage(data.message);
+        }
       } else {
-        setPinStatus('unavailable');
-        setIsPincodeVerified(false);
-        setQuote(null);
-        setStatusMessage(data.message || '✕ Delivery is not available to this PIN code. Please enter another delivery PIN code.');
+        setQuoteCache((current) => ({ ...current, [requestedMode]: undefined }));
+        if (selectedModeRef.current === requestedMode) {
+          setPinStatus('unavailable');
+          setStatusMessage('Delivery is not available for this payment method and PIN code.');
+        }
       }
-    } catch (err: any) {
-      setPinStatus('error');
-      setIsPincodeVerified(false);
-      setQuote(null);
-      setStatusMessage(err.message || 'Authoritative pricing could not be verified.');
+    } catch (error: unknown) {
+      setQuoteCache((current) => ({ ...current, [requestedMode]: undefined }));
+      if (selectedModeRef.current === requestedMode) {
+        setPinStatus('error');
+        setStatusMessage(requestedMode === 'ONLINE'
+          ? 'Online delivery pricing could not be verified. Please try again or use Cash on Delivery.'
+          : error instanceof Error ? error.message : 'Authoritative pricing could not be verified.');
+      }
     } finally {
       setIsCheckingPin(false);
     }
-  }, [formData.pincode, formData.paymentMethod, cart]);
+  }, [activeMode, cart, cartSignature, formData.pincode]);
 
   const handlePincodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawVal = e.target.value.replace(/\D/g, '').slice(0, 6);
     setFormData(prev => ({ ...prev, pincode: rawVal }));
     
-    setIsPincodeVerified(false);
     setPinStatus('idle');
-    setQuote(null);
+    setQuoteCache({});
     setStatusMessage('');
     setErrorMsg(null);
   };
@@ -162,9 +170,18 @@ export default function CheckoutPage() {
   };
 
   const handlePaymentMethodChange = (method: 'COD' | 'ONLINE') => {
+    if (method === activeMode) return;
+    selectedModeRef.current = method;
     setFormData(prev => ({ ...prev, paymentMethod: method }));
-    if (isPincodeVerified && formData.pincode.length === 6) {
-      handleCheckPincode(formData.pincode, method);
+    const cachedQuote = getValidCheckoutQuote(quoteCache, method, formData.pincode.trim(), cartSignature);
+    if (cachedQuote) {
+      setPinStatus('available');
+      setStatusMessage(cachedQuote.message);
+    } else if (formData.pincode.length === 6) {
+      void handleCheckPincode(formData.pincode, method);
+    } else {
+      setPinStatus('idle');
+      setStatusMessage('');
     }
   };
 
@@ -179,9 +196,8 @@ export default function CheckoutPage() {
     window.dispatchEvent(new Event('cartUpdated'));
     setItemToRemove(null);
 
-    setIsPincodeVerified(false);
     setPinStatus('idle');
-    setQuote(null);
+    setQuoteCache({});
   };
 
   const handleGetLocation = () => {
@@ -277,7 +293,7 @@ export default function CheckoutPage() {
   };
 
   const storeUpiId = 'adhyeybrothers@okicici';
-  const upiPaymentUrl = `upi://pay?pa=${storeUpiId}&pn=AdhyeyBrothers&am=${grandTotal}&cu=INR`;
+  const upiPaymentUrl = `upi://pay?pa=${storeUpiId}&pn=AdhyeyBrothers&am=${grandTotal ?? ''}&cu=INR`;
   const qrCodeImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiPaymentUrl)}`;
 
   if (orderPlaced) {
@@ -527,8 +543,7 @@ export default function CheckoutPage() {
                       2. Payment Method
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <label 
-                        onClick={() => handlePaymentMethodChange('COD')}
+                      <label
                         className={`flex items-center gap-3 p-4 rounded-2xl border-2 cursor-pointer transition ${
                           formData.paymentMethod === 'COD' ? 'border-indigo-600 bg-indigo-50/50' : 'border-gray-200 hover:border-gray-300'
                         }`}
@@ -547,8 +562,7 @@ export default function CheckoutPage() {
                         </div>
                       </label>
 
-                      <label 
-                        onClick={() => handlePaymentMethodChange('ONLINE')}
+                      <label
                         className={`flex items-center gap-3 p-4 rounded-2xl border-2 cursor-pointer transition ${
                           formData.paymentMethod === 'ONLINE' ? 'border-indigo-600 bg-indigo-50/50' : 'border-gray-200 hover:border-gray-300'
                         }`}
@@ -563,17 +577,17 @@ export default function CheckoutPage() {
                         />
                         <div>
                           <span className="block text-xs font-bold text-gray-900">Scan QR & Pay Online</span>
-                          <span className="block text-[10px] text-gray-500">GPay, PhonePe, Paytm, UPI</span>
+                          <span className="block text-[10px] text-gray-500">UPI / Online Payment</span>
                         </div>
                       </label>
                     </div>
                   </div>
 
-                  {formData.paymentMethod === 'ONLINE' && (
+                  {formData.paymentMethod === 'ONLINE' && quote && (
                     <div className="p-6 bg-indigo-50/80 border-2 border-indigo-200 rounded-2xl text-center space-y-4">
                       <div className="flex items-center justify-center gap-2 text-indigo-950 font-bold text-sm">
                         <QrCode size={20} className="text-orange-500" />
-                        <span>Scan to Pay: <b className="text-orange-600 font-black text-base">₹{grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</b></span>
+                        <span>Scan to Pay: <b className="text-orange-600 font-black text-base">₹{quote.totalPayable.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</b></span>
                       </div>
                       <div className="w-48 h-48 bg-white p-2 rounded-xl border mx-auto flex items-center justify-center shadow-sm">
                         {/* Generated payment QR stays direct; it is not a storefront media asset. */}
@@ -696,17 +710,24 @@ export default function CheckoutPage() {
                     </span>
                   </div>
 
-                  <div className="flex justify-between text-gray-500 font-medium">
-                    <span>COD Charge</span>
-                    <span className="font-bold text-gray-900">
-                      {quote ? `₹${quote.codCharge.toFixed(2)}` : 'Pending PIN check'}
-                    </span>
-                  </div>
+                  {formData.paymentMethod === 'COD' && (
+                    <div className="flex justify-between text-gray-500 font-medium">
+                      <span>COD Charge</span>
+                      <span className="font-bold text-gray-900">
+                        {quote ? `₹${quote.codCharge.toFixed(2)}` : 'Pending PIN check'}
+                      </span>
+                    </div>
+                  )}
+                  {formData.paymentMethod === 'ONLINE' && !quote && (
+                    <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs font-bold text-amber-800">
+                      Online delivery pricing could not be verified. Please try again or use Cash on Delivery. The payment QR is unavailable until a prepaid quote succeeds.
+                    </div>
+                  )}
 
                   <div className="border-t border-gray-200 pt-3 flex justify-between items-baseline text-sm font-black text-indigo-950">
                     <span>Total Payable Amount</span>
                     <span className="text-base text-orange-600 font-black">
-                      ₹{grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      {grandTotal === null ? 'Pending verified quote' : `₹${grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`}
                     </span>
                   </div>
                 </div>
@@ -730,7 +751,7 @@ export default function CheckoutPage() {
                   ) : (
                     <>
                       <ShieldCheck size={16} />
-                      <span>Confirm & Place Order (₹{grandTotal.toLocaleString('en-IN')})</span>
+                      <span>{grandTotal === null ? 'Verified Quote Required' : `Confirm & Place Order (₹${grandTotal.toLocaleString('en-IN')})`}</span>
                     </>
                   )}
                 </button>

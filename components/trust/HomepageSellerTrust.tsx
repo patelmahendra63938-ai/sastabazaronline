@@ -13,8 +13,8 @@ export default function HomepageSellerTrust() {
     {
       id: 'amazon',
       platform: 'Amazon',
-      sellerName: 'Adhyey Brothers',
-      description: 'Explore the Adhyey Brothers product catalog on Amazon India.',
+      sellerName: 'ADHYEY BROTHERS',
+      description: 'Explore the ADHYEY BROTHERS product catalog on Amazon India.',
       url: 'https://www.amazon.in/l/27943762031?me=AXKNNYVWLT32Y&tag=ShopReferral_d451e877-492b-4a44-8989-d4151cfc4c54&ref=sf_seller_app_share_new_ls_srb',
       ctaText: 'View on Amazon',
       accentBorder: 'hover:border-amber-400',
@@ -26,8 +26,8 @@ export default function HomepageSellerTrust() {
     {
       id: 'flipkart',
       platform: 'Flipkart',
-      sellerName: 'Adhyey Brothers',
-      description: 'Browse Adhyey Brothers products and collections on Flipkart.',
+      sellerName: 'ADHYEY BROTHERS',
+      description: 'Browse ADHYEY BROTHERS products and collections on Flipkart.',
       url: 'https://www.flipkart.com/adhyey-brothers-women-crop-top-skirt-ethnic-jacket-set/p/itm2881ff260ebcc?pid=ETHHJNJYHKNYXZPM',
       ctaText: 'View on Flipkart',
       accentBorder: 'hover:border-blue-400',
@@ -39,8 +39,8 @@ export default function HomepageSellerTrust() {
     {
       id: 'meesho',
       platform: 'Meesho',
-      sellerName: 'Adhyey Brothers',
-      description: 'Find the Adhyey Brothers profile and catalog on Meesho.',
+      sellerName: 'ADHYEY BROTHERS',
+      description: 'Find the ADHYEY BROTHERS profile and catalog on Meesho.',
       url: 'https://www.meesho.com/Adhyey?ms=2',
       ctaText: 'View on Meesho',
       accentBorder: 'hover:border-pink-400',
@@ -68,7 +68,7 @@ export default function HomepageSellerTrust() {
             id="seller-trust-heading" 
             className="text-2xl sm:text-3xl font-black text-indigo-950 tracking-tight"
           >
-            Find Adhyey Brothers on Marketplaces
+            Find ADHYEY BROTHERS on Marketplaces
           </h2>
           <p className="text-xs sm:text-sm text-gray-600 font-medium">
             Visit our configured marketplace pages using the links below
@@ -78,7 +78,7 @@ export default function HomepageSellerTrust() {
         {/* Primary Brand Context Note */}
         <div className="mb-8 p-4 rounded-2xl bg-white border border-gray-200/80 shadow-2xs max-w-3xl mx-auto text-center">
           <p className="text-xs text-gray-600 leading-relaxed">
-            You can also find <strong className="text-indigo-950 font-bold">Adhyey Brothers</strong> products on the marketplaces below.
+            You can also find <strong className="text-indigo-950 font-bold">ADHYEY BROTHERS</strong> products on the marketplaces below.
             To browse the complete SASTABAZARONLINE catalog and current offers, continue shopping on this website.
           </p>
         </div>
@@ -119,7 +119,7 @@ export default function HomepageSellerTrust() {
                   href={item.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label={`${item.ctaText} for Adhyey Brothers (opens in a new tab)`}
+                  aria-label={`${item.ctaText} for ADHYEY BROTHERS (opens in a new tab)`}
                   className={`w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all duration-200 shadow-xs cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-600 ${item.btnBg}`}
                 >
                   <span>{item.ctaText}</span>
@@ -148,7 +148,7 @@ export default function HomepageSellerTrust() {
             </div>
             <div>
               <p className="text-xs font-bold text-indigo-950">Surat Business</p>
-              <p className="text-[11px] text-gray-500">Adhyey Brothers Surat</p>
+              <p className="text-[11px] text-gray-500">ADHYEY BROTHERS, Surat</p>
             </div>
           </div>
 

@@ -15,7 +15,7 @@ export default function HomepageSellerTrust() {
     {
       id: 'amazon',
       platform: 'Amazon',
-      sellerName: 'Adhyey Brothers',
+      sellerName: 'ADHYEY BROTHERS',
       description: 'Explore our official verified storefront and product catalog on Amazon India.',
       url: 'https://www.amazon.in/l/27943762031?me=AXKNNYVWLT32Y&tag=ShopReferral_d451e877-492b-4a44-8989-d4151cfc4c54&ref=sf_seller_app_share_new_ls_srb',
       ctaText: 'View on Amazon',
@@ -28,7 +28,7 @@ export default function HomepageSellerTrust() {
     {
       id: 'flipkart',
       platform: 'Flipkart',
-      sellerName: 'Adhyey Brothers',
+      sellerName: 'ADHYEY BROTHERS',
       description: 'Browse our verified range of quality products and collections on Flipkart.',
       url: 'https://www.flipkart.com/adhyey-brothers-women-crop-top-skirt-ethnic-jacket-set/p/itm2881ff260ebcc?pid=ETHHJNJYHKNYXZPM',
       ctaText: 'View on Flipkart',
@@ -41,7 +41,7 @@ export default function HomepageSellerTrust() {
     {
       id: 'meesho',
       platform: 'Meesho',
-      sellerName: 'Adhyey Brothers',
+      sellerName: 'ADHYEY BROTHERS',
       description: 'Check out our wholesale merchant supplier profile and catalog on Meesho.',
       url: 'https://www.meesho.com/Adhyey?ms=2',
       ctaText: 'View on Meesho',
@@ -70,7 +70,7 @@ export default function HomepageSellerTrust() {
             id="seller-trust-heading" 
             className="text-2xl sm:text-3xl font-black text-indigo-950 tracking-tight"
           >
-            Shop Adhyey Brothers Everywhere
+            Shop ADHYEY BROTHERS Everywhere
           </h2>
           <p className="text-xs sm:text-sm text-gray-600 font-medium">
             Verified seller across leading marketplaces
@@ -80,7 +80,7 @@ export default function HomepageSellerTrust() {
         {/* Primary Brand Context Note */}
         <div className="mb-8 p-4 rounded-2xl bg-white border border-gray-200/80 shadow-2xs max-w-3xl mx-auto text-center">
           <p className="text-xs text-gray-600 leading-relaxed">
-            Want to verify <strong className="text-indigo-950 font-bold">Adhyey Brothers</strong>? Check our official seller presence on leading marketplaces below. 
+            Want to find <strong className="text-indigo-950 font-bold">ADHYEY BROTHERS</strong>? Check our seller presence on the marketplaces below.
             For direct factory-wholesale pricing, faster shipping, and exclusive offers, shop right here at <strong className="text-orange-600 font-bold">SASTABAZARONLINE</strong> as your primary destination.
           </p>
         </div>
@@ -121,7 +121,7 @@ export default function HomepageSellerTrust() {
                   href={item.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label={`${item.ctaText} for Adhyey Brothers (opens in a new tab)`}
+                  aria-label={`${item.ctaText} for ADHYEY BROTHERS (opens in a new tab)`}
                   className={`w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all duration-200 shadow-xs cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-600 ${item.btnBg}`}
                 >
                   <span>{item.ctaText}</span>
@@ -150,7 +150,7 @@ export default function HomepageSellerTrust() {
             </div>
             <div>
               <p className="text-xs font-bold text-indigo-950">Verified Seller</p>
-              <p className="text-[11px] text-gray-500">Adhyey Brothers Surat</p>
+              <p className="text-[11px] text-gray-500">ADHYEY BROTHERS, Surat</p>
             </div>
           </div>
 

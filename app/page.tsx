@@ -382,7 +382,7 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
               <div className="flex flex-wrap gap-2">
                 <Link href="/orders" className="rounded-xl bg-indigo-950 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-indigo-900">View Orders</Link>
                 <Link href="/privacy-policy" className="rounded-xl border border-gray-200 px-4 py-2.5 text-xs font-bold text-gray-700 transition hover:border-indigo-300">Privacy Policy</Link>
-                <Link href="/terms" className="rounded-xl border border-gray-200 px-4 py-2.5 text-xs font-bold text-gray-700 transition hover:border-indigo-300">Terms</Link>
+                <Link href="/terms-and-conditions" className="rounded-xl border border-gray-200 px-4 py-2.5 text-xs font-bold text-gray-700 transition hover:border-indigo-300">Terms &amp; Conditions</Link>
               </div>
             </div>
           </section>

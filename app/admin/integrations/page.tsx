@@ -6,7 +6,11 @@ export const dynamic = 'force-dynamic';
 export default function AdminIntegrationsPage() {
   // Check active environment variables securely on the server
   const isSupabaseActive = !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-  const isCourierActive = !!(process.env.COURIER_API_KEY || process.env.NIMBUSPOST_API_KEY);
+  const isCourierActive = Boolean(
+    process.env.NIMBUSPOST_API_KEY &&
+    process.env.NIMBUSPOST_API_SECRET &&
+    /^\d{6}$/.test(process.env.NIMBUSPOST_PICKUP_PINCODE?.trim() || '')
+  );
   const isSmtpActive = !!(process.env.SMTP_USER && process.env.SMTP_PASS);
   const isWhatsappActive = !!(process.env.WHATSAPP_PHONE_NUMBER_ID && (process.env.WHATSAPP_API_TOKEN || process.env.WHATSAPP_ACCESS_TOKEN));
   const isMerchantActive = true; // Dynamic XML catalog feed is active at /api/feed/merchant.xml
@@ -21,7 +25,7 @@ export default function AdminIntegrationsPage() {
     {
       name: 'NimbusPost Logistics API',
       status: isCourierActive ? 'CONNECTED' : 'READY_FOR_CONFIGURATION',
-      desc: 'Automated courier rates, AWB generation, and tracking dispatch.',
+      desc: 'V2 live serviceability and internal rate verification. Shipment/AWB booking is not enabled.',
       type: 'Shipping',
     },
     {

@@ -19,7 +19,7 @@ export async function sendTransactionalOrderEmail(
 ): Promise<EmailDispatchResult> {
   const supabase = await createServerSupabaseClient();
   const senderEmail = process.env.EMAIL_FROM_ADDRESS || 'sales@sastabazaronline.in';
-  const senderName = process.env.EMAIL_FROM_NAME || 'Sastabazar';
+  const senderName = process.env.EMAIL_FROM_NAME || 'SASTABAZARONLINE';
 
   // 1. Validation check
   if (!payload.customerEmail || !payload.customerEmail.includes('@')) {

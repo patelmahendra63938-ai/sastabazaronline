@@ -76,5 +76,5 @@ export async function saveShippingRules(
 
   revalidatePath('/admin/shipping');
   revalidatePath('/admin/settings');
-  return { status: 'success', message: 'Authoritative temporary shipping settings saved.' };
+  return { status: 'success', message: 'Shipping compatibility settings saved. Live NimbusPost pricing remains fixed at a 30% delivery buffer.' };
 }

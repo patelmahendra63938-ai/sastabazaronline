@@ -45,7 +45,7 @@ export async function sendOrderConfirmationWhatsApp(payload: WhatsAppOrderPayloa
           type: 'text',
           text: {
             preview_url: true,
-            body: `🎉 *Order Confirmed! - SastaBazar Online*\n\nHi ${payload.customerName},\nThank you for your order *#${payload.orderNumber}* containing *${payload.itemCount} item(s)* for a total of *₹${payload.grandTotal}*.\n\n📦 *Live Order Tracking:* https://sastabazaronline.in/orders/${payload.orderNumber}\n\nOur team in Surat is packing your order. For any queries, reply to this message or email sales@sastabazaronline.in.`,
+            body: `🎉 *Order Confirmed! - SASTABAZARONLINE*\n\nHi ${payload.customerName},\nThank you for your order *#${payload.orderNumber}* containing *${payload.itemCount} item(s)* for a total of *₹${payload.grandTotal}*.\n\n📦 *Live Order Tracking:* https://sastabazaronline.in/orders/${payload.orderNumber}\n\nOur team is packing your order. For any queries, reply to this message or email sales@sastabazaronline.in.`,
           },
         }),
       }

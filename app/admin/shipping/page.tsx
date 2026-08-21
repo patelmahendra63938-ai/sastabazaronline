@@ -6,7 +6,11 @@ export const dynamic = 'force-dynamic';
 
 export default async function AdminShippingPage() {
   const setting = await getShippingRulesSetting();
-  const hasNimbusCredentials = Boolean(process.env.COURIER_API_KEY || process.env.NIMBUSPOST_API_KEY || process.env.NIMBUSPOST_API_TOKEN);
+  const hasNimbusV2Configuration = Boolean(
+    process.env.NIMBUSPOST_API_KEY &&
+    process.env.NIMBUSPOST_API_SECRET &&
+    /^\d{6}$/.test(process.env.NIMBUSPOST_PICKUP_PINCODE?.trim() || '')
+  );
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -18,7 +22,7 @@ export default async function AdminShippingPage() {
 
       <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs leading-relaxed text-amber-900">
         <AlertTriangle size={18} className="mt-0.5 shrink-0" />
-        <p>Temporary slab pricing is active until verified NimbusPost v2 live pricing is connected.</p>
+        <p>Live customer delivery pricing uses the selected NimbusPost V2 non-COD courier cost plus the fixed 30% shipping buffer. There is no fallback when live verification fails.</p>
       </div>
 
       <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-xs sm:p-6">
@@ -41,9 +45,9 @@ export default async function AdminShippingPage() {
           <div className="space-y-1">
             <h2 className="text-sm font-black text-gray-900">NimbusPost pricing status</h2>
             <p className="text-xs leading-relaxed text-orange-900">
-              Pending official v2 pricing integration. {hasNimbusCredentials ? 'Runtime configuration is detected, but this does not confirm a working pricing connection.' : 'Required runtime configuration is not fully detected.'}
+              {hasNimbusV2Configuration ? 'V2 live customer pricing is configured and checkout fails closed when live verification is unavailable.' : 'Required V2 credentials or the validated pickup PIN configuration are missing.'}
             </p>
-            <p className="text-[11px] text-orange-800">No credentials or secret values are displayed or stored here.</p>
+            <p className="text-[11px] text-orange-800">Shipment/AWB booking is not enabled. No credential, secret, or pickup PIN value is displayed here.</p>
           </div>
         </div>
       </section>

@@ -5,10 +5,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { supabase } from '@/lib/supabase';
+import { createClient as createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { sanitizeMarketplaceUrl } from '@/lib/utils';
 import { normalizeProductPackage, ProductPackageValidationError } from '@/lib/catalog/product-package';
 import { CATEGORY_ENGINE, CategoryAttribute } from '@/lib/category-attributes';
+import { createAdminProduct } from './actions';
 import { 
   Upload, X, Video, Plus, Trash2, ChevronLeft, ChevronRight, CheckCircle2, 
   AlertCircle, Save, Eye, ArrowLeft, Loader2, ArrowUp, ArrowDown, Sparkles, 
@@ -21,6 +22,10 @@ interface VariantRow {
   sku: string;
   weight_kg: number;
   stock: number;
+}
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error && error.message ? error.message : fallback;
 }
 
 // 🎬 Client-side Video Compressor (Canvas/MediaRecorder)
@@ -137,6 +142,7 @@ async function compressVideoFile(
 
 export default function AdminAddProductPage() {
   const router = useRouter();
+  const supabase = useMemo(() => createBrowserSupabaseClient(), []);
 
   // --- Form & UI Global States ---
   const [loading, setLoading] = useState(false);
@@ -327,8 +333,8 @@ export default function AdminAddProductPage() {
 
       setPhotoUrls(prev => [...prev, ...newUploadedUrls]);
       setImageQualityNotes(notes);
-    } catch (err: any) {
-      setErrorMsg('Image upload failed: ' + err.message);
+    } catch (error: unknown) {
+      setErrorMsg('Image upload failed: ' + getErrorMessage(error, 'Please retry.'));
     } finally {
       setUploadingPhoto(false);
       if (photoInputRef.current) photoInputRef.current.value = '';
@@ -403,8 +409,8 @@ export default function AdminAddProductPage() {
           stats: { originalSizeMB, compressedSizeMB, savedPercent }
         });
       }
-    } catch (err: any) {
-      console.error('Video compression/upload error:', err);
+    } catch (error: unknown) {
+      console.error('Video compression/upload error:', getErrorMessage(error, 'Unknown upload error'));
       setVideoState({ isProcessing: false, stage: 'error', progress: 0 });
     } finally {
       if (videoInputRef.current) videoInputRef.current.value = '';
@@ -417,7 +423,7 @@ export default function AdminAddProductPage() {
   };
 
   // Variant Helpers
-  const handleVariantChange = (index: number, field: keyof VariantRow, value: any) => {
+  const handleVariantChange = (index: number, field: keyof VariantRow, value: string | number) => {
     const updated = [...variants];
     updated[index] = { ...updated[index], [field]: value };
     setVariants(updated);
@@ -521,7 +527,7 @@ export default function AdminAddProductPage() {
     setLoading(true);
 
     try {
-      const productPayload: Record<string, any> = {
+      const productPayload = {
         title: formData.title.trim(),
         description: structuredDescription,
         category: selectedCategory,
@@ -544,55 +550,21 @@ export default function AdminAddProductPage() {
         other_marketplace_name: formData.other_marketplace_url ? (formData.other_marketplace_name.trim() || 'Marketplace') : null
       };
 
-      if (videoUrl) {
-        productPayload.video = videoUrl;
-      }
+      const result = await createAdminProduct({
+        product: {
+          ...productPayload,
+          video: videoUrl || null,
+        },
+        variants,
+      });
 
-      let { data: productData, error: productError } = await supabase
-        .from('products')
-        .insert([productPayload])
-        .select('id, title')
-        .single();
-
-      if (productError && (productError.message?.includes('column "video"') || productError.message?.includes('video_url'))) {
-        delete productPayload.video;
-        const retry = await supabase
-          .from('products')
-          .insert([productPayload])
-          .select('id, title')
-          .single();
-        productData = retry.data;
-        productError = retry.error;
-      }
-
-      if (productError || !productData) {
-        throw productError || new Error('Failed to create product record.');
-      }
-
-      const newProductId = productData.id;
-
-      const inventoryInserts = variants.map(v => ({
-        product_id: newProductId,
-        size: v.size.trim(),
-        sku: v.sku.trim() || `${formData.title.slice(0, 3).toUpperCase()}-${v.size.trim()}-${Math.floor(100 + Math.random() * 900)}`,
-        weight_kg: Number(v.weight_kg) || 0.5,
-        available_quantity: Number(v.stock) || 0,
-        reserved_quantity: 0,
-        sold_quantity: 0,
-        reorder_level: 5
-      }));
-
-      const { error: invError } = await supabase
-        .from('inventory')
-        .upsert(inventoryInserts, { onConflict: 'product_id,size' });
-
-      if (invError) throw invError;
+      if (!result.success) throw new Error(result.error);
 
       setSuccessMsg('🎉 Product published successfully! It is now live on SASTABAZARONLINE.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    } catch (err: any) {
-      console.error('Publish Error:', err);
-      setErrorMsg(err.message || 'Failed to create product.');
+    } catch (error: unknown) {
+      console.error('Publish Error:', getErrorMessage(error, 'Failed to create product.'));
+      setErrorMsg(getErrorMessage(error, 'Failed to create product.'));
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setLoading(false);
@@ -916,7 +888,7 @@ export default function AdminAddProductPage() {
                   <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-950 flex items-center justify-center font-bold text-xs">4</div>
                   <div>
                     <h2 className="text-sm font-black text-gray-900 uppercase tracking-wider">Product Media Showcase</h2>
-                    <p className="text-[11px] text-gray-500">Stored in Supabase Storage Bucket ('product-images').</p>
+                    <p className="text-[11px] text-gray-500">Stored in Supabase Storage Bucket (&apos;product-images&apos;).</p>
                   </div>
                 </div>
                 <span className="text-xs font-bold text-indigo-900 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100">

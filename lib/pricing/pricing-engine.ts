@@ -7,19 +7,22 @@ import { calculateTemporarySlabCharges } from '@/lib/pricing/temporary-slabs';
 export type PricingPaymentMethod = 'COD' | 'ONLINE' | 'UPI_QR';
 export interface PricingCartItem { id?: string; product_id?: string; size?: string; quantity: number; selected_campaign_id?: string; }
 export interface VerifiedPricingItem { product_id: string; product_title: string; size: string; sku: string; hsn_code: string; gst_rate: number; unit_price: number; original_price: number; applied_offer_label: string | null; discount_reduction: number; weight_kg: number; quantity: number; line_total: number; }
-export interface PricingBreakdown { pricingMode: 'temporary_slabs'; originalProductPriceTotal: number; discountDeductionAmount: number; primaryOfferName: string | null; discountedSubtotal: number; totalTaxAmount: number; actualWeightGrams: number; chargeableWeightGrams: number; shippingCharge: number; codCharge: number; totalPayable: number; freeShippingApplied: boolean; serviceable: boolean; message: string; verifiedItems: VerifiedPricingItem[]; ruleVersion: number; }
+export interface PricingBreakdown { pricingMode: 'temporary_slabs' | 'nimbuspost_live'; originalProductPriceTotal: number; discountDeductionAmount: number; primaryOfferName: string | null; discountedSubtotal: number; totalTaxAmount: number; actualWeightGrams: number; chargeableWeightGrams: number; shippingCharge: number; codCharge: number; totalPayable: number; freeShippingApplied: boolean; serviceable: boolean; message: string; verifiedItems: VerifiedPricingItem[]; ruleVersion: number; }
 
-export async function calculateAuthoritativeOrderPricing(input: { db: SupabaseClient; pincode: string; paymentMethod: PricingPaymentMethod; cart: PricingCartItem[]; couponCode?: string; }): Promise<PricingBreakdown> {
+export async function calculateAuthoritativeOrderPricing(input: { db: SupabaseClient; pincode: string; paymentMethod: PricingPaymentMethod; cart: PricingCartItem[]; couponCode?: string; useLiveDeliveryPricing?: boolean; }): Promise<PricingBreakdown> {
   const cleanPin = String(input.pincode || '').trim();
   if (!/^\d{6}$/.test(cleanPin)) throw new Error('Please enter a valid 6-digit delivery PIN code.');
   if (!Array.isArray(input.cart) || !input.cart.length) throw new Error('Cart cannot be empty.');
   const productIds = [...new Set(input.cart.map((item) => item.product_id || item.id).filter((id): id is string => Boolean(id)))];
   if (!productIds.length) throw new Error('No valid product references were found in the cart.');
+  const settingsPromise = input.useLiveDeliveryPricing
+    ? Promise.resolve({ data: null, error: null })
+    : input.db.from('store_settings').select('value, version').eq('key', 'shipping_rules').maybeSingle();
   const [productsResult, inventoryResult, promotionsResult, settingsResult] = await Promise.all([
     input.db.from('products').select('id, title, price, mrp, category, hsn_code, gst_rate, net_weight_grams').in('id', productIds),
     input.db.from('inventory').select('product_id, size, sku, available_quantity').in('product_id', productIds),
     input.db.from('promotions').select('*').eq('is_enabled', true),
-    input.db.from('store_settings').select('value, version').eq('key', 'shipping_rules').maybeSingle(),
+    settingsPromise,
   ]);
   if (productsResult.error || !productsResult.data) throw new Error('Catalog verification failed.');
   if (inventoryResult.error || !inventoryResult.data) throw new Error('Inventory verification failed.');
@@ -53,6 +56,8 @@ export async function calculateAuthoritativeOrderPricing(input: { db: SupabaseCl
     if (appliedOffer && !primaryOfferName) primaryOfferName = appliedOffer.offerLabel;
     verifiedItems.push({ product_id: product.id, product_title: product.title, size, sku: inventory.sku || `SKU-${product.id.slice(0, 4)}-${size}`, hsn_code: product.hsn_code || '6204', gst_rate: gstRate, unit_price: Number(finalPrice), original_price: originalPrice, applied_offer_label: appliedOffer?.offerLabel || null, discount_reduction: Math.max(0, originalLineTotal - lineTotal), weight_kg: exactWeight / 1000, quantity, line_total: lineTotal });
   }
-  const charges = calculateTemporarySlabCharges({ actualWeightGrams, discountedSubtotal, paymentMethod: input.paymentMethod, rules });
-  return { pricingMode: rules.pricing_mode, originalProductPriceTotal, discountDeductionAmount: Math.max(0, originalProductPriceTotal - discountedSubtotal), primaryOfferName, discountedSubtotal, totalTaxAmount: Math.round(totalTaxAmount * 100) / 100, actualWeightGrams, chargeableWeightGrams: actualWeightGrams, ...charges, serviceable: true, message: 'Delivery pricing is available for this PIN code using temporary slabs.', verifiedItems, ruleVersion: Number(settingsResult.data?.version || 0) };
+  const charges = input.useLiveDeliveryPricing
+    ? { shippingCharge: 0, codCharge: 0, totalPayable: discountedSubtotal, freeShippingApplied: false }
+    : calculateTemporarySlabCharges({ actualWeightGrams, discountedSubtotal, paymentMethod: input.paymentMethod, rules });
+  return { pricingMode: input.useLiveDeliveryPricing ? 'nimbuspost_live' : rules.pricing_mode, originalProductPriceTotal, discountDeductionAmount: Math.max(0, originalProductPriceTotal - discountedSubtotal), primaryOfferName, discountedSubtotal, totalTaxAmount: Math.round(totalTaxAmount * 100) / 100, actualWeightGrams, chargeableWeightGrams: actualWeightGrams, ...charges, serviceable: true, message: input.useLiveDeliveryPricing ? 'Product pricing verified; live delivery pricing is pending.' : 'Delivery pricing is available for this PIN code using temporary slabs.', verifiedItems, ruleVersion: Number(settingsResult.data?.version || 0) };
 }

@@ -21,7 +21,7 @@ export default async function HomePage({ params: { locale } }: { params: { local
         <div className="mb-8 bg-indigo-950 rounded-3xl p-8 md:p-12 text-white text-center shadow-lg relative overflow-hidden">
           <div className="relative z-10">
             <h1 className="text-3xl md:text-5xl font-black mb-4 text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-yellow-300">
-              Welcome to Sastabazar
+              Welcome to SASTABAZARONLINE
             </h1>
             <p className="text-sm md:text-base text-indigo-100 max-w-2xl mx-auto font-medium">
               India's Most Trusted Wholesale Hub. Now shop in your own language!

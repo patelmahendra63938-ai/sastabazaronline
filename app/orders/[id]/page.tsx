@@ -517,7 +517,7 @@ export default function CustomerOrderDetailPage({
               <p className="font-bold text-gray-500 text-[10px] uppercase">Financial Summary</p>
               <div className="flex justify-between text-gray-600 text-xs"><span>Product Subtotal:</span><span className="font-bold text-gray-900">₹{totals?.productSubtotal}</span></div>
               {Boolean(totals?.discountAmount) && <div className="flex justify-between text-green-700 text-xs"><span>Discount:</span><span className="font-bold">-₹{totals?.discountAmount}</span></div>}
-              <div className="flex justify-between text-gray-600 text-xs"><span>Shipping Charge:</span><span className="font-bold text-gray-900">₹{totals?.shippingCharge}</span></div>
+              <div className="flex justify-between text-gray-600 text-xs"><span>Delivery Charge:</span><span className="font-bold text-gray-900">₹{totals?.shippingCharge}</span></div>
               {totals?.isCod && <div className="flex justify-between text-gray-600 text-xs"><span>COD Charge:</span><span className="font-bold text-gray-900">₹{totals.codCharge}</span></div>}
               <div className="flex justify-between text-gray-600 text-xs">
                 <span>Payment Mode:</span>

@@ -51,55 +51,55 @@ export function buildOrderEmailHtml(type: EmailTemplateType, data: EmailOrderPay
   // Dynamic header configurations based on lifecycle event
   const eventConfig: Record<EmailTemplateType, { subject: string; bannerTitle: string; bannerSubtitle: string; badgeColor: string }> = {
     ORDER_CONFIRMED: {
-      subject: `Order Confirmed: ${data.orderNumber} - Sastabazar`,
+      subject: `Order Confirmed: ${data.orderNumber} - SASTABAZARONLINE`,
       bannerTitle: 'Order Confirmed!',
-      bannerSubtitle: 'Thank you for shopping with Sastabazar. We have received your order.',
+      bannerSubtitle: 'Thank you for shopping with SASTABAZARONLINE. We have received your order.',
       badgeColor: '#16a34a'
     },
     ORDER_SHIPPED: {
-      subject: `Your Order ${data.orderNumber} Has Been Shipped! - Sastabazar`,
+      subject: `Your Order ${data.orderNumber} Has Been Shipped! - SASTABAZARONLINE`,
       bannerTitle: 'Package Dispatched!',
       bannerSubtitle: `Your package is on its way via ${data.courierPartner || 'our courier partner'}.`,
       badgeColor: '#2563eb'
     },
     OUT_FOR_DELIVERY: {
-      subject: `Out for Delivery: ${data.orderNumber} - Sastabazar`,
+      subject: `Out for Delivery: ${data.orderNumber} - SASTABAZARONLINE`,
       bannerTitle: 'Out for Delivery Today!',
       bannerSubtitle: 'Our delivery partner is arriving at your doorstep soon.',
       badgeColor: '#ea580c'
     },
     ORDER_DELIVERED: {
-      subject: `Delivered: ${data.orderNumber} - Sastabazar`,
+      subject: `Delivered: ${data.orderNumber} - SASTABAZARONLINE`,
       bannerTitle: 'Delivered Successfully!',
       bannerSubtitle: 'Your package has been safely delivered. We hope you love your purchase!',
       badgeColor: '#16a34a'
     },
     ORDER_CANCELLED: {
-      subject: `Order Cancelled: ${data.orderNumber} - Sastabazar`,
+      subject: `Order Cancelled: ${data.orderNumber} - SASTABAZARONLINE`,
       bannerTitle: 'Order Cancelled',
       bannerSubtitle: data.cancellationReason || 'Your order has been cancelled as requested.',
       badgeColor: '#dc2626'
     },
     RETURN_APPROVED: {
-      subject: `Return Request Approved: ${data.orderNumber} - Sastabazar`,
+      subject: `Return Request Approved: ${data.orderNumber} - SASTABAZARONLINE`,
       bannerTitle: 'Return Approved',
       bannerSubtitle: 'Our courier agent will pick up the item within 24-48 hours.',
       badgeColor: '#9333ea'
     },
     RETURN_RECEIVED: {
-      subject: `Return Package Received: ${data.orderNumber} - Sastabazar`,
+      subject: `Return Package Received: ${data.orderNumber} - SASTABAZARONLINE`,
       bannerTitle: 'Return Item Inspected',
       bannerSubtitle: 'We have received your returned item and verified the QC inspection.',
       badgeColor: '#9333ea'
     },
     REFUND_INITIATED: {
-      subject: `Refund Initiated for Order ${data.orderNumber} - Sastabazar`,
+      subject: `Refund Initiated for Order ${data.orderNumber} - SASTABAZARONLINE`,
       bannerTitle: 'Refund Processing',
       bannerSubtitle: `A refund of ₹${Number(data.refundAmount || data.grandTotal).toLocaleString('en-IN')} has been initiated to your account.`,
       badgeColor: '#0891b2'
     },
     REFUND_COMPLETED: {
-      subject: `Refund Completed: ${data.orderNumber} - Sastabazar`,
+      subject: `Refund Completed: ${data.orderNumber} - SASTABAZARONLINE`,
       bannerTitle: 'Refund Transferred Successfully!',
       bannerSubtitle: `Amount ₹${Number(data.refundAmount || data.grandTotal).toLocaleString('en-IN')} is credited (UTR: ${data.refundUtr || 'Processed'}).`,
       badgeColor: '#16a34a'
@@ -242,7 +242,7 @@ export function buildOrderEmailHtml(type: EmailTemplateType, data: EmailOrderPay
         <a href="mailto:sales@sastabazaronline.in" style="color: #0f172a; font-weight: bold; text-decoration: underline;">sales@sastabazaronline.in</a>.
       </p>
       <p style="margin: 0;">
-        © ${new Date().getFullYear()} Sastabazar. Surat, Gujarat, India. All rights reserved.
+        © ${new Date().getFullYear()} SASTABAZARONLINE. Owned and operated by ADHYEY BROTHERS. All rights reserved.
       </p>
     </div>
 

@@ -341,7 +341,7 @@ export default function CheckoutPage() {
                     <CreditCard size={20} className={paymentMethod === 'QR' ? 'text-indigo-600' : 'text-gray-400'} />
                     <div>
                       <p className="text-xs font-bold text-gray-900">Instant UPI QR</p>
-                      <p className="text-[10px] text-gray-500">GPay, PhonePe, Paytm</p>
+                      <p className="text-[10px] text-gray-500">UPI / Online Payment</p>
                     </div>
                   </div>
                   <input type="radio" name="payment" checked={paymentMethod === 'QR'} readOnly className="accent-indigo-600" />

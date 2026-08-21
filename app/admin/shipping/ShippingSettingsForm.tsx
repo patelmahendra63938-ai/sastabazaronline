@@ -36,8 +36,8 @@ export default function ShippingSettingsForm({ rules }: { rules: ShippingRules }
 
   return (
     <form action={formAction} className="space-y-6">
-      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs font-bold text-amber-900">Temporary slab pricing is active until verified NimbusPost v2 live pricing is connected.</div>
-      <label className="block space-y-1.5"><span className="block text-xs font-bold text-gray-700">Pricing Mode</span><input name="pricing_mode" value="temporary_slabs" readOnly className="w-full rounded-xl border bg-gray-50 px-3 py-2.5 text-sm" /></label>
+      <div className="rounded-2xl border border-green-200 bg-green-50 p-4 text-xs font-bold leading-relaxed text-green-900">Live rule: NimbusPost non-COD courier cost × 1.30. COD uses NimbusPost&apos;s live COD charge without markup. Fallback: none (fail closed). AWB booking is not enabled.</div>
+      <label className="block space-y-1.5"><span className="block text-xs font-bold text-gray-700">Pricing Mode</span><input name="pricing_mode" value="nimbuspost_live" readOnly className="w-full rounded-xl border bg-gray-50 px-3 py-2.5 text-sm" /></label>
       <div className="grid gap-4 lg:grid-cols-2">
         <ToggleField name="free_shipping_enabled" label="Free Shipping Enabled" description="Store the free-shipping policy for the upcoming unified pricing engine." defaultChecked={rules.free_shipping_enabled} />
         <ToggleField name="apply_courier_charge" label="Apply Courier Charge" description="Controls whether the unified pricing engine should charge customers for courier delivery." defaultChecked={rules.apply_courier_charge} />
@@ -45,12 +45,12 @@ export default function ShippingSettingsForm({ rules }: { rules: ShippingRules }
 
       <div className="grid gap-4 rounded-2xl border border-gray-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-3">
         <NumberField name="free_shipping_threshold" label="Free Shipping Threshold" defaultValue={rules.free_shipping_threshold} suffix="₹" />
-        <NumberField name="courier_markup_pct" label="Courier Markup" defaultValue={rules.courier_markup_pct} suffix="%" />
+        <label className="space-y-1.5"><span className="block text-xs font-bold text-gray-700">Live Shipping Buffer</span><input type="hidden" name="courier_markup_pct" value="30" /><span className="block rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm">30% (fixed)</span></label>
         <NumberField name="weight_buffer_pct" label="Weight Buffer" defaultValue={rules.weight_buffer_pct} suffix="%" />
       </div>
 
       <fieldset className="space-y-4 rounded-2xl border border-gray-200 bg-white p-4">
-        <legend className="px-1 text-sm font-black text-indigo-950">Temporary shipping slabs</legend>
+        <legend className="px-1 text-sm font-black text-indigo-950">Historical compatibility settings — not used by live checkout</legend>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <NumberField name="shipping_slab_500g" label="Up to 500 g charge" defaultValue={rules.shipping_slab_500g} suffix="₹" />
           <NumberField name="shipping_slab_1000g" label="Up to 1 kg charge" defaultValue={rules.shipping_slab_1000g} suffix="₹" />
@@ -60,7 +60,7 @@ export default function ShippingSettingsForm({ rules }: { rules: ShippingRules }
       </fieldset>
 
       <fieldset className="space-y-4 rounded-2xl border border-gray-200 bg-white p-4">
-        <legend className="px-1 text-sm font-black text-indigo-950">COD fee rules</legend>
+        <legend className="px-1 text-sm font-black text-indigo-950">Historical COD settings — not used by live checkout</legend>
         <label className="block space-y-1.5">
           <span className="block text-xs font-bold text-gray-700">COD Fee Type</span>
           <select name="cod_fee_type" defaultValue={rules.cod_fee_type} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-600 sm:max-w-xs">
