@@ -43,8 +43,6 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
     .eq('is_enabled', true);
 
   const activeCampaigns: Campaign[] = getActiveCampaigns((rawPromotions as Campaign[]) || []);
-  
-  // Determine top homepage banner
   const homepageBannerCampaign = activeCampaigns.find(c => c.is_homepage_visible) || activeCampaigns[0] || null;
 
   // 2. Fetch filter configurations from admin settings
@@ -54,6 +52,15 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
     .order('display_order', { ascending: true });
 
   const filterConfigs: FilterGroupConfig[] = filterConfigsData || [];
+
+  // A disabled individual filter must be unavailable both visually and through URL parameters.
+  // If the master filter switch is OFF, every storefront filter parameter is ignored.
+  const isFilterEnabled = (...keys: string[]) => {
+    if (!visibility.filter_panel_enabled) return false;
+
+    const matchingConfig = filterConfigs.find(config => keys.includes(config.filter_key));
+    return matchingConfig ? matchingConfig.is_enabled !== false : true;
+  };
 
   // 3. Query active categories
   const { data: categoriesData } = await supabase
@@ -74,67 +81,58 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
     query = query.in('category', activeCategories);
   }
 
-  // Apply URL filters safely
+  // Search remains independent from the filter-panel master switch.
   if (resolvedSearchParams.q) {
     query = query.ilike('title', `%${resolvedSearchParams.q}%`);
   }
 
-  if (resolvedSearchParams.category) {
-    const cats = resolvedSearchParams.category.split(',');
-    query = query.in('category', cats);
+  if (resolvedSearchParams.category && isFilterEnabled('category', 'categories')) {
+    query = query.in('category', resolvedSearchParams.category.split(','));
   }
 
-  if (resolvedSearchParams.brand) {
-    const brands = resolvedSearchParams.brand.split(',');
-    query = query.in('brand', brands);
+  if (resolvedSearchParams.brand && isFilterEnabled('brand', 'brands')) {
+    query = query.in('brand', resolvedSearchParams.brand.split(','));
   }
 
-  if (resolvedSearchParams.color) {
-    const colors = resolvedSearchParams.color.split(',');
-    query = query.in('color', colors);
+  if (resolvedSearchParams.color && isFilterEnabled('color', 'colors')) {
+    query = query.in('color', resolvedSearchParams.color.split(','));
   }
 
-  if (resolvedSearchParams.fabric) {
-    const fabrics = resolvedSearchParams.fabric.split(',');
-    query = query.in('fabric', fabrics);
+  if (resolvedSearchParams.fabric && isFilterEnabled('fabric', 'fabrics')) {
+    query = query.in('fabric', resolvedSearchParams.fabric.split(','));
   }
 
-  if (resolvedSearchParams.gender) {
-    const genders = resolvedSearchParams.gender.split(',');
-    query = query.in('gender', genders);
+  if (resolvedSearchParams.gender && isFilterEnabled('gender', 'genders')) {
+    query = query.in('gender', resolvedSearchParams.gender.split(','));
   }
 
-  if (resolvedSearchParams.fit) {
-    const fits = resolvedSearchParams.fit.split(',');
-    query = query.in('fit', fits);
+  if (resolvedSearchParams.fit && isFilterEnabled('fit', 'fits')) {
+    query = query.in('fit', resolvedSearchParams.fit.split(','));
   }
 
-  if (resolvedSearchParams.occasion) {
-    const occasions = resolvedSearchParams.occasion.split(',');
-    query = query.in('occasion', occasions);
+  if (resolvedSearchParams.occasion && isFilterEnabled('occasion', 'occasions')) {
+    query = query.in('occasion', resolvedSearchParams.occasion.split(','));
   }
 
-  if (resolvedSearchParams.type) {
-    const types = resolvedSearchParams.type.split(',');
-    query = query.in('product_type', types);
+  if (resolvedSearchParams.type && isFilterEnabled('type', 'product_type', 'productType')) {
+    query = query.in('product_type', resolvedSearchParams.type.split(','));
   }
 
-  if (resolvedSearchParams.minPrice) {
+  if (resolvedSearchParams.minPrice && isFilterEnabled('price', 'price_range', 'priceRange')) {
     query = query.gte('price', parseFloat(resolvedSearchParams.minPrice));
   }
 
-  if (resolvedSearchParams.maxPrice) {
+  if (resolvedSearchParams.maxPrice && isFilterEnabled('price', 'price_range', 'priceRange')) {
     query = query.lte('price', parseFloat(resolvedSearchParams.maxPrice));
   }
 
-  if (resolvedSearchParams.size) {
-    const sizes = resolvedSearchParams.size.split(',');
+  if (resolvedSearchParams.size && isFilterEnabled('size', 'sizes')) {
     query = query
-      .in('inventory.size', sizes)
+      .in('inventory.size', resolvedSearchParams.size.split(','))
       .gt('inventory.available_quantity', 0);
   }
 
-  // Apply sorting
+  // Sorting remains available even when the filter panel is hidden.
   if (resolvedSearchParams.sort === 'price_asc') {
     query = query.order('price', { ascending: true });
   } else if (resolvedSearchParams.sort === 'price_desc') {
@@ -183,15 +181,11 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
         <Header />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-          
-          {/* Top Promotional Sale Banner (Redirects to /sale/[slug]) */}
           {homepageBannerCampaign && (
             <CampaignBanner campaign={homepageBannerCampaign} />
           )}
 
-          {/* Main Layout: Optional Left Sidebar Filters + Right Catalog Grid */}
           <div className="flex flex-col md:flex-row gap-6 pt-2">
-            
             {visibility.filter_panel_enabled && (
               <aside className="w-full md:w-64 shrink-0">
                 <ProductFilterPanel
@@ -201,23 +195,20 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
               </aside>
             )}
 
-            {/* Product Catalog Grid Column */}
             <div className="flex-1 space-y-4">
-              
-              {/* Active Removable Chips */}
               {visibility.filter_panel_enabled && <ActiveFilterChips />}
 
-              {/* Toolbar Bar */}
               <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-gray-200/80 shadow-2xs">
                 <h1 className="text-xs font-black text-indigo-950 uppercase tracking-wider">
-                  {resolvedSearchParams.category ? `${resolvedSearchParams.category} Collection` : 'All Store Products'} ({products.length} Items)
+                  {resolvedSearchParams.category && isFilterEnabled('category', 'categories')
+                    ? `${resolvedSearchParams.category} Collection`
+                    : 'All Store Products'} ({products.length} Items)
                 </h1>
                 <span className="text-[11px] text-gray-500 font-semibold">
                   Direct Factory Rates
                 </span>
               </div>
 
-              {/* Products Rendering */}
               {products.length === 0 ? (
                 <div className="bg-white rounded-3xl border border-gray-200 p-16 text-center space-y-3 shadow-xs">
                   <h3 className="text-base font-bold text-gray-800">No Products Found</h3>
@@ -237,7 +228,6 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
                 </div>
               )}
             </div>
-
           </div>
         </div>
 
