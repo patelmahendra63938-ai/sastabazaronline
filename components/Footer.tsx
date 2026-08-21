@@ -20,16 +20,15 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Quick Links (Customer Only - No Admin Link) */}
+        {/* Policy & Legal Links */}
         <div>
-          <h4 className="text-sm font-bold uppercase tracking-wider text-orange-400 mb-4">Quick Links</h4>
+          <h4 className="text-sm font-bold uppercase tracking-wider text-orange-400 mb-4">Policies & Legal</h4>
           <ul className="space-y-2.5 text-xs text-gray-300">
-            <li><Link href="/" className="hover:text-white transition">Home</Link></li>
-            <li><Link href="/cart" className="hover:text-white transition">My Shopping Cart</Link></li>
-            <li><Link href="/wishlist" className="hover:text-white transition">My Wishlist</Link></li>
-            <li><Link href="/orders" className="hover:text-white transition">Track My Orders</Link></li>
-            <li><Link href="/privacy-policy" className="hover:text-white transition">Privacy Policy</Link></li>
             <li><Link href="/terms" className="hover:text-white transition">Terms & Conditions</Link></li>
+            <li><Link href="/refund-policy" className="hover:text-white transition">Refund Policy</Link></li>
+            <li><Link href="/return-policy" className="hover:text-white transition">Return Policy</Link></li>
+            <li><Link href="/shipping-policy" className="hover:text-white transition">Shipping Policy</Link></li>
+            <li><Link href="/privacy-policy" className="hover:text-white transition">Privacy Policy</Link></li>
           </ul>
         </div>
 
