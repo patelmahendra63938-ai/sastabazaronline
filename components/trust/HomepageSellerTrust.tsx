@@ -7,11 +7,19 @@ import {
   CheckCircle2, 
   ShoppingBag 
 } from 'lucide-react';
+import { getStorefrontVisibilitySetting } from '@/lib/settings/storefront-visibility';
 
-export default function HomepageSellerTrust() {
+export default async function HomepageSellerTrust() {
+  const { value: visibility } = await getStorefrontVisibilitySetting();
+
+  if (!visibility.marketplace_section_enabled) {
+    return null;
+  }
+
   const marketplaces = [
     {
       id: 'amazon',
+      enabled: visibility.amazon_enabled,
       platform: 'Amazon',
       sellerName: 'ADHYEY BROTHERS',
       description: 'Explore the ADHYEY BROTHERS product catalog on Amazon India.',
@@ -25,6 +33,7 @@ export default function HomepageSellerTrust() {
     },
     {
       id: 'flipkart',
+      enabled: visibility.flipkart_enabled,
       platform: 'Flipkart',
       sellerName: 'ADHYEY BROTHERS',
       description: 'Browse ADHYEY BROTHERS products and collections on Flipkart.',
@@ -38,6 +47,7 @@ export default function HomepageSellerTrust() {
     },
     {
       id: 'meesho',
+      enabled: visibility.meesho_enabled,
       platform: 'Meesho',
       sellerName: 'ADHYEY BROTHERS',
       description: 'Find the ADHYEY BROTHERS profile and catalog on Meesho.',
@@ -49,7 +59,11 @@ export default function HomepageSellerTrust() {
       tagColor: 'bg-pink-600',
       btnBg: 'bg-pink-600 hover:bg-pink-700 text-white'
     }
-  ];
+  ].filter((item) => item.enabled);
+
+  if (marketplaces.length === 0) {
+    return null;
+  }
 
   return (
     <section 
