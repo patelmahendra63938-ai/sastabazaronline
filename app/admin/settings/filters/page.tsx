@@ -153,8 +153,8 @@ export default function AdminFilterSettingsPage() {
             Storefront Filter Configuration
           </h1>
           <p className="text-xs text-gray-500 mt-1">
-            Control the complete filter panel, marketplace links, and individual
-            filter groups shown to storefront shoppers.
+            Control the complete main-page filter system, individual filter tabs,
+            and external marketplace links.
           </p>
         </div>
         <button
@@ -179,11 +179,12 @@ export default function AdminFilterSettingsPage() {
             <div>
               <div className="flex items-center gap-2 text-sm font-black text-indigo-950">
                 <Eye size={17} className="text-indigo-600" />
-                Main Page Filter Tab
+                Main Page Filter System
               </div>
               <p className="mt-2 text-xs leading-relaxed text-gray-500">
-                ON shows the complete filter panel on the main storefront. OFF
-                removes the filter panel and active filter chips from the main page.
+                ON shows enabled filter tabs on the main storefront. OFF completely
+                removes the filter panel and active filter chips, and filter URL
+                parameters are ignored.
               </p>
             </div>
             <button
@@ -213,9 +214,8 @@ export default function AdminFilterSettingsPage() {
                 External Marketplace Links
               </div>
               <p className="mt-2 text-xs leading-relaxed text-gray-500">
-                ON shows the Amazon, Flipkart and Meesho seller links wherever the
-                marketplace trust section is displayed. OFF hides those external
-                marketplace cards and links.
+                ON shows Amazon, Flipkart and Meesho seller links. OFF hides the
+                marketplace cards and external seller links from the storefront.
               </p>
             </div>
             <button
@@ -238,6 +238,12 @@ export default function AdminFilterSettingsPage() {
         </div>
       </section>
 
+      <div className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-900">
+        <strong>Individual filter rule:</strong> when a filter below is DISABLED,
+        that filter tab is not shown on the main page and its URL filter parameter
+        is ignored. Other enabled filter tabs continue to work normally.
+      </div>
+
       <div className="bg-white rounded-2xl border border-gray-200 shadow-2xs overflow-hidden">
         <table className="w-full text-left border-collapse">
           <thead>
@@ -245,7 +251,7 @@ export default function AdminFilterSettingsPage() {
               <th className="p-4">Order</th>
               <th className="p-4">Filter Key</th>
               <th className="p-4">Display Label</th>
-              <th className="p-4">Status</th>
+              <th className="p-4">Main Page</th>
               <th className="p-4 text-right">Reorder</th>
             </tr>
           </thead>
@@ -275,7 +281,7 @@ export default function AdminFilterSettingsPage() {
                         : 'bg-gray-100 text-gray-600 border border-gray-200'
                     }`}
                   >
-                    {f.is_enabled ? 'ENABLED' : 'DISABLED'}
+                    {f.is_enabled ? 'ON' : 'OFF'}
                   </button>
                 </td>
                 <td className="p-4 text-right">
