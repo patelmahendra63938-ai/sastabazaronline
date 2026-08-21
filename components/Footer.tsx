@@ -49,7 +49,7 @@ export default function Footer() {
           <div className="space-y-3 text-xs text-gray-300">
             <p className="flex items-start gap-2">
               <MapPin size={16} className="text-orange-500 flex-shrink-0 mt-0.5" />
-              <span>353-355 Pandol Industries, Surat, Gujarat, 395004</span>
+              <span>3rd Floor, 33 Shaktinagar Society, Peoples Char Rasta, Katargam, Surat, Gujarat - 395004, India</span>
             </p>
             <p className="flex items-center gap-2">
               <PhoneCall size={16} className="text-orange-500 flex-shrink-0" />
