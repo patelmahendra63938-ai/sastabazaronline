@@ -8,13 +8,10 @@ import {
   LayoutDashboard,
   ShoppingCart,
   Package,
-  PlusCircle,
   Warehouse,
   Tags,
   Users,
   Receipt,
-  CreditCard,
-  Navigation,
   Truck,
   BarChart3,
   RotateCcw,
@@ -29,34 +26,29 @@ import {
 } from 'lucide-react';
 
 const adminNavGroups = [
-  { label: 'Overview', items: [{ name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard }] },
+  { label: 'Dashboard', items: [{ name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard }] },
   { label: 'Orders', items: [
-    { name: 'Orders', href: '/admin/orders', icon: ShoppingCart },
+    { name: 'All Orders', href: '/admin/orders', icon: ShoppingCart },
     { name: 'Returns', href: '/admin/returns', icon: RotateCcw },
     { name: 'Invoices', href: '/admin/invoices', icon: Receipt },
-    { name: 'Payments', href: '/admin/payments', icon: CreditCard },
-    { name: 'Customers', href: '/admin/customers', icon: Users },
   ] },
-  { label: 'Catalog', items: [
-    { name: 'Products', href: '/admin/products', icon: Package },
-    { name: 'Add Product', href: '/admin/add-product', icon: PlusCircle },
-    { name: 'Inventory', href: '/admin/inventory', icon: Warehouse },
+  { label: 'Products', items: [
+    { name: 'All Products', href: '/admin/products', icon: Package },
     { name: 'Categories', href: '/admin/categories', icon: Tags },
+    { name: 'Inventory', href: '/admin/inventory', icon: Warehouse },
   ] },
+  { label: 'Customers', items: [{ name: 'Customers', href: '/admin/customers', icon: Users }] },
   { label: 'Marketing', items: [
-    { name: 'Coupons', href: '/admin/coupons', icon: Ticket },
+    { name: 'Coupons & Discounts', href: '/admin/coupons', icon: Ticket },
     { name: 'Reviews', href: '/admin/reviews', icon: MessageSquare },
-    { name: 'Discounts', href: '/admin/settings/discounts', icon: Tags },
   ] },
-  { label: 'Logistics', items: [
-    { name: 'Shipping', href: '/admin/shipping', icon: Truck },
-    { name: 'Logistics', href: '/admin/logistics', icon: Navigation },
-  ] },
+  { label: 'Shipping', items: [{ name: 'Shipping & Logistics', href: '/admin/logistics', icon: Truck }] },
   { label: 'Reports', items: [{ name: 'Reports', href: '/admin/reports', icon: BarChart3 }] },
-  { label: 'System', items: [
+  { label: 'Settings', items: [
+    { name: 'General', href: '/admin/settings', icon: Settings },
     { name: 'Integrations', href: '/admin/integrations', icon: Plug },
-    { name: 'Settings', href: '/admin/settings', icon: Settings },
     { name: 'Filters', href: '/admin/settings/filters', icon: SlidersHorizontal },
+    { name: 'Homepage Display Settings', href: '/admin/settings/homepage-display', icon: LayoutDashboard },
   ] },
 ];
 
@@ -128,7 +120,7 @@ export default function AdminSidebar() {
           <span className="text-[10px] font-black tracking-widest text-orange-400 uppercase block">
             Control Panel
           </span>
-          <h2 className="text-lg font-black text-white">SASTABAZAR</h2>
+          <h2 className="text-lg font-black text-white">SASTABAZARONLINE</h2>
         </div>
 
         {navLinks}

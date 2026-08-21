@@ -1,11 +1,14 @@
 import React from 'react';
 import AdminSidebar from '@/components/AdminSidebar';
+import { requireAdminUser } from '@/lib/auth';
 
-export default function AdminLayout({
+export default async function AdminLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  await requireAdminUser();
+
   return (
     <div className="flex min-h-screen bg-gray-50 font-sans antialiased">
       {/* Admin navigation */}

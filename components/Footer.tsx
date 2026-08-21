@@ -1,12 +1,9 @@
 import React from 'react';
 import Link from 'next/link';
 import { PhoneCall, Mail, MapPin, ShieldCheck, Heart } from 'lucide-react';
+import { BUSINESS_INFO } from '@/lib/business-info';
 
-interface FooterProps {
-  categories?: string[];
-}
-
-export default function Footer({ categories = [] }: FooterProps) {
+export default function Footer() {
   return (
     <footer className="bg-indigo-950 text-white pt-12 pb-8 border-t border-indigo-900 mt-20">
       <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-8 pb-12 border-b border-indigo-900">
@@ -20,7 +17,7 @@ export default function Footer({ categories = [] }: FooterProps) {
             Your trusted destination for quality home, kitchen, and lifestyle products at direct wholesale pricing in Surat and across India.
           </p>
           <div className="flex items-center gap-2 text-xs text-yellow-400 font-bold">
-            <ShieldCheck size={16} /> Secure checkout and GST invoicing
+            <ShieldCheck size={16} /> 100% Trusted & Verified Wholesale Store
           </div>
         </div>
 
@@ -32,29 +29,23 @@ export default function Footer({ categories = [] }: FooterProps) {
             <li><Link href="/cart" className="hover:text-white transition">My Shopping Cart</Link></li>
             <li><Link href="/wishlist" className="hover:text-white transition">My Wishlist</Link></li>
             <li><Link href="/orders" className="hover:text-white transition">Track My Orders</Link></li>
+            <li><Link href="/terms-and-conditions" className="hover:text-white transition">Terms & Conditions</Link></li>
+            <li><Link href="/refund-policy" className="hover:text-white transition">Refund Policy</Link></li>
+            <li><Link href="/return-policy" className="hover:text-white transition">Return Policy</Link></li>
+            <li><Link href="/shipping-policy" className="hover:text-white transition">Shipping Policy</Link></li>
             <li><Link href="/privacy-policy" className="hover:text-white transition">Privacy Policy</Link></li>
-            <li><Link href="/terms" className="hover:text-white transition">Terms & Conditions</Link></li>
           </ul>
         </div>
 
         {/* Categories */}
         <div>
           <h4 className="text-sm font-bold uppercase tracking-wider text-orange-400 mb-4">Categories</h4>
-          {categories.length > 0 ? (
-            <ul className="space-y-2.5 text-xs text-gray-300">
-              {categories.slice(0, 6).map((category) => (
-                <li key={category}>
-                  <Link href={`/category/${encodeURIComponent(category)}`} className="hover:text-white transition">
-                    {category}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <Link href="/" className="text-xs text-gray-300 hover:text-white transition">
-              Browse all products
-            </Link>
-          )}
+          <ul className="space-y-2.5 text-xs text-gray-300">
+            <li><Link href="/category/Kitchenware" className="hover:text-white transition">Kitchen Appliances</Link></li>
+            <li><Link href="/category/Storage" className="hover:text-white transition">Storage & Organization</Link></li>
+            <li><Link href="/category/Cleaning" className="hover:text-white transition">Cleaning Utilities</Link></li>
+            <li><Link href="/category/Home Decor" className="hover:text-white transition">Home Decor</Link></li>
+          </ul>
         </div>
 
         {/* Contact Info */}
@@ -63,15 +54,15 @@ export default function Footer({ categories = [] }: FooterProps) {
           <div className="space-y-3 text-xs text-gray-300">
             <p className="flex items-start gap-2">
               <MapPin size={16} className="text-orange-500 flex-shrink-0 mt-0.5" />
-              <span>353-355 Pandol Industries, Surat, Gujarat, 395004</span>
+              <span>{BUSINESS_INFO.addressLines.join(' ')}</span>
             </p>
             <p className="flex items-center gap-2">
               <PhoneCall size={16} className="text-orange-500 flex-shrink-0" />
-              <a href="tel:+919723268666" className="hover:text-white transition">+91 9723268666</a>
+              <a href={BUSINESS_INFO.officePhoneHref}>{BUSINESS_INFO.officePhone}</a>
             </p>
             <p className="flex items-center gap-2">
               <Mail size={16} className="text-orange-500 flex-shrink-0" />
-              <a href="mailto:sales@sastabazaronline.in" className="hover:text-white transition">sales@sastabazaronline.in</a>
+              <a href={`mailto:${BUSINESS_INFO.email}`}>{BUSINESS_INFO.email}</a>
             </p>
           </div>
         </div>
@@ -81,7 +72,7 @@ export default function Footer({ categories = [] }: FooterProps) {
       <div className="max-w-7xl mx-auto px-4 pt-6 flex flex-col sm:flex-row justify-between items-center text-xs text-gray-400 gap-4">
         <p>© {new Date().getFullYear()} SASTABAZARONLINE. All rights reserved.</p>
         <p className="flex items-center gap-1">
-          Operated by Adhyey Brothers with <Heart size={14} className="text-red-500 fill-red-500" />
+          Operated by ADHYEY BROTHERS with <Heart size={14} className="text-red-500 fill-red-500" />
         </p>
       </div>
     </footer>

@@ -16,6 +16,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
 import Pagination from '@/components/Pagination';
+import { getHomepageDisplaySettings } from '@/lib/settings/homepage-display';
 import {
   ArrowRight,
   FileText,
@@ -57,6 +58,15 @@ function parsePage(value?: string) {
 
 export default async function StorefrontPage({ searchParams }: PageProps) {
   const resolvedSearchParams = await searchParams;
+  const homepageDisplay = await getHomepageDisplaySettings();
+  const effectiveSearchParams = homepageDisplay.show_filter_panel
+    ? resolvedSearchParams
+    : Object.fromEntries(
+        Object.entries(resolvedSearchParams).filter(([key]) => ![
+          'category', 'brand', 'color', 'fabric', 'gender', 'fit', 'occasion',
+          'type', 'minPrice', 'maxPrice', 'size',
+        ].includes(key)),
+      );
   const cookieStore = await cookies();
 
   const supabase = createServerClient(
@@ -103,10 +113,10 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
 
   const activeCategories = (categoriesData || []).map(c => c.name);
   const homepageCategories = homepageCategoriesResult.data || [];
-  const currentPage = parsePage(resolvedSearchParams.page);
+  const currentPage = parsePage(effectiveSearchParams.page);
   const rangeFrom = (currentPage - 1) * CATALOG_PAGE_SIZE;
   const rangeTo = rangeFrom + CATALOG_PAGE_SIZE - 1;
-  const productSelect = resolvedSearchParams.size
+  const productSelect = effectiveSearchParams.size
     ? 'id, title, price, mrp, category, images, stock, inventory!inner(size, available_quantity)'
     : 'id, title, price, mrp, category, images, stock, inventory(size, available_quantity)';
 
@@ -121,22 +131,22 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
   }
 
   // Apply URL filters safely
-  if (resolvedSearchParams.q) {
-    query = query.ilike('title', `%${resolvedSearchParams.q}%`);
+  if (effectiveSearchParams.q) {
+    query = query.ilike('title', `%${effectiveSearchParams.q}%`);
   }
 
-  if (resolvedSearchParams.category) {
-    const cats = resolvedSearchParams.category.split(',');
+  if (effectiveSearchParams.category) {
+    const cats = effectiveSearchParams.category.split(',');
     query = query.in('category', cats);
   }
 
-  if (resolvedSearchParams.brand) {
-    const brands = resolvedSearchParams.brand.split(',');
+  if (effectiveSearchParams.brand) {
+    const brands = effectiveSearchParams.brand.split(',');
     query = query.in('brand', brands);
   }
 
-  if (resolvedSearchParams.fabric) {
-    const fabrics = resolvedSearchParams.fabric.split(',');
+  if (effectiveSearchParams.fabric) {
+    const fabrics = effectiveSearchParams.fabric.split(',');
     query = query.in('fabric', fabrics);
   }
 
@@ -145,35 +155,35 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
     query = query.in('pattern', patterns);
   }
 
-  if (resolvedSearchParams.fit) {
-    const fits = resolvedSearchParams.fit.split(',');
+  if (effectiveSearchParams.fit) {
+    const fits = effectiveSearchParams.fit.split(',');
     query = query.in('fit', fits);
   }
 
-  if (resolvedSearchParams.occasion) {
-    const occasions = resolvedSearchParams.occasion.split(',');
+  if (effectiveSearchParams.occasion) {
+    const occasions = effectiveSearchParams.occasion.split(',');
     query = query.in('occasion', occasions);
   }
 
-  if (resolvedSearchParams.minPrice) {
-    query = query.gte('price', parseFloat(resolvedSearchParams.minPrice));
+  if (effectiveSearchParams.minPrice) {
+    query = query.gte('price', parseFloat(effectiveSearchParams.minPrice));
   }
 
-  if (resolvedSearchParams.maxPrice) {
-    query = query.lte('price', parseFloat(resolvedSearchParams.maxPrice));
+  if (effectiveSearchParams.maxPrice) {
+    query = query.lte('price', parseFloat(effectiveSearchParams.maxPrice));
   }
 
-  if (resolvedSearchParams.size) {
-    const sizes = resolvedSearchParams.size.split(',');
+  if (effectiveSearchParams.size) {
+    const sizes = effectiveSearchParams.size.split(',');
     query = query
       .in('inventory.size', sizes)
       .gt('inventory.available_quantity', 0);
   }
 
   // Apply sorting
-  if (resolvedSearchParams.sort === 'price_asc') {
+  if (effectiveSearchParams.sort === 'price_asc') {
     query = query.order('price', { ascending: true });
-  } else if (resolvedSearchParams.sort === 'price_desc') {
+  } else if (effectiveSearchParams.sort === 'price_desc') {
     query = query.order('price', { ascending: false });
   } else {
     query = query.order('created_at', { ascending: false });
@@ -189,24 +199,24 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
     featuredQuery = featuredQuery.in('category', activeCategories);
   }
 
-  if (resolvedSearchParams.q) featuredQuery = featuredQuery.ilike('title', `%${resolvedSearchParams.q}%`);
-  if (resolvedSearchParams.category) featuredQuery = featuredQuery.in('category', resolvedSearchParams.category.split(','));
-  if (resolvedSearchParams.brand) featuredQuery = featuredQuery.in('brand', resolvedSearchParams.brand.split(','));
-  if (resolvedSearchParams.fabric) featuredQuery = featuredQuery.in('fabric', resolvedSearchParams.fabric.split(','));
+  if (effectiveSearchParams.q) featuredQuery = featuredQuery.ilike('title', `%${effectiveSearchParams.q}%`);
+  if (effectiveSearchParams.category) featuredQuery = featuredQuery.in('category', effectiveSearchParams.category.split(','));
+  if (effectiveSearchParams.brand) featuredQuery = featuredQuery.in('brand', effectiveSearchParams.brand.split(','));
+  if (effectiveSearchParams.fabric) featuredQuery = featuredQuery.in('fabric', effectiveSearchParams.fabric.split(','));
   if (resolvedSearchParams.pattern) featuredQuery = featuredQuery.in('pattern', resolvedSearchParams.pattern.split(','));
-  if (resolvedSearchParams.fit) featuredQuery = featuredQuery.in('fit', resolvedSearchParams.fit.split(','));
-  if (resolvedSearchParams.occasion) featuredQuery = featuredQuery.in('occasion', resolvedSearchParams.occasion.split(','));
-  if (resolvedSearchParams.minPrice) featuredQuery = featuredQuery.gte('price', parseFloat(resolvedSearchParams.minPrice));
-  if (resolvedSearchParams.maxPrice) featuredQuery = featuredQuery.lte('price', parseFloat(resolvedSearchParams.maxPrice));
-  if (resolvedSearchParams.size) {
+  if (effectiveSearchParams.fit) featuredQuery = featuredQuery.in('fit', effectiveSearchParams.fit.split(','));
+  if (effectiveSearchParams.occasion) featuredQuery = featuredQuery.in('occasion', effectiveSearchParams.occasion.split(','));
+  if (effectiveSearchParams.minPrice) featuredQuery = featuredQuery.gte('price', parseFloat(effectiveSearchParams.minPrice));
+  if (effectiveSearchParams.maxPrice) featuredQuery = featuredQuery.lte('price', parseFloat(effectiveSearchParams.maxPrice));
+  if (effectiveSearchParams.size) {
     featuredQuery = featuredQuery
-      .in('inventory.size', resolvedSearchParams.size.split(','))
+      .in('inventory.size', effectiveSearchParams.size.split(','))
       .gt('inventory.available_quantity', 0);
   }
 
-  if (resolvedSearchParams.sort === 'price_asc') {
+  if (effectiveSearchParams.sort === 'price_asc') {
     featuredQuery = featuredQuery.order('price', { ascending: true });
-  } else if (resolvedSearchParams.sort === 'price_desc') {
+  } else if (effectiveSearchParams.sort === 'price_desc') {
     featuredQuery = featuredQuery.order('price', { ascending: false });
   } else {
     featuredQuery = featuredQuery.order('created_at', { ascending: false });
@@ -387,30 +397,34 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
             </div>
           </section>
 
-          <HomepageSellerTrust />
+          <HomepageSellerTrust
+            showAmazon={homepageDisplay.show_amazon_link}
+            showFlipkart={homepageDisplay.show_flipkart_link}
+            showMeesho={homepageDisplay.show_meesho_link}
+          />
 
           {/* Main Layout: Left Sidebar Filters + Right Catalog Grid */}
           <section id="all-products" aria-labelledby="all-products-heading" className="scroll-mt-24">
           <div className="flex flex-col md:flex-row gap-6 pt-2">
             
             {/* Desktop & Mobile Left Filter Panel */}
-            <aside className="w-full md:w-64 shrink-0">
+            {homepageDisplay.show_filter_panel && <aside className="w-full md:w-64 shrink-0">
               <ProductFilterPanel
                 availableOptions={availableOptions}
                 filterConfigs={filterConfigs}
               />
-            </aside>
+            </aside>}
 
             {/* Product Catalog Grid Column */}
             <div className="flex-1 space-y-4">
               
               {/* Active Removable Chips */}
-              <ActiveFilterChips />
+              {homepageDisplay.show_filter_panel && <ActiveFilterChips />}
 
               {/* Toolbar Bar */}
               <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-gray-200/80 shadow-2xs">
                 <h2 id="all-products-heading" className="text-xs font-black text-indigo-950 uppercase tracking-wider">
-                  {resolvedSearchParams.category ? `${resolvedSearchParams.category} Collection` : 'All Store Products'} ({totalProducts} Items)
+                  {effectiveSearchParams.category ? `${effectiveSearchParams.category} Collection` : 'All Store Products'} ({totalProducts} Items)
                 </h2>
                 <span className="text-[11px] text-gray-500 font-semibold">
                   Direct Factory Rates
@@ -441,7 +455,7 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
                   </div>
                   <Pagination
                     pathname="/"
-                    searchParams={resolvedSearchParams}
+                    searchParams={effectiveSearchParams}
                     currentPage={currentPage}
                     pageSize={CATALOG_PAGE_SIZE}
                     totalCount={totalProducts}
@@ -455,7 +469,7 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
         </div>
       </div>
 
-      <Footer categories={activeCategories} />
+      <Footer />
     </main>
   );
 }

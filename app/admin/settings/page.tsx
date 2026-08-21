@@ -123,6 +123,9 @@ export default async function AdminSettingsPage() {
           <Link href="/admin/settings/filters" className="flex items-center justify-between rounded-xl border border-gray-200 p-4 text-xs font-bold text-gray-800 transition hover:border-indigo-300 hover:bg-indigo-50/40">
             <span className="flex items-center gap-2"><SlidersHorizontal size={16} className="text-indigo-600" /> Storefront Filters</span><ChevronRight size={14} />
           </Link>
+          <Link href="/admin/settings/homepage-display" className="flex items-center justify-between rounded-xl border border-gray-200 p-4 text-xs font-bold text-gray-800 transition hover:border-indigo-300 hover:bg-indigo-50/40">
+            <span className="flex items-center gap-2"><ShoppingBag size={16} className="text-indigo-600" /> Homepage Display</span><ChevronRight size={14} />
+          </Link>
           <Link href="/admin/settings/discounts" className="flex items-center justify-between rounded-xl border border-gray-200 p-4 text-xs font-bold text-gray-800 transition hover:border-orange-300 hover:bg-orange-50/40">
             <span className="flex items-center gap-2"><Tags size={16} className="text-orange-600" /> Discounts & Promotions</span><ChevronRight size={14} />
           </Link>

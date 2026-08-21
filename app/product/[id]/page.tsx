@@ -56,6 +56,18 @@ interface ProductDetailType {
   other_marketplace_name?: string | null;
 }
 
+interface MarketplaceVisibility {
+  show_meesho_link: boolean;
+  show_amazon_link: boolean;
+  show_flipkart_link: boolean;
+}
+
+const DEFAULT_MARKETPLACE_VISIBILITY: MarketplaceVisibility = {
+  show_meesho_link: true,
+  show_amazon_link: true,
+  show_flipkart_link: true,
+};
+
 export default function ProductDetailPage({ 
   params 
 }: { 
@@ -75,6 +87,7 @@ export default function ProductDetailPage({
   const [activeCampaigns, setActiveCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [marketplaceVisibility, setMarketplaceVisibility] = useState<MarketplaceVisibility>(DEFAULT_MARKETPLACE_VISIBILITY);
 
   // --- Interaction & Media States ---
   const [selectedMedia, setSelectedMedia] = useState<string>('');
@@ -121,6 +134,22 @@ export default function ProductDetailPage({
         }
 
         setProduct(prodData);
+
+        const { data: homepageDisplaySetting } = await supabase
+          .from('store_settings')
+          .select('value')
+          .eq('key', 'homepage_display')
+          .maybeSingle();
+
+        const homepageDisplay = homepageDisplaySetting?.value;
+        if (homepageDisplay && typeof homepageDisplay === 'object' && !Array.isArray(homepageDisplay)) {
+          const value = homepageDisplay as Record<string, unknown>;
+          setMarketplaceVisibility({
+            show_meesho_link: typeof value.show_meesho_link === 'boolean' ? value.show_meesho_link : true,
+            show_amazon_link: typeof value.show_amazon_link === 'boolean' ? value.show_amazon_link : true,
+            show_flipkart_link: typeof value.show_flipkart_link === 'boolean' ? value.show_flipkart_link : true,
+          });
+        }
 
         const initialImg = (prodData.images && prodData.images.length > 0)
           ? prodData.images[0]
@@ -937,9 +966,9 @@ export default function ProductDetailPage({
 
           {/* Marketplace Trust Component Added Here on Product Page */}
           <SellerMarketplaceTrust 
-            amazonUrl="https://www.amazon.in/l/27943762031?me=AXKNNYVWLT32Y&tag=ShopReferral_d451e877-492b-4a44-8989-d4151cfc4c54&ref=sf_seller_app_share_new_ls_srb"
-            flipkartUrl="https://www.flipkart.com/adhyey-brothers-women-crop-top-skirt-ethnic-jacket-set/p/itm2881ff260ebcc?pid=ETHHJNJYHKNYXZPM"
-            meeshoUrl="https://www.meesho.com/Adhyey?ms=2"
+            amazonUrl={marketplaceVisibility.show_amazon_link ? "https://www.amazon.in/l/27943762031?me=AXKNNYVWLT32Y&tag=ShopReferral_d451e877-492b-4a44-8989-d4151cfc4c54&ref=sf_seller_app_share_new_ls_srb" : undefined}
+            flipkartUrl={marketplaceVisibility.show_flipkart_link ? "https://www.flipkart.com/adhyey-brothers-women-crop-top-skirt-ethnic-jacket-set/p/itm2881ff260ebcc?pid=ETHHJNJYHKNYXZPM" : undefined}
+            meeshoUrl={marketplaceVisibility.show_meesho_link ? "https://www.meesho.com/Adhyey?ms=2" : undefined}
           />
 
           {/* SIMILAR PRODUCTS */}

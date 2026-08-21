@@ -19,6 +19,8 @@ export const SellerMarketplaceTrust: React.FC<SellerMarketplaceTrustProps> = ({
   meeshoUrl,
   testimonials = []
 }) => {
+  if (!amazonUrl && !flipkartUrl && !meeshoUrl) return null;
+
   return (
     <div className="marketplace-trust-container" style={{ padding: '20px', textAlign: 'center', background: '#f9f9f9', margin: '20px 0', borderRadius: '8px' }}>
       <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '8px' }}>અમારી અન્ય શોપિંગ પ્લેટફોર્મ પર પણ મુલાકાત લો</h3>

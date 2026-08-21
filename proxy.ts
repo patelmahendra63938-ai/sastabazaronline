@@ -66,31 +66,6 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
 
-    /*
-     * Authenticated user:
-     * verify the server-side profile role.
-     */
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .maybeSingle();
-
-    const role = profile?.role;
-
-    if (
-      profileError ||
-      !role ||
-      !ADMIN_ROLES.includes(role as (typeof ADMIN_ROLES)[number])
-    ) {
-      const homeUrl = request.nextUrl.clone();
-
-      homeUrl.pathname = '/';
-      homeUrl.search = '';
-      homeUrl.searchParams.set('error', 'unauthorized');
-
-      return NextResponse.redirect(homeUrl);
-    }
   }
 
   /*
