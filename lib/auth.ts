@@ -1,6 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { canAccessAdmin, type UserRole } from '@/lib/auth-roles';
 
-export type UserRole = 'customer' | 'staff' | 'admin' | 'super_admin';
+export { ADMIN_ROLES, canAccessAdmin, type UserRole } from '@/lib/auth-roles';
 
 export interface UserProfile {
   id: string;
@@ -33,5 +34,14 @@ export async function getCurrentUser() {
     user,
     profile: profile as UserProfile | null,
     role: (profile?.role || 'customer') as UserRole
+  };
+}
+
+export async function getAdminSession() {
+  const session = await getCurrentUser();
+
+  return {
+    ...session,
+    authorized: Boolean(session.user && canAccessAdmin(session.role)),
   };
 }
