@@ -1,8 +1,16 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
-import { SlidersHorizontal, ArrowUp, ArrowDown, Save, CheckCircle2 } from 'lucide-react';
+import {
+  SlidersHorizontal,
+  ArrowUp,
+  ArrowDown,
+  Save,
+  CheckCircle2,
+  Eye,
+  ExternalLink,
+} from 'lucide-react';
 
 interface FilterSetting {
   id: string;
@@ -12,10 +20,23 @@ interface FilterSetting {
   display_order: number;
 }
 
+interface VisibilitySettings {
+  filter_panel_enabled: boolean;
+  marketplace_links_enabled: boolean;
+}
+
+const DEFAULT_VISIBILITY: VisibilitySettings = {
+  filter_panel_enabled: true,
+  marketplace_links_enabled: true,
+};
+
 export default function AdminFilterSettingsPage() {
   const [filters, setFilters] = useState<FilterSetting[]>([]);
+  const [visibility, setVisibility] =
+    useState<VisibilitySettings>(DEFAULT_VISIBILITY);
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState('');
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -28,23 +49,38 @@ export default function AdminFilterSettingsPage() {
 
   const fetchSettings = async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from('storefront_filter_settings')
-      .select('*')
-      .order('display_order', { ascending: true });
-    setFilters(data || []);
+    setError('');
+
+    const [filtersResult, visibilityResult] = await Promise.all([
+      supabase
+        .from('storefront_filter_settings')
+        .select('*')
+        .order('display_order', { ascending: true }),
+      fetch('/api/storefront-visibility', { cache: 'no-store' }),
+    ]);
+
+    setFilters(filtersResult.data || []);
+
+    if (visibilityResult.ok) {
+      const value = (await visibilityResult.json()) as VisibilitySettings;
+      setVisibility({
+        filter_panel_enabled: value.filter_panel_enabled !== false,
+        marketplace_links_enabled: value.marketplace_links_enabled !== false,
+      });
+    }
+
     setLoading(false);
   };
 
   const handleToggle = (id: string) => {
-    setFilters(prev =>
-      prev.map(f => (f.id === id ? { ...f, is_enabled: !f.is_enabled } : f))
+    setFilters((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, is_enabled: !f.is_enabled } : f))
     );
   };
 
   const handleNameChange = (id: string, name: string) => {
-    setFilters(prev =>
-      prev.map(f => (f.id === id ? { ...f, display_name: name } : f))
+    setFilters((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, display_name: name } : f))
     );
   };
 
@@ -57,49 +93,150 @@ export default function AdminFilterSettingsPage() {
     newArr[index] = newArr[targetIndex];
     newArr[targetIndex] = temp;
 
-    const reordered = newArr.map((item, idx) => ({ ...item, display_order: idx + 1 }));
+    const reordered = newArr.map((item, idx) => ({
+      ...item,
+      display_order: idx + 1,
+    }));
     setFilters(reordered);
   };
 
   const handleSave = async () => {
     setLoading(true);
-    for (const item of filters) {
-      await supabase
-        .from('storefront_filter_settings')
-        .update({
-          display_name: item.display_name,
-          is_enabled: item.is_enabled,
-          display_order: item.display_order,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', item.id);
+    setSaved(false);
+    setError('');
+
+    try {
+      for (const item of filters) {
+        const { error: filterError } = await supabase
+          .from('storefront_filter_settings')
+          .update({
+            display_name: item.display_name,
+            is_enabled: item.is_enabled,
+            display_order: item.display_order,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', item.id);
+
+        if (filterError) throw filterError;
+      }
+
+      const response = await fetch('/api/storefront-visibility', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(visibility),
+      });
+
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Unable to save storefront visibility.');
+      }
+
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (saveError) {
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : 'Unable to save storefront settings.'
+      );
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
   };
 
   return (
     <div className="p-6 space-y-6 max-w-4xl">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold text-indigo-950 flex items-center gap-2">
             <SlidersHorizontal size={20} className="text-orange-500" />
             Storefront Filter Configuration
           </h1>
           <p className="text-xs text-gray-500 mt-1">
-            Enable, disable, rename, and reorder filter groups shown to storefront shoppers.
+            Control the complete filter panel, marketplace links, and individual
+            filter groups shown to storefront shoppers.
           </p>
         </div>
         <button
           onClick={handleSave}
           disabled={loading}
-          className="bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition flex items-center gap-2 shadow-xs"
+          className="bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition flex items-center gap-2 shadow-xs"
         >
           {saved ? <CheckCircle2 size={16} /> : <Save size={16} />}
-          {saved ? 'Saved' : 'Save Filter Order'}
+          {saved ? 'Saved' : loading ? 'Saving...' : 'Save Settings'}
         </button>
       </div>
+
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-semibold text-red-700">
+          {error}
+        </div>
+      )}
+
+      <section className="grid gap-4 sm:grid-cols-2">
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-2xs">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 text-sm font-black text-indigo-950">
+                <Eye size={17} className="text-indigo-600" />
+                Main Page Filter Tab
+              </div>
+              <p className="mt-2 text-xs leading-relaxed text-gray-500">
+                ON shows the complete filter panel on the main storefront. OFF
+                removes the filter panel and active filter chips from the main page.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                setVisibility((current) => ({
+                  ...current,
+                  filter_panel_enabled: !current.filter_panel_enabled,
+                }))
+              }
+              className={`shrink-0 rounded-lg border px-3 py-1.5 text-[11px] font-black transition ${
+                visibility.filter_panel_enabled
+                  ? 'border-green-200 bg-green-100 text-green-800'
+                  : 'border-gray-200 bg-gray-100 text-gray-600'
+              }`}
+            >
+              {visibility.filter_panel_enabled ? 'ON' : 'OFF'}
+            </button>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-2xs">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 text-sm font-black text-indigo-950">
+                <ExternalLink size={17} className="text-orange-500" />
+                External Marketplace Links
+              </div>
+              <p className="mt-2 text-xs leading-relaxed text-gray-500">
+                ON shows the Amazon, Flipkart and Meesho seller links wherever the
+                marketplace trust section is displayed. OFF hides those external
+                marketplace cards and links.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                setVisibility((current) => ({
+                  ...current,
+                  marketplace_links_enabled: !current.marketplace_links_enabled,
+                }))
+              }
+              className={`shrink-0 rounded-lg border px-3 py-1.5 text-[11px] font-black transition ${
+                visibility.marketplace_links_enabled
+                  ? 'border-green-200 bg-green-100 text-green-800'
+                  : 'border-gray-200 bg-gray-100 text-gray-600'
+              }`}
+            >
+              {visibility.marketplace_links_enabled ? 'ON' : 'OFF'}
+            </button>
+          </div>
+        </div>
+      </section>
 
       <div className="bg-white rounded-2xl border border-gray-200 shadow-2xs overflow-hidden">
         <table className="w-full text-left border-collapse">
@@ -115,13 +252,17 @@ export default function AdminFilterSettingsPage() {
           <tbody className="divide-y divide-gray-100 text-xs">
             {filters.map((f, idx) => (
               <tr key={f.id} className="hover:bg-gray-50/80 transition">
-                <td className="p-4 font-mono text-gray-400 font-bold">{f.display_order}</td>
-                <td className="p-4 font-mono font-semibold text-indigo-900">{f.filter_key}</td>
+                <td className="p-4 font-mono text-gray-400 font-bold">
+                  {f.display_order}
+                </td>
+                <td className="p-4 font-mono font-semibold text-indigo-900">
+                  {f.filter_key}
+                </td>
                 <td className="p-4">
                   <input
                     type="text"
                     value={f.display_name}
-                    onChange={e => handleNameChange(f.id, e.target.value)}
+                    onChange={(e) => handleNameChange(f.id, e.target.value)}
                     className="border border-gray-200 rounded-lg px-2.5 py-1 text-xs focus:bg-white w-48 font-semibold text-gray-800"
                   />
                 </td>
