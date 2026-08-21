@@ -1,15 +1,15 @@
 'use client';
 
 import React from 'react';
-import { 
-  ShieldCheck, 
-  ExternalLink, 
-  Truck, 
-  Lock, 
-  CheckCircle2, 
-  Store, 
-  Sparkles, 
-  Star 
+import {
+  ShieldCheck,
+  ExternalLink,
+  Truck,
+  Lock,
+  CheckCircle2,
+  Store,
+  Sparkles,
+  Star,
 } from 'lucide-react';
 
 interface Testimonial {
@@ -21,13 +21,9 @@ interface Testimonial {
 }
 
 interface SellerMarketplaceTrustProps {
-  // URLs supplied via configuration / env / props. If empty, card is not rendered.
-  amazonUrl?: Hey, check out the products that I am selling on Amazon. You can visit my storefront on Amazon from here:
-https://www.amazon.in/l/27943762031?me=AXKNNYVWLT32Y&tag=ShopReferral_d451e877-492b-4a44-8989-d4151cfc4c54&ref=sf_seller_app_share_new_ls_srb
-You easily can browse popular products, best offers, and top discounted products on my storefront. If you like the products, then please share my storefront with others in your network who might be interested.;
-  flipkartUrl?: https://www.flipkart.com/adhyey-brothers-women-crop-top-skirt-ethnic-jacket-set/p/itm2881ff260ebcc?pid=ETHHJNJYHKNYXZPM;
-  meeshoUrl?: https://www.meesho.com/Adhyey?ms=2;
-  // Authentic synchronized testimonials only. Pass empty array if none exist.
+  amazonUrl?: string;
+  flipkartUrl?: string;
+  meeshoUrl?: string;
   testimonials?: Testimonial[];
 }
 
@@ -35,124 +31,148 @@ export default function SellerMarketplaceTrust({
   amazonUrl = process.env.NEXT_PUBLIC_SELLER_AMAZON_URL || '',
   flipkartUrl = process.env.NEXT_PUBLIC_SELLER_FLIPKART_URL || '',
   meeshoUrl = process.env.NEXT_PUBLIC_SELLER_MEESHO_URL || '',
-  testimonials = []
+  testimonials = [],
 }: SellerMarketplaceTrustProps) {
   const marketplaces = [
     {
       id: 'amazon',
       platform: 'Amazon',
       sellerName: 'Adhyey Brothers',
-      description: 'Find our catalog of home, kitchen, and lifestyle items on Amazon India.',
+      description:
+        'Find our catalog of home, kitchen, and lifestyle items on Amazon India.',
       url: amazonUrl,
       accentBorder: 'hover:border-amber-400',
       glowColor: 'group-hover:shadow-amber-500/10',
       badgeBg: 'bg-amber-50 text-amber-900 border-amber-200',
       ctaText: 'Visit Seller Profile',
-      tagColor: 'bg-amber-500'
+      tagColor: 'bg-amber-500',
     },
     {
       id: 'flipkart',
       platform: 'Flipkart',
       sellerName: 'Adhyey Brothers',
-      description: 'Explore our verified range of products directly on Flipkart marketplace.',
+      description:
+        'Explore our verified range of products directly on Flipkart marketplace.',
       url: flipkartUrl,
       accentBorder: 'hover:border-blue-400',
       glowColor: 'group-hover:shadow-blue-500/10',
       badgeBg: 'bg-blue-50 text-blue-900 border-blue-200',
       ctaText: 'Visit Seller Profile',
-      tagColor: 'bg-blue-600'
+      tagColor: 'bg-blue-600',
     },
     {
       id: 'meesho',
       platform: 'Meesho',
       sellerName: 'Adhyey Brothers',
-      description: 'Verify our wholesale catalog and merchant presence on Meesho.',
+      description:
+        'Verify our wholesale catalog and merchant presence on Meesho.',
       url: meeshoUrl,
       accentBorder: 'hover:border-pink-400',
       glowColor: 'group-hover:shadow-pink-500/10',
       badgeBg: 'bg-pink-50 text-pink-900 border-pink-200',
       ctaText: 'Visit Seller Profile',
-      tagColor: 'bg-pink-600'
-    }
-  ].filter(m => Boolean(m.url && m.url.trim() !== ''));
+      tagColor: 'bg-pink-600',
+    },
+  ].filter((m) => Boolean(m.url && m.url.trim() !== ''));
 
   return (
-    <section 
-      aria-labelledby="seller-trust-heading" 
-      className="w-full py-12 md:py-16 bg-[#F8F9FB] border-t border-gray-150"
+    <section
+      aria-labelledby="seller-trust-heading"
+      className="w-full border-t border-gray-150 bg-[#F8F9FB] py-12 md:py-16"
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6">
-        
+      <div className="mx-auto max-w-7xl px-4 sm:px-6">
         {/* Header Block */}
-        <div className="text-center max-w-2xl mx-auto space-y-2 mb-10">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-950 text-[11px] font-bold tracking-wide uppercase">
+        <div className="mx-auto mb-10 max-w-2xl space-y-2 text-center">
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-indigo-950">
             <ShieldCheck size={14} className="text-orange-500" />
             <span>Official Seller Verification</span>
           </div>
-          <h2 
-            id="seller-trust-heading" 
-            className="text-2xl sm:text-3xl font-black text-indigo-950 tracking-tight"
+
+          <h2
+            id="seller-trust-heading"
+            className="text-2xl font-black tracking-tight text-indigo-950 sm:text-3xl"
           >
             Trusted by Shoppers Across India
           </h2>
-          <p className="text-xs sm:text-sm text-gray-600 font-medium">
+
+          <p className="text-xs font-medium text-gray-600 sm:text-sm">
             Verified seller presence across leading marketplaces
           </p>
         </div>
 
         {/* Verification Context Notice */}
-        <div className="mb-8 p-4 rounded-2xl bg-white border border-gray-200/80 shadow-2xs max-w-3xl mx-auto text-center">
-          <p className="text-xs text-gray-600 leading-relaxed">
-            Want to verify <strong className="text-indigo-950 font-bold">Adhyey Brothers</strong>? Check our seller presence on leading marketplaces below. 
-            Enjoy factory-direct wholesale pricing, direct order tracking, and GST invoicing exclusively on <strong className="text-orange-600 font-bold">SASTABAZARONLINE</strong>.
+        <div className="mx-auto mb-8 max-w-3xl rounded-2xl border border-gray-200/80 bg-white p-4 text-center shadow-2xs">
+          <p className="text-xs leading-relaxed text-gray-600">
+            Want to verify{' '}
+            <strong className="font-bold text-indigo-950">
+              Adhyey Brothers
+            </strong>
+            ? Check our seller presence on leading marketplaces below. Enjoy
+            factory-direct wholesale pricing, direct order tracking, and GST
+            invoicing exclusively on{' '}
+            <strong className="font-bold text-orange-600">
+              SASTABAZARONLINE
+            </strong>
+            .
           </p>
         </div>
 
-        {/* Responsive Marketplace Cards Grid (3 on desktop, 2+1 on tablet, 1 on mobile) */}
+        {/* Marketplace Cards */}
         {marketplaces.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-12">
+          <div className="mb-12 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {marketplaces.map((item) => (
               <div
                 key={item.id}
-                className={`group relative bg-white rounded-3xl border border-gray-200/90 p-6 shadow-xs hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 ${item.accentBorder} ${item.glowColor} flex flex-col justify-between`}
+                className={`group relative flex flex-col justify-between rounded-3xl border border-gray-200/90 bg-white p-6 shadow-xs transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${item.accentBorder} ${item.glowColor}`}
               >
                 <div>
-                  {/* Card Header & Brand Identifier */}
-                  <div className="flex items-center justify-between gap-3 mb-4">
+                  {/* Card Header */}
+                  <div className="mb-4 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2.5">
-                      <div className={`w-3 h-3 rounded-full ${item.tagColor}`} />
-                      <span className="text-base font-black text-indigo-950 tracking-tight">
+                      <div
+                        className={`h-3 w-3 rounded-full ${item.tagColor}`}
+                      />
+
+                      <span className="text-base font-black tracking-tight text-indigo-950">
                         {item.platform}
                       </span>
                     </div>
-                    <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${item.badgeBg}`}>
+
+                    <span
+                      className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${item.badgeBg}`}
+                    >
                       Verified Presence
                     </span>
                   </div>
 
                   {/* Seller Identity */}
-                  <div className="space-y-1 mb-3">
+                  <div className="mb-3 space-y-1">
                     <div className="flex items-center gap-1.5 text-xs font-bold text-gray-800">
                       <Store size={14} className="text-gray-400" />
                       <span>Seller: {item.sellerName}</span>
                     </div>
-                    <p className="text-xs text-gray-500 leading-relaxed">
+
+                    <p className="text-xs leading-relaxed text-gray-500">
                       {item.description}
                     </p>
                   </div>
                 </div>
 
                 {/* External Action Button */}
-                <div className="pt-4 border-t border-gray-100 mt-4">
+                <div className="mt-4 border-t border-gray-100 pt-4">
                   <a
                     href={item.url}
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label={`Visit ${item.sellerName} profile on ${item.platform} (opens in new tab)`}
-                    className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold text-indigo-950 bg-gray-50 hover:bg-indigo-950 hover:text-white border border-gray-200 transition-colors duration-200 group-hover:border-transparent cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                    className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-xs font-bold text-indigo-950 transition-colors duration-200 hover:bg-indigo-950 hover:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 group-hover:border-transparent"
                   >
                     <span>{item.ctaText}</span>
-                    <ExternalLink size={13} className="opacity-70 group-hover:opacity-100 transition-opacity" />
+
+                    <ExternalLink
+                      size={13}
+                      className="opacity-70 transition-opacity group-hover:opacity-100"
+                    />
                   </a>
                 </div>
               </div>
@@ -160,75 +180,117 @@ export default function SellerMarketplaceTrust({
           </div>
         )}
 
-        {/* Factually Supported Trust Row */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4 max-w-5xl mx-auto">
-          <div className="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-2xs flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
+        {/* Trust Row */}
+        <div className="mx-auto grid max-w-5xl grid-cols-2 gap-3.5 sm:gap-4 lg:grid-cols-4">
+          <div className="flex items-center gap-3 rounded-2xl border border-gray-200/80 bg-white p-4 shadow-2xs">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
               <Sparkles size={20} />
             </div>
+
             <div>
-              <p className="text-xs font-bold text-indigo-950">100% Authentic</p>
-              <p className="text-[11px] text-gray-500">Factory direct products</p>
+              <p className="text-xs font-bold text-indigo-950">
+                100% Authentic
+              </p>
+              <p className="text-[11px] text-gray-500">
+                Factory direct products
+              </p>
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-2xs flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+          <div className="flex items-center gap-3 rounded-2xl border border-gray-200/80 bg-white p-4 shadow-2xs">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
               <ShieldCheck size={20} />
             </div>
+
             <div>
-              <p className="text-xs font-bold text-indigo-950">Verified Seller</p>
-              <p className="text-[11px] text-gray-500">Adhyey Brothers Surat</p>
+              <p className="text-xs font-bold text-indigo-950">
+                Verified Seller
+              </p>
+              <p className="text-[11px] text-gray-500">
+                Adhyey Brothers Surat
+              </p>
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-2xs flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-green-50 text-green-600 flex items-center justify-center shrink-0">
+          <div className="flex items-center gap-3 rounded-2xl border border-gray-200/80 bg-white p-4 shadow-2xs">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-green-50 text-green-600">
               <Lock size={18} />
             </div>
+
             <div>
-              <p className="text-xs font-bold text-indigo-950">Secure Checkout</p>
-              <p className="text-[11px] text-gray-500">COD & Verified UPI</p>
+              <p className="text-xs font-bold text-indigo-950">
+                Secure Checkout
+              </p>
+              <p className="text-[11px] text-gray-500">
+                COD &amp; Verified UPI
+              </p>
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-2xs flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+          <div className="flex items-center gap-3 rounded-2xl border border-gray-200/80 bg-white p-4 shadow-2xs">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
               <Truck size={20} />
             </div>
+
             <div>
-              <p className="text-xs font-bold text-indigo-950">India-Wide Delivery</p>
-              <p className="text-[11px] text-gray-500">PIN-verified courier dispatch</p>
+              <p className="text-xs font-bold text-indigo-950">
+                India-Wide Delivery
+              </p>
+              <p className="text-[11px] text-gray-500">
+                PIN-verified courier dispatch
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Genuine Customer Testimonials (Rendered strictly if verified data exists) */}
-        {testimonials && testimonials.length > 0 && (
-          <div className="mt-12 pt-10 border-t border-gray-200/80">
-            <div className="text-center mb-6">
-              <h3 className="text-lg font-black text-indigo-950">Verified Buyer Experiences</h3>
-              <p className="text-xs text-gray-500">Real feedback from genuine orders</p>
+        {/* Customer Testimonials */}
+        {testimonials.length > 0 && (
+          <div className="mt-12 border-t border-gray-200/80 pt-10">
+            <div className="mb-6 text-center">
+              <h3 className="text-lg font-black text-indigo-950">
+                Verified Buyer Experiences
+              </h3>
+
+              <p className="text-xs text-gray-500">
+                Real feedback from genuine orders
+              </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               {testimonials.map((t) => (
-                <div key={t.id} className="bg-white p-5 rounded-2xl border border-gray-200 shadow-2xs space-y-3">
+                <div
+                  key={t.id}
+                  className="space-y-3 rounded-2xl border border-gray-200 bg-white p-5 shadow-2xs"
+                >
                   {t.rating && (
                     <div className="flex items-center gap-1 text-amber-500">
-                      {[...Array(Math.min(5, Math.max(1, t.rating)))].map((_, i) => (
-                        <Star key={i} size={13} className="fill-amber-400 text-amber-400" />
+                      {[
+                        ...Array(
+                          Math.min(5, Math.max(1, Math.round(t.rating))),
+                        ),
+                      ].map((_, i) => (
+                        <Star
+                          key={i}
+                          size={13}
+                          className="fill-amber-400 text-amber-400"
+                        />
                       ))}
                     </div>
                   )}
-                  <p className="text-xs text-gray-700 italic leading-relaxed">
+
+                  <p className="text-xs italic leading-relaxed text-gray-700">
                     &quot;{t.comment}&quot;
                   </p>
-                  <div className="flex items-center justify-between text-[11px] border-t border-gray-100 pt-2 text-gray-500">
-                    <span className="font-bold text-indigo-950">{t.name}</span>
+
+                  <div className="flex items-center justify-between border-t border-gray-100 pt-2 text-[11px] text-gray-500">
+                    <span className="font-bold text-indigo-950">
+                      {t.name}
+                    </span>
+
                     {t.isVerifiedPurchase && (
-                      <span className="text-green-700 flex items-center gap-1 font-semibold">
-                        <CheckCircle2 size={12} /> Verified Order
+                      <span className="flex items-center gap-1 font-semibold text-green-700">
+                        <CheckCircle2 size={12} />
+                        Verified Order
                       </span>
                     )}
                   </div>
@@ -237,7 +299,6 @@ export default function SellerMarketplaceTrust({
             </div>
           </div>
         )}
-
       </div>
     </section>
   );
