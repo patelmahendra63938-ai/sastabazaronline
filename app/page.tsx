@@ -8,7 +8,9 @@ import ProductFilterPanel, {
 } from '@/components/ProductFilterPanel';
 import ActiveFilterChips from '@/components/ActiveFilterChips';
 import CampaignBanner from '@/components/promotions/CampaignBanner';
+import SellerMarketplaceTrust from '@/components/trust/SellerMarketplaceTrust';
 import { getActiveCampaigns, Campaign } from '@/lib/promotions';
+import { getStorefrontVisibilitySetting } from '@/lib/settings/storefront-visibility';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { Metadata } from 'next';
@@ -25,6 +27,8 @@ interface PageProps {
 export default async function StorefrontPage({ searchParams }: PageProps) {
   const resolvedSearchParams = await searchParams;
   const cookieStore = await cookies();
+  const visibilitySetting = await getStorefrontVisibilitySetting();
+  const visibility = visibilitySetting.value;
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -185,22 +189,23 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
             <CampaignBanner campaign={homepageBannerCampaign} />
           )}
 
-          {/* Main Layout: Left Sidebar Filters + Right Catalog Grid */}
+          {/* Main Layout: Optional Left Sidebar Filters + Right Catalog Grid */}
           <div className="flex flex-col md:flex-row gap-6 pt-2">
             
-            {/* Desktop & Mobile Left Filter Panel */}
-            <aside className="w-full md:w-64 shrink-0">
-              <ProductFilterPanel
-                availableOptions={availableOptions}
-                filterConfigs={filterConfigs}
-              />
-            </aside>
+            {visibility.filter_panel_enabled && (
+              <aside className="w-full md:w-64 shrink-0">
+                <ProductFilterPanel
+                  availableOptions={availableOptions}
+                  filterConfigs={filterConfigs}
+                />
+              </aside>
+            )}
 
             {/* Product Catalog Grid Column */}
             <div className="flex-1 space-y-4">
               
               {/* Active Removable Chips */}
-              <ActiveFilterChips />
+              {visibility.filter_panel_enabled && <ActiveFilterChips />}
 
               {/* Toolbar Bar */}
               <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-gray-200/80 shadow-2xs">
@@ -235,6 +240,12 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
 
           </div>
         </div>
+
+        <SellerMarketplaceTrust
+          amazonUrl={visibility.marketplace_links_enabled ? process.env.NEXT_PUBLIC_SELLER_AMAZON_URL || '' : ''}
+          flipkartUrl={visibility.marketplace_links_enabled ? process.env.NEXT_PUBLIC_SELLER_FLIPKART_URL || '' : ''}
+          meeshoUrl={visibility.marketplace_links_enabled ? process.env.NEXT_PUBLIC_SELLER_MEESHO_URL || '' : ''}
+        />
       </div>
 
       <Footer />
