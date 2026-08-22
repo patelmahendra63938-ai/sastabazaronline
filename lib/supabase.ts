@@ -1,29 +1,15 @@
-import { createClient } from '@supabase/supabase-js';
+import { createBrowserClient } from '@supabase/ssr';
 
-// Safe HTTPS fallback prevents build-time evaluation crashes on Vercel
-const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ozzxrzyahbnavldyrlms.supabase.co';
-const supabaseAnonKey =
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_jXpCXLTZTtwJ6oVeEq8M9g_ZRx0K1ex';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-  if (typeof window !== 'undefined') {
-    console.warn('⚠️ Supabase environment variables missing in client runtime.');
-  }
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error(
+    'Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY'
+  );
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true, // Retains authentication state across sessions and RLS policies
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-  },
-  global: {
-    headers: {
-      'x-application-name': 'sastabazaronline',
-    },
-  },
-  db: {
-    schema: 'public',
-  },
-});
+export const supabase = createBrowserClient(
+  supabaseUrl,
+  supabaseAnonKey
+);
