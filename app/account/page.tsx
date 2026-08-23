@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
 import { AlertCircle, CheckCircle2, Loader2, Lock, LogIn, Mail, UserPlus } from 'lucide-react';
 import Header from '@/components/Header';
@@ -10,7 +10,6 @@ import Footer from '@/components/Footer';
 
 export default function CustomerAccountPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -18,6 +17,7 @@ export default function CustomerAccountPage() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [safeRedirect, setSafeRedirect] = useState('/orders');
 
   const supabase = useMemo(
     () => createBrowserClient(
@@ -27,10 +27,12 @@ export default function CustomerAccountPage() {
     []
   );
 
-  const requestedPath = searchParams.get('redirectTo');
-  const safeRedirect = requestedPath && requestedPath.startsWith('/') && !requestedPath.startsWith('//')
-    ? requestedPath
-    : '/orders';
+  useEffect(() => {
+    const requestedPath = new URLSearchParams(window.location.search).get('redirectTo');
+    if (requestedPath && requestedPath.startsWith('/') && !requestedPath.startsWith('//')) {
+      setSafeRedirect(requestedPath);
+    }
+  }, []);
 
   const resetMessages = () => {
     setErrorMsg('');
@@ -73,9 +75,7 @@ export default function CustomerAccountPage() {
 
     setLoading(true);
     try {
-      const emailRedirectTo = typeof window !== 'undefined'
-        ? `${window.location.origin}/account?redirectTo=${encodeURIComponent(safeRedirect)}`
-        : undefined;
+      const emailRedirectTo = `${window.location.origin}/account?redirectTo=${encodeURIComponent(safeRedirect)}`;
 
       const { data, error } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
