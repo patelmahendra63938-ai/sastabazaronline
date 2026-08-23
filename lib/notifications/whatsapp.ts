@@ -13,11 +13,55 @@ function formatIndianPhoneNumber(phone: string): string {
   return digits;
 }
 
+async function sendTemplateMessage(args: {
+  token: string;
+  phoneNumberId: string;
+  recipientPhone: string;
+  templateName: string;
+  templateLanguage: string;
+  payload: WhatsAppOrderPayload;
+}) {
+  const response = await fetch(
+    `https://graph.facebook.com/v26.0/${args.phoneNumberId}/messages`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${args.token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to: args.recipientPhone,
+        type: 'template',
+        template: {
+          name: args.templateName,
+          language: { code: args.templateLanguage },
+          components: [
+            {
+              type: 'body',
+              parameters: [
+                { type: 'text', text: args.payload.customerName },
+                { type: 'text', text: args.payload.orderNumber },
+                { type: 'text', text: String(args.payload.itemCount) },
+                { type: 'text', text: args.payload.grandTotal.toFixed(2) },
+              ],
+            },
+          ],
+        },
+      }),
+    }
+  );
+
+  const data = await response.json();
+  return { response, data };
+}
+
 export async function sendOrderConfirmationWhatsApp(payload: WhatsAppOrderPayload) {
   const token = process.env.WHATSAPP_ACCESS_TOKEN || process.env.WHATSAPP_API_TOKEN;
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
   const templateName = process.env.WHATSAPP_ORDER_TEMPLATE_NAME || 'sastabazar_order_confirmation';
-  const templateLanguage = process.env.WHATSAPP_ORDER_TEMPLATE_LANGUAGE || 'en_US';
+  const configuredLanguage = process.env.WHATSAPP_ORDER_TEMPLATE_LANGUAGE || 'en';
 
   if (!token || !phoneNumberId) {
     return {
@@ -38,55 +82,42 @@ export async function sendOrderConfirmationWhatsApp(payload: WhatsAppOrderPayloa
   }
 
   try {
-    const response = await fetch(
-      `https://graph.facebook.com/v26.0/${phoneNumberId}/messages`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messaging_product: 'whatsapp',
-          recipient_type: 'individual',
-          to: recipientPhone,
-          type: 'template',
-          template: {
-            name: templateName,
-            language: {
-              code: templateLanguage,
-            },
-            components: [
-              {
-                type: 'body',
-                parameters: [
-                  { type: 'text', text: payload.customerName },
-                  { type: 'text', text: payload.orderNumber },
-                  { type: 'text', text: String(payload.itemCount) },
-                  { type: 'text', text: payload.grandTotal.toFixed(2) },
-                ],
-              },
-            ],
-          },
-        }),
+    const languages = Array.from(new Set([configuredLanguage, 'en', 'en_US']));
+    let lastData: any = null;
+
+    for (const templateLanguage of languages) {
+      const { response, data } = await sendTemplateMessage({
+        token,
+        phoneNumberId,
+        recipientPhone,
+        templateName,
+        templateLanguage,
+        payload,
+      });
+
+      if (response.ok) {
+        return {
+          success: true,
+          messageId: data.messages?.[0]?.id,
+          status: data.messages?.[0]?.message_status || 'accepted',
+          templateLanguage,
+        };
       }
-    );
 
-    const data = await response.json();
+      lastData = data;
+      const code = data?.error?.code;
+      const details = String(data?.error?.error_data?.details || '');
+      const isTemplateLanguageMismatch =
+        code === 132001 || details.toLowerCase().includes('does not exist in');
 
-    if (!response.ok) {
-      console.error('[WhatsApp Cloud API Error]:', data);
-      return {
-        success: false,
-        error: data.error?.message || 'WhatsApp API request failed',
-        metaError: data,
-      };
+      if (!isTemplateLanguageMismatch) break;
     }
 
+    console.error('[WhatsApp Cloud API Error]:', lastData);
     return {
-      success: true,
-      messageId: data.messages?.[0]?.id,
-      status: data.messages?.[0]?.message_status || 'accepted',
+      success: false,
+      error: lastData?.error?.message || 'WhatsApp API request failed',
+      metaError: lastData,
     };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'WhatsApp network request failed';
