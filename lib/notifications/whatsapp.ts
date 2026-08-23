@@ -21,6 +21,8 @@ async function sendTemplateMessage(args: {
   templateLanguage: string;
   payload: WhatsAppOrderPayload;
 }) {
+  const orderTrackingUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.sastabazaronline.in'}/orders`;
+
   const response = await fetch(
     `https://graph.facebook.com/v26.0/${args.phoneNumberId}/messages`,
     {
@@ -43,8 +45,8 @@ async function sendTemplateMessage(args: {
               parameters: [
                 { type: 'text', text: args.payload.customerName },
                 { type: 'text', text: args.payload.orderNumber },
-                { type: 'text', text: String(args.payload.itemCount) },
                 { type: 'text', text: args.payload.grandTotal.toFixed(2) },
+                { type: 'text', text: orderTrackingUrl },
               ],
             },
           ],
@@ -60,7 +62,7 @@ async function sendTemplateMessage(args: {
 export async function sendOrderConfirmationWhatsApp(payload: WhatsAppOrderPayload) {
   const token = process.env.WHATSAPP_ACCESS_TOKEN || process.env.WHATSAPP_API_TOKEN;
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-  const templateName = process.env.WHATSAPP_ORDER_TEMPLATE_NAME || 'sastabazar_order_confirmation';
+  const templateName = process.env.WHATSAPP_ORDER_TEMPLATE_NAME || 'order_confirmation';
   const configuredLanguage = process.env.WHATSAPP_ORDER_TEMPLATE_LANGUAGE || 'en';
 
   if (!token || !phoneNumberId) {
