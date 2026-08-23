@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { createBrowserClient } from '@supabase/ssr';
+import { createClient } from '@supabase/supabase-js';
 import { AlertCircle, CheckCircle2, Loader2, Lock, LogIn, Mail, UserPlus } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -22,9 +22,17 @@ export default function CustomerAccountPage() {
   const [safeRedirect, setSafeRedirect] = useState('/orders');
 
   const supabase = useMemo(
-    () => createBrowserClient(
+    () => createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        auth: {
+          flowType: 'implicit',
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+        },
+      }
     ),
     []
   );
@@ -50,9 +58,7 @@ export default function CustomerAccountPage() {
         email: email.trim().toLowerCase(),
         password,
       });
-
       if (error || !data.user) throw new Error(error?.message || 'Unable to sign in.');
-
       router.replace(safeRedirect);
       router.refresh();
     } catch (err: any) {
@@ -78,13 +84,11 @@ export default function CustomerAccountPage() {
     setLoading(true);
     try {
       const emailRedirectTo = `https://www.sastabazaronline.in/account?redirectTo=${encodeURIComponent(safeRedirect)}`;
-
       const { data, error } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
         password,
         options: { emailRedirectTo },
       });
-
       if (error) throw error;
 
       if (data.session) {
@@ -119,7 +123,6 @@ export default function CustomerAccountPage() {
       const redirectTo = 'https://www.sastabazaronline.in/account/reset-password';
       const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, { redirectTo });
       if (error) throw error;
-
       setSuccessMsg('Password reset link sent. Please check your email and open the secure reset link.');
     } catch (err: any) {
       setErrorMsg(err.message || 'Unable to send password reset email.');
