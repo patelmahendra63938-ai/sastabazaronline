@@ -13,6 +13,13 @@ function formatIndianPhoneNumber(phone: string): string {
   return digits;
 }
 
+function sanitizeTemplateText(value: unknown): string {
+  return String(value ?? '')
+    .replace(/[\r\n\t]+/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
 async function sendTemplateMessage(args: {
   token: string;
   phoneNumberId: string;
@@ -22,6 +29,11 @@ async function sendTemplateMessage(args: {
   payload: WhatsAppOrderPayload;
 }) {
   const orderTrackingUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.sastabazaronline.in'}/orders`;
+
+  const customerName = sanitizeTemplateText(args.payload.customerName);
+  const orderNumber = sanitizeTemplateText(args.payload.orderNumber);
+  const grandTotal = sanitizeTemplateText(args.payload.grandTotal.toFixed(2));
+  const trackingUrl = sanitizeTemplateText(orderTrackingUrl);
 
   const response = await fetch(
     `https://graph.facebook.com/v26.0/${args.phoneNumberId}/messages`,
@@ -43,10 +55,10 @@ async function sendTemplateMessage(args: {
             {
               type: 'body',
               parameters: [
-                { type: 'text', text: args.payload.customerName },
-                { type: 'text', text: args.payload.orderNumber },
-                { type: 'text', text: args.payload.grandTotal.toFixed(2) },
-                { type: 'text', text: orderTrackingUrl },
+                { type: 'text', text: customerName },
+                { type: 'text', text: orderNumber },
+                { type: 'text', text: grandTotal },
+                { type: 'text', text: trackingUrl },
               ],
             },
           ],
