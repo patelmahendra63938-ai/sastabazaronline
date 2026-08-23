@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
@@ -13,6 +13,8 @@ export default function ResetPasswordPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [sessionLoading, setSessionLoading] = useState(true);
+  const [recoveryReady, setRecoveryReady] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
@@ -24,10 +26,84 @@ export default function ResetPasswordPage() {
     []
   );
 
+  useEffect(() => {
+    let active = true;
+
+    const establishRecoverySession = async () => {
+      setSessionLoading(true);
+      setErrorMsg('');
+
+      try {
+        const url = new URL(window.location.href);
+        const code = url.searchParams.get('code');
+
+        if (code) {
+          const { error } = await supabase.auth.exchangeCodeForSession(code);
+          if (error) throw error;
+
+          // Remove the one-time auth code from the visible URL.
+          window.history.replaceState({}, '', url.pathname);
+        } else if (window.location.hash) {
+          // Compatibility for recovery links that return access/refresh tokens in the hash.
+          const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+          const accessToken = hash.get('access_token');
+          const refreshToken = hash.get('refresh_token');
+
+          if (accessToken && refreshToken) {
+            const { error } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            });
+            if (error) throw error;
+
+            window.history.replaceState({}, '', url.pathname);
+          }
+        }
+
+        const { data, error } = await supabase.auth.getSession();
+        if (error) throw error;
+
+        if (!data.session) {
+          throw new Error('This password reset link is invalid or has expired. Please request a new link.');
+        }
+
+        if (active) setRecoveryReady(true);
+      } catch (err: any) {
+        if (active) {
+          setRecoveryReady(false);
+          setErrorMsg(err.message || 'Unable to verify the password reset link. Please request a new link.');
+        }
+      } finally {
+        if (active) setSessionLoading(false);
+      }
+    };
+
+    establishRecoverySession();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!active) return;
+      if ((event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') && session) {
+        setRecoveryReady(true);
+        setSessionLoading(false);
+        setErrorMsg('');
+      }
+    });
+
+    return () => {
+      active = false;
+      authListener.subscription.unsubscribe();
+    };
+  }, [supabase]);
+
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
     setSuccessMsg('');
+
+    if (!recoveryReady) {
+      setErrorMsg('Password reset session is not ready. Please open a fresh reset link from your email.');
+      return;
+    }
 
     if (password.length < 8) {
       setErrorMsg('Password must be at least 8 characters.');
@@ -44,6 +120,7 @@ export default function ResetPasswordPage() {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
 
+      await supabase.auth.signOut();
       setSuccessMsg('Your password has been updated successfully. You can now sign in with your new password.');
       setPassword('');
       setConfirmPassword('');
@@ -70,6 +147,13 @@ export default function ResetPasswordPage() {
               Enter a new password for your SASTABAZARONLINE customer account.
             </p>
 
+            {sessionLoading && (
+              <div className="mb-4 p-3 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-semibold flex items-center gap-2">
+                <Loader2 size={16} className="animate-spin shrink-0" />
+                <span>Verifying your secure password reset link...</span>
+              </div>
+            )}
+
             {errorMsg && (
               <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold flex items-start gap-2">
                 <AlertCircle size={16} className="shrink-0 mt-0.5" />
@@ -92,11 +176,12 @@ export default function ResetPasswordPage() {
                   <input
                     type="password"
                     required
+                    disabled={!recoveryReady || sessionLoading || loading}
                     autoComplete="new-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Minimum 8 characters"
-                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-600"
+                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-600 disabled:bg-gray-100 disabled:text-gray-500"
                   />
                 </div>
               </div>
@@ -108,24 +193,33 @@ export default function ResetPasswordPage() {
                   <input
                     type="password"
                     required
+                    disabled={!recoveryReady || sessionLoading || loading}
                     autoComplete="new-password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Repeat your new password"
-                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-600"
+                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-600 disabled:bg-gray-100 disabled:text-gray-500"
                   />
                 </div>
               </div>
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || sessionLoading || !recoveryReady}
                 className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3.5 rounded-xl transition flex items-center justify-center gap-2 text-sm disabled:opacity-60"
               >
-                {loading ? <Loader2 size={17} className="animate-spin" /> : <Lock size={17} />}
-                {loading ? 'Updating Password...' : 'Set New Password'}
+                {loading || sessionLoading ? <Loader2 size={17} className="animate-spin" /> : <Lock size={17} />}
+                {sessionLoading ? 'Verifying Link...' : loading ? 'Updating Password...' : 'Set New Password'}
               </button>
             </form>
+
+            {!sessionLoading && !recoveryReady && (
+              <div className="mt-4 text-center">
+                <Link href="/account" className="text-xs font-bold text-indigo-700 hover:underline">
+                  Request a New Reset Link
+                </Link>
+              </div>
+            )}
 
             <div className="mt-5 pt-5 border-t border-gray-100 text-center">
               <Link href="/account" className="text-xs font-bold text-indigo-700 hover:underline">
