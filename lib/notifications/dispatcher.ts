@@ -6,7 +6,6 @@ export interface NotificationPayload extends EmailOrderPayload {
 }
 
 export async function dispatchOrderNotifications(payload: NotificationPayload) {
-  // Count actual units ordered, not just the number of different line items.
   const itemCount = Math.max(
     1,
     (payload.items || []).reduce(
@@ -15,8 +14,6 @@ export async function dispatchOrderNotifications(payload: NotificationPayload) {
     )
   );
 
-  // Fire both notifications in parallel. Notification failures must not block
-  // an otherwise successful checkout.
   const [emailResult, whatsappResult] = await Promise.allSettled([
     sendOrderConfirmationEmail(payload),
     sendOrderConfirmationWhatsApp({
@@ -28,14 +25,24 @@ export async function dispatchOrderNotifications(payload: NotificationPayload) {
     }),
   ]);
 
-  return {
+  const result = {
     email:
       emailResult.status === 'fulfilled'
         ? emailResult.value
-        : { success: false, error: emailResult.reason },
+        : { success: false, error: String(emailResult.reason) },
     whatsapp:
       whatsappResult.status === 'fulfilled'
         ? whatsappResult.value
-        : { success: false, error: whatsappResult.reason },
+        : { success: false, error: String(whatsappResult.reason) },
   };
+
+  console.info('[ORDER_NOTIFICATION_RESULT]', {
+    orderNumber: payload.orderNumber,
+    customerPhone: payload.customerPhone,
+    customerEmail: payload.customerEmail,
+    email: result.email,
+    whatsapp: result.whatsapp,
+  });
+
+  return result;
 }
