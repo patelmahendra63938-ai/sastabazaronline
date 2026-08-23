@@ -6,7 +6,6 @@ export interface WhatsAppOrderPayload {
   itemCount: number;
 }
 
-// Format 10-digit Indian phone number to E.164 (91XXXXXXXXXX)
 function formatIndianPhoneNumber(phone: string): string {
   const digits = phone.replace(/\D/g, '');
   if (digits.length === 10) return `91${digits}`;
@@ -15,23 +14,32 @@ function formatIndianPhoneNumber(phone: string): string {
 }
 
 export async function sendOrderConfirmationWhatsApp(payload: WhatsAppOrderPayload) {
-  const token = process.env.WHATSAPP_API_TOKEN;
+  const token = process.env.WHATSAPP_ACCESS_TOKEN || process.env.WHATSAPP_API_TOKEN;
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-  const isEnabled = process.env.WHATSAPP_ENABLED === 'true';
+  const templateName = process.env.WHATSAPP_ORDER_TEMPLATE_NAME || 'sastabazar_order_confirmation';
+  const templateLanguage = process.env.WHATSAPP_ORDER_TEMPLATE_LANGUAGE || 'en_US';
 
-  if (!isEnabled || !token || !phoneNumberId) {
+  if (!token || !phoneNumberId) {
     return {
       success: false,
       reason: 'WHATSAPP_NOT_CONFIGURED',
-      message: 'WhatsApp Cloud API credentials not configured in .env.local',
+      message: 'WhatsApp Cloud API credentials are not configured.',
     };
   }
 
   const recipientPhone = formatIndianPhoneNumber(payload.customerPhone);
 
+  if (!/^91\d{10}$/.test(recipientPhone)) {
+    return {
+      success: false,
+      reason: 'INVALID_CUSTOMER_PHONE',
+      message: 'Customer WhatsApp number is invalid.',
+    };
+  }
+
   try {
     const response = await fetch(
-      `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`,
+      `https://graph.facebook.com/v26.0/${phoneNumberId}/messages`,
       {
         method: 'POST',
         headers: {
@@ -42,10 +50,23 @@ export async function sendOrderConfirmationWhatsApp(payload: WhatsAppOrderPayloa
           messaging_product: 'whatsapp',
           recipient_type: 'individual',
           to: recipientPhone,
-          type: 'text',
-          text: {
-            preview_url: true,
-            body: `🎉 *Order Confirmed! - SastaBazar Online*\n\nHi ${payload.customerName},\nThank you for your order *#${payload.orderNumber}* containing *${payload.itemCount} item(s)* for a total of *₹${payload.grandTotal}*.\n\n📦 *Live Order Tracking:* https://sastabazaronline.in/orders/${payload.orderNumber}\n\nOur team in Surat is packing your order. For any queries, reply to this message or email sales@sastabazaronline.in.`,
+          type: 'template',
+          template: {
+            name: templateName,
+            language: {
+              code: templateLanguage,
+            },
+            components: [
+              {
+                type: 'body',
+                parameters: [
+                  { type: 'text', text: payload.customerName },
+                  { type: 'text', text: payload.orderNumber },
+                  { type: 'text', text: String(payload.itemCount) },
+                  { type: 'text', text: payload.grandTotal.toFixed(2) },
+                ],
+              },
+            ],
           },
         }),
       }
@@ -55,12 +76,21 @@ export async function sendOrderConfirmationWhatsApp(payload: WhatsAppOrderPayloa
 
     if (!response.ok) {
       console.error('[WhatsApp Cloud API Error]:', data);
-      return { success: false, error: data.error?.message || 'API request failed' };
+      return {
+        success: false,
+        error: data.error?.message || 'WhatsApp API request failed',
+        metaError: data,
+      };
     }
 
-    return { success: true, messageId: data.messages?.[0]?.id };
-  } catch (error: any) {
+    return {
+      success: true,
+      messageId: data.messages?.[0]?.id,
+      status: data.messages?.[0]?.message_status || 'accepted',
+    };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'WhatsApp network request failed';
     console.error('[WhatsApp Network Error]:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: message };
   }
 }
