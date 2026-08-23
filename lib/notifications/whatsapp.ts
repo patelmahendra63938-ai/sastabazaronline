@@ -62,8 +62,14 @@ async function sendTemplateMessage(args: {
 export async function sendOrderConfirmationWhatsApp(payload: WhatsAppOrderPayload) {
   const token = process.env.WHATSAPP_ACCESS_TOKEN || process.env.WHATSAPP_API_TOKEN;
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-  const templateName = process.env.WHATSAPP_ORDER_TEMPLATE_NAME || 'order_confirmation';
-  const configuredLanguage = process.env.WHATSAPP_ORDER_TEMPLATE_LANGUAGE || 'en';
+  const templateName =
+    process.env.WHATSAPP_ORDER_TEMPLATE_NAME ||
+    process.env.WHATSAPP_TEMPLATE_NAME ||
+    'order_confirmation';
+  const configuredLanguage =
+    process.env.WHATSAPP_ORDER_TEMPLATE_LANGUAGE ||
+    process.env.WHATSAPP_TEMPLATE_LANGUAGE ||
+    'en';
 
   if (!token || !phoneNumberId) {
     return {
