@@ -22,7 +22,6 @@ export interface EmailOrderPayload {
   }>;
 }
 
-// 1. Initialize Nodemailer Transporter
 function getTransporter() {
   const host = process.env.SMTP_HOST || 'smtp.titan.email';
   const port = Number(process.env.SMTP_PORT) || 465;
@@ -41,7 +40,6 @@ function getTransporter() {
   });
 }
 
-// 2. Generate Responsive HTML Invoice Template
 function generateOrderEmailHtml(data: EmailOrderPayload): string {
   const orderDate = new Date().toLocaleDateString('en-IN', {
     day: 'numeric',
@@ -78,8 +76,6 @@ function generateOrderEmailHtml(data: EmailOrderPayload): string {
       <tr>
         <td align="center">
           <table width="100%" max-width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
-            
-            <!-- Header Banner -->
             <tr>
               <td style="background-color: #0f172a; padding: 24px; text-align: center;">
                 <h1 style="color: #ffffff; margin: 0; font-size: 22px; font-weight: 900; letter-spacing: -0.5px;">
@@ -88,8 +84,6 @@ function generateOrderEmailHtml(data: EmailOrderPayload): string {
                 <p style="color: #cbd5e1; margin: 4px 0 0 0; font-size: 11px;">Wholesale Direct • Managed by Adhyey Brothers, Surat</p>
               </td>
             </tr>
-
-            <!-- Order Status Callout -->
             <tr>
               <td style="padding: 24px; text-align: center; border-bottom: 1px solid #f1f5f9;">
                 <div style="display: inline-block; background-color: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 50px; padding: 6px 16px; margin-bottom: 12px;">
@@ -101,80 +95,41 @@ function generateOrderEmailHtml(data: EmailOrderPayload): string {
                 </p>
               </td>
             </tr>
-
-            <!-- Items Ordered Table -->
             <tr>
               <td style="padding: 20px 24px;">
-                <h3 style="color: #0f172a; font-size: 13px; font-weight: 800; text-transform: uppercase; margin: 0 0 12px 0;">
-                  Package Summary
-                </h3>
-                <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
-                  ${itemsRows}
-                </table>
+                <h3 style="color: #0f172a; font-size: 13px; font-weight: 800; text-transform: uppercase; margin: 0 0 12px 0;">Package Summary</h3>
+                <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">${itemsRows}</table>
               </td>
             </tr>
-
-            <!-- Financial Summary -->
             <tr>
               <td style="padding: 0 24px 20px 24px;">
                 <table width="100%" cellpadding="4" cellspacing="0" style="font-size: 12px; color: #475569;">
-                  <tr>
-                    <td>Subtotal (incl. GST):</td>
-                    <td align="right" style="color: #0f172a; font-weight: 600;">₹${data.subtotal + (data.discountAmount || 0)}</td>
-                  </tr>
+                  <tr><td>Subtotal (incl. GST):</td><td align="right" style="color: #0f172a; font-weight: 600;">₹${data.subtotal + (data.discountAmount || 0)}</td></tr>
                   ${data.discountAmount && data.discountAmount > 0 ? `<tr><td>Discount:</td><td align="right" style="color: #047857; font-weight: 700;">-₹${data.discountAmount}</td></tr>` : ''}
-                  <tr>
-                    <td>Shipping Charge:</td>
-                    <td align="right" style="color: #047857; font-weight: 700;">
-                      ${data.shippingCharge === 0 ? 'FREE' : `₹${data.shippingCharge}`}
-                    </td>
-                  </tr>
+                  <tr><td>Shipping Charge:</td><td align="right" style="color: #0f172a; font-weight: 700;">₹${data.shippingCharge}</td></tr>
                   ${data.paymentMethod.toUpperCase().includes('COD') ? `<tr><td>COD Charge:</td><td align="right" style="color: #0f172a; font-weight: 600;">₹${data.codCharge}</td></tr>` : ''}
-                  <tr>
-                    <td>Payment Mode:</td>
-                    <td align="right" style="color: #0f172a; font-weight: 600;">${data.paymentMethod}</td>
-                  </tr>
-                  <tr style="border-top: 2px solid #e2e8f0; font-size: 14px;">
-                    <td style="padding-top: 8px; font-weight: 800; color: #0f172a;">Grand Total:</td>
-                    <td align="right" style="padding-top: 8px; font-weight: 900; color: #f97316; font-size: 16px;">
-                      ₹${data.grandTotal}
-                    </td>
-                  </tr>
+                  <tr><td>Payment Mode:</td><td align="right" style="color: #0f172a; font-weight: 600;">${data.paymentMethod}</td></tr>
+                  <tr style="border-top: 2px solid #e2e8f0; font-size: 14px;"><td style="padding-top: 8px; font-weight: 800; color: #0f172a;">Grand Total:</td><td align="right" style="padding-top: 8px; font-weight: 900; color: #f97316; font-size: 16px;">₹${data.grandTotal}</td></tr>
                 </table>
               </td>
             </tr>
-
-            <!-- Shipping Details -->
             <tr>
               <td style="padding: 16px 24px; background-color: #f8fafc; border-top: 1px solid #e2e8f0;">
-                <h4 style="color: #0f172a; font-size: 11px; text-transform: uppercase; font-weight: 800; margin: 0 0 6px 0;">
-                  Delivery Address
-                </h4>
-                <p style="color: #334155; font-size: 12px; margin: 0; line-height: 1.5;">
-                  ${data.shippingAddress}<br/>
-                  <strong>Phone:</strong> ${data.customerPhone}
-                </p>
+                <h4 style="color: #0f172a; font-size: 11px; text-transform: uppercase; font-weight: 800; margin: 0 0 6px 0;">Delivery Address</h4>
+                <p style="color: #334155; font-size: 12px; margin: 0; line-height: 1.5;">${data.shippingAddress}<br/><strong>Phone:</strong> ${data.customerPhone}</p>
               </td>
             </tr>
-
-            <!-- Track Order Button -->
             <tr>
               <td style="padding: 24px; text-align: center;">
-                <a href="https://sastabazaronline.in/orders/${data.orderNumber}" 
-                   style="background-color: #0f172a; color: #ffffff; text-decoration: none; font-size: 13px; font-weight: 700; padding: 12px 28px; border-radius: 12px; display: inline-block;">
-                  Track Live Order Status →
-                </a>
+                <a href="https://www.sastabazaronline.in/orders/${data.orderNumber}" style="background-color: #0f172a; color: #ffffff; text-decoration: none; font-size: 13px; font-weight: 700; padding: 12px 28px; border-radius: 12px; display: inline-block;">Track Live Order Status →</a>
               </td>
             </tr>
-
-            <!-- Footer Legal & Support -->
             <tr>
               <td style="padding: 16px 24px; background-color: #f1f5f9; text-align: center; font-size: 10px; color: #64748b;">
                 <p style="margin: 0 0 4px 0;">Need help with your order? Reach out at <strong>sales@sastabazaronline.in</strong></p>
                 <p style="margin: 0;">SastaBazar Online • Surat, Gujarat - 395007 • GSTIN: 24AKBPD1704F1Z1</p>
               </td>
             </tr>
-
           </table>
         </td>
       </tr>
@@ -184,27 +139,29 @@ function generateOrderEmailHtml(data: EmailOrderPayload): string {
   `;
 }
 
-// 3. Send Order Confirmation Email
 export async function sendOrderConfirmationEmail(payload: EmailOrderPayload) {
   const transporter = getTransporter();
 
   if (!transporter) {
-    console.warn('[SMTP] Email credentials missing in .env.local. Dispatch skipped.');
+    console.warn('[SMTP] Email credentials missing. Dispatch skipped.');
     return { success: false, reason: 'SMTP_NOT_CONFIGURED' };
   }
 
   const fromAddress = process.env.EMAIL_FROM_ADDRESS || 'sales@sastabazaronline.in';
-  const fromName = process.env.EMAIL_FROM_NAME || 'SastaBazar Online';
+  const fromName = process.env.EMAIL_FROM_NAME || 'SASTABAZARONLINE';
+  const storeNotificationAddress = process.env.ORDER_NOTIFICATION_EMAIL || 'sales@sastabazaronline.in';
 
   try {
     const info = await transporter.sendMail({
       from: `"${fromName}" <${fromAddress}>`,
       to: payload.customerEmail,
-      subject: `Order Confirmed: ${payload.orderNumber} (₹${payload.grandTotal}) - SastaBazar`,
+      bcc: storeNotificationAddress,
+      replyTo: 'sales@sastabazaronline.in',
+      subject: `Order Confirmed: ${payload.orderNumber} (₹${payload.grandTotal}) - SASTABAZARONLINE`,
       html: generateOrderEmailHtml(payload),
     });
 
-    return { success: true, messageId: info.messageId };
+    return { success: true, messageId: info.messageId, storeCopy: storeNotificationAddress };
   } catch (error: any) {
     console.error('[SMTP Error] Failed to send email:', error);
     return { success: false, error: error.message };
