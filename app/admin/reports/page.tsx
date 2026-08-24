@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { BarChart3, TrendingUp, ShoppingCart, DollarSign, Package, Loader2, Calendar } from 'lucide-react';
+import { isCancelledOrderStatus } from '@/lib/orders/admin-order-status';
 
 export default function AdminReportsPage() {
   const [stats, setStats] = useState({
@@ -22,7 +23,7 @@ export default function AdminReportsPage() {
       const { data: items } = await supabase.from('order_items').select('quantity');
 
       if (!error && orders) {
-        const gross = orders.reduce((sum, o) => sum + Number(o.grand_total || o.total_amount || 0), 0);
+        const gross = orders.filter(o => !isCancelledOrderStatus(o.order_status)).reduce((sum, o) => sum + Number(o.grand_total || o.total_amount || 0), 0);
         const totalQty = items ? items.reduce((sum, i) => sum + Number(i.quantity || 1), 0) : 0;
         const delivered = orders.filter(o => o.order_status === 'DELIVERED').length;
         const pending = orders.filter(o => o.order_status === 'PENDING' || !o.order_status).length;
@@ -69,7 +70,7 @@ export default function AdminReportsPage() {
               <DollarSign size={20} className="text-green-600" />
             </div>
             <p className="text-2xl font-black text-indigo-950">₹{stats.grossSales.toLocaleString()}</p>
-            <p className="text-[10px] text-green-600 font-bold">Total revenue across all orders</p>
+            <p className="text-[10px] text-green-600 font-bold">Revenue excluding cancelled orders</p>
           </div>
 
           <div className="bg-white p-6 rounded-2xl border shadow-sm space-y-2">
@@ -78,7 +79,7 @@ export default function AdminReportsPage() {
               <ShoppingCart size={20} className="text-blue-600" />
             </div>
             <p className="text-2xl font-black text-indigo-950">{stats.totalOrders}</p>
-            <p className="text-[10px] text-blue-600 font-bold">Successful customer orders</p>
+            <p className="text-[10px] text-blue-600 font-bold">All customer orders</p>
           </div>
 
           <div className="bg-white p-6 rounded-2xl border shadow-sm space-y-2">
