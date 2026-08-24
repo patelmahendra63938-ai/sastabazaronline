@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Search, FileText, Printer, Loader2, Receipt } from 'lucide-react';
 import { resolveOrderTotals } from '@/lib/orders/order-totals';
+import OrderStatusBadge from '@/components/admin/OrderStatusBadge';
+import { isCancelledOrderStatus } from '@/lib/orders/admin-order-status';
 
 export default function AdminInvoicesPage() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -130,6 +132,7 @@ export default function AdminInvoicesPage() {
                     <tr key={order.id} className="hover:bg-gray-50 transition">
                       <td className="p-3.5 font-mono font-bold text-indigo-950">
                         INV-{orderNum}
+                        {isCancelledOrderStatus(order.order_status) && <span className="mt-1 block"><OrderStatusBadge status={order.order_status} /></span>}
                       </td>
                       <td className="p-3.5 font-bold text-gray-900">
                         {order.customer_name || 'Customer'}
@@ -166,6 +169,7 @@ export default function AdminInvoicesPage() {
             <div className="flex items-center justify-between border-b pb-4 print:hidden">
               <h3 className="font-black text-indigo-950 text-sm flex items-center gap-2">
                 <Receipt size={18} className="text-orange-500" /> Tax Invoice — INV-{selectedInvoice.invoiceNum}
+                  <OrderStatusBadge status={selectedInvoice.order_status} />
               </h3>
               <div className="flex items-center gap-2">
                 <button 
