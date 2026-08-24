@@ -36,6 +36,7 @@ const adminNavGroups = [
     { name: 'All Products', href: '/admin/products', icon: Package },
     { name: 'Categories', href: '/admin/categories', icon: Tags },
     { name: 'Inventory', href: '/admin/inventory', icon: Warehouse },
+    { name: 'Image Optimizer', href: '/admin/image-optimizer', icon: SlidersHorizontal },
   ] },
   { label: 'Customers', items: [{ name: 'Customers', href: '/admin/customers', icon: Users }] },
   { label: 'Marketing', items: [
@@ -105,7 +106,6 @@ export default function AdminSidebar() {
 
   return (
     <>
-      {/* Mobile Menu Toggle Button */}
       <button
         onClick={() => setMobileOpen(!mobileOpen)}
         className="md:hidden fixed top-4 left-4 z-50 p-2 rounded-xl bg-indigo-950 text-white shadow-lg border border-indigo-800"
@@ -114,7 +114,6 @@ export default function AdminSidebar() {
         {mobileOpen ? <X size={20} /> : <Menu size={20} />}
       </button>
 
-      {/* Desktop Persistent Sidebar */}
       <aside className="w-64 bg-indigo-950 text-white hidden md:flex flex-col h-screen sticky top-0 shadow-xl shrink-0 z-30">
         <div className="p-5 border-b border-indigo-900/80">
           <span className="text-[10px] font-black tracking-widest text-orange-400 uppercase block">
@@ -136,7 +135,6 @@ export default function AdminSidebar() {
         </div>
       </aside>
 
-      {/* Mobile Drawer */}
       {mobileOpen && (
         <div className="fixed inset-0 z-40 md:hidden flex">
           <div
