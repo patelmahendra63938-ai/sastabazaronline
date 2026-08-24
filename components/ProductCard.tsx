@@ -21,9 +21,10 @@ export interface Product {
 interface ProductCardProps {
   product: Product;
   activeCampaigns?: Campaign[];
+  priorityImage?: boolean;
 }
 
-export default function ProductCard({ product, activeCampaigns = [] }: ProductCardProps) {
+export default function ProductCard({ product, activeCampaigns = [], priorityImage = false }: ProductCardProps) {
   const [added, setAdded] = useState(false);
 
   // Safe image resolution supporting both string arrays and single string URLs
@@ -92,7 +93,9 @@ export default function ProductCard({ product, activeCampaigns = [] }: ProductCa
             src={imageUrl}
             alt={product.title}
             fill
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            sizes="(max-width: 640px) calc(50vw - 24px), (max-width: 1024px) 33vw, 25vw"
+            loading={priorityImage ? 'eager' : 'lazy'}
+            fetchPriority={priorityImage ? 'high' : 'auto'}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           />
           {appliedOffer && (
