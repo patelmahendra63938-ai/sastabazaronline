@@ -27,7 +27,6 @@ interface ProductCardProps {
 export default function ProductCard({ product, activeCampaigns = [], priorityImage = false }: ProductCardProps) {
   const [added, setAdded] = useState(false);
 
-  // Safe image resolution supporting both string arrays and single string URLs
   const rawImageUrl = Array.isArray(product.images) && product.images.length > 0
     ? product.images[0]
     : product.image;
@@ -35,7 +34,6 @@ export default function ProductCard({ product, activeCampaigns = [], priorityIma
 
   const originalPrice = Number(product.price || product.mrp || 0);
 
-  // Calculate dynamic discounted price and active offer details
   const { finalPrice, appliedOffer } = calculateDiscountedPrice(
     originalPrice,
     activeCampaigns,
@@ -86,8 +84,7 @@ export default function ProductCard({ product, activeCampaigns = [], priorityIma
 
   return (
     <div className="group bg-white rounded-2xl border border-gray-200/80 overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col justify-between">
-      <Link href={`/product/${product.id}`} className="block relative cursor-pointer">
-        {/* Product Media & Top Floating Badge */}
+      <Link href={`/product/${product.id}`} className="block relative cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-700" aria-label={`View ${product.title}`}>
         <div className="aspect-square bg-gray-100 overflow-hidden relative">
           <Image
             src={imageUrl}
@@ -99,16 +96,15 @@ export default function ProductCard({ product, activeCampaigns = [], priorityIma
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           />
           {appliedOffer && (
-            <span className="absolute top-2.5 left-2.5 bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded-md shadow-sm">
+            <span className="absolute top-2.5 left-2.5 bg-red-700 text-white text-[10px] font-black px-2 py-0.5 rounded-md shadow-sm">
               {appliedOffer.offerLabel}
             </span>
           )}
         </div>
 
-        {/* Product Information */}
         <div className="p-3.5 space-y-1.5">
           {product.category && (
-            <p className="text-[10px] font-bold text-orange-600 uppercase tracking-wider">
+            <p className="text-[10px] font-bold text-orange-800 uppercase tracking-wider">
               {product.category}
             </p>
           )}
@@ -117,14 +113,13 @@ export default function ProductCard({ product, activeCampaigns = [], priorityIma
             {product.title}
           </h3>
 
-          {/* Pricing Presentation */}
           <div className="pt-1">
             {appliedOffer ? (
               <div className="space-y-0.5">
-                <div className="text-[11px] text-gray-400 line-through">
+                <div className="text-[11px] text-gray-600 line-through">
                   ₹{originalPrice.toLocaleString('en-IN')}
                 </div>
-                <div className="text-[11px] font-black text-green-700">
+                <div className="text-[11px] font-black text-green-800">
                   {appliedOffer.offerLabel}
                 </div>
                 <div className="text-base font-black text-indigo-950">
@@ -137,7 +132,7 @@ export default function ProductCard({ product, activeCampaigns = [], priorityIma
                   ₹{originalPrice.toLocaleString('en-IN')}
                 </span>
                 {product.mrp && Number(product.mrp) > originalPrice && (
-                  <span className="text-[11px] text-gray-400 line-through">
+                  <span className="text-[11px] text-gray-600 line-through">
                     ₹{Number(product.mrp).toLocaleString('en-IN')}
                   </span>
                 )}
@@ -147,14 +142,14 @@ export default function ProductCard({ product, activeCampaigns = [], priorityIma
         </div>
       </Link>
 
-      {/* Cart Action Button */}
       <div className="p-3.5 pt-0">
         <button
           type="button"
           onClick={handleAddToCart}
-          className="w-full bg-indigo-950 hover:bg-indigo-900 text-white text-xs font-bold py-2.5 rounded-xl transition flex items-center justify-center gap-1.5 shadow-2xs active:scale-95 cursor-pointer"
+          aria-label={`${added ? 'Added' : 'Add'} ${product.title} ${added ? 'to cart' : 'to cart'}`}
+          className="w-full min-h-11 bg-indigo-950 hover:bg-indigo-900 text-white text-xs font-bold px-3 rounded-xl transition flex items-center justify-center gap-1.5 shadow-2xs active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-700 focus-visible:ring-offset-2"
         >
-          {added ? <Check size={14} className="text-green-400" /> : <ShoppingCart size={14} />}
+          {added ? <Check size={14} className="text-green-400" aria-hidden="true" /> : <ShoppingCart size={14} aria-hidden="true" />}
           <span>{added ? 'Added!' : 'Add to Cart'}</span>
         </button>
       </div>
