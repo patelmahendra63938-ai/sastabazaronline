@@ -1,9 +1,12 @@
 import type { Metadata } from 'next';
-import LegalPage, { BusinessContact } from '@/components/legal/LegalPage';
+import LegalPage from '@/components/legal/LegalPage';
+
 export const metadata: Metadata = { title: 'Shipping Policy' };
-export default function ShippingPolicyPage() { return <LegalPage title="Shipping Policy">
-  <section><h2>Order processing</h2><p>Orders are normally processed within 24–48 hours after successful order confirmation, excluding holidays or circumstances requiring customer verification.</p></section>
-  <section><h2>Delivery estimate</h2><p>Standard delivery is normally completed within 3–7 business days after dispatch. Delivery times are estimates and may vary because of courier operations, destination serviceability, weather, public disruptions, or other external conditions.</p></section>
-  <section><h2>Tracking</h2><p>When tracking is available, details and delivery updates are shared through the email and/or SMS channels supplied with the order.</p></section>
-  <section><h2>Shipping charges</h2><p>Any applicable shipping charge is displayed before order confirmation. Please verify the delivery address and charges before placing the order.</p></section><BusinessContact />
-</LegalPage>; }
+
+export default function ShippingPolicyPage() {
+  return (
+    <LegalPage title="Shipping Policy">
+      <p>The orders for the user are shipped through registered domestic courier companies and/or speed post only. Orders are shipped within 2 days from the date of the order and/or payment or as per the delivery date agreed at the time of order confirmation and delivering of the shipment, subject to courier company / post office norms. Platform Owner shall not be liable for any delay in delivery by the courier company / postal authority. Delivery of all orders will be made to the address provided by the buyer at the time of purchase. Delivery of our services will be confirmed on your email ID as specified at the time of registration. If there are any shipping cost(s) levied by the seller or the Platform Owner (as the case be), the same is not refundable.</p>
+    </LegalPage>
+  );
+}
