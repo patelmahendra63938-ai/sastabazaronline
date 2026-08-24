@@ -48,7 +48,6 @@ const adminNavGroups = [
   { label: 'Settings', items: [
     { name: 'General', href: '/admin/settings', icon: Settings },
     { name: 'Integrations', href: '/admin/integrations', icon: Plug },
-    { name: 'Filters', href: '/admin/settings/filters', icon: SlidersHorizontal },
     { name: 'Homepage Display Settings', href: '/admin/settings/homepage-display', icon: LayoutDashboard },
   ] },
 ];
