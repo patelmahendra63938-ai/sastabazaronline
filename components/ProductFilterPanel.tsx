@@ -281,16 +281,6 @@ export function ProductFilterPanel({
     .filter(config => supportedFilterKeys.has(config.filter_key))
     .sort((a, b) => a.display_order - b.display_order);
 
-  if (safeOptions.patterns.length > 0 && !sortedConfigs.some(config => config.filter_key === 'pattern')) {
-    sortedConfigs.push({
-      filter_key: 'pattern',
-      display_name: 'Pattern',
-      is_enabled: true,
-      display_order: Math.max(0, ...sortedConfigs.map(config => config.display_order)) + 1,
-    });
-  }
-
-  // If no database filter config exists, render default Category & Price filters
   const defaultFilterConfigs: FilterGroupConfig[] = [
     { filter_key: 'category', display_name: 'Categories', is_enabled: true, display_order: 1 },
     { filter_key: 'price', display_name: 'Price Range', is_enabled: true, display_order: 2 },

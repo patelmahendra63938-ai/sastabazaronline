@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Header from '@/components/Header';
+import OrderStatusBadge from '@/components/admin/OrderStatusBadge';
+import { isCancelledOrderStatus, normalizeAdminOrderStatus } from '@/lib/orders/admin-order-status';
 import Footer from '@/components/Footer';
 import { supabase } from '@/lib/supabase';
 import { 
@@ -76,8 +78,8 @@ export default function AdminOrderInventoryDashboard() {
   const kpis = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
     const todayOrders = orders.filter(o => o.created_at && o.created_at.startsWith(today));
-    const totalRevenue = orders.filter(o => o.order_status !== 'CANCELLED').reduce((acc, o) => acc + Number(o.grand_total || 0), 0);
-    const todayRevenue = todayOrders.filter(o => o.order_status !== 'CANCELLED').reduce((acc, o) => acc + Number(o.grand_total || 0), 0);
+    const totalRevenue = orders.filter(o => !isCancelledOrderStatus(o.order_status)).reduce((acc, o) => acc + Number(o.grand_total || 0), 0);
+    const todayRevenue = todayOrders.filter(o => !isCancelledOrderStatus(o.order_status)).reduce((acc, o) => acc + Number(o.grand_total || 0), 0);
 
     const pendingCount = orders.filter(o => o.order_status === 'PENDING').length;
     const toPackCount = orders.filter(o => o.order_status === 'CONFIRMED').length;
@@ -166,7 +168,7 @@ export default function AdminOrderInventoryDashboard() {
         (order.customer_name && order.customer_name.toLowerCase().includes(orderSearch.toLowerCase())) ||
         (order.customer_phone && order.customer_phone.includes(orderSearch));
       
-      const matchesStatus = orderStatusFilter === 'ALL' || order.order_status === orderStatusFilter;
+      const matchesStatus = orderStatusFilter === 'ALL' || normalizeAdminOrderStatus(order.order_status) === orderStatusFilter;
       const matchesPayment = paymentFilter === 'ALL' || order.payment_status === paymentFilter;
 
       return matchesSearch && matchesStatus && matchesPayment;
@@ -352,7 +354,7 @@ export default function AdminOrderInventoryDashboard() {
                           <td className="p-3.5 text-gray-500">{new Date(order.created_at).toLocaleDateString('en-IN')}</td>
                           <td className="p-3.5 font-bold text-gray-900">{order.customer_name}</td>
                           <td className="p-3.5 font-bold text-gray-950">₹{order.grand_total}</td>
-                          <td className="p-3.5 font-bold text-indigo-700">{order.order_status}</td>
+                          <td className="p-3.5"><OrderStatusBadge status={order.order_status} /></td>
                           <td className="p-3.5 text-right">
                             <button 
                               onClick={() => setSelectedOrder(order)}

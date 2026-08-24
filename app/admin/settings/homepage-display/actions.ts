@@ -9,6 +9,7 @@ export type SaveHomepageDisplayResult = { success: true } | { success: false; er
 
 export async function saveHomepageDisplaySettings(
   value: unknown,
+  filters: Array<{ id: string; is_enabled: boolean }> = [],
 ): Promise<SaveHomepageDisplayResult> {
   const { user, role } = await getCurrentUser();
 
@@ -35,6 +36,19 @@ export async function saveHomepageDisplaySettings(
   }, { onConflict: 'key' });
 
   if (error) return { success: false, error: error.message };
+
+  for (const filter of filters) {
+    if (!filter?.id || typeof filter.is_enabled !== 'boolean') {
+      return { success: false, error: 'Invalid storefront filter setting.' };
+    }
+
+    const { error: filterError } = await supabase
+      .from('storefront_filter_settings')
+      .update({ is_enabled: filter.is_enabled, updated_at: new Date().toISOString() })
+      .eq('id', filter.id);
+
+    if (filterError) return { success: false, error: filterError.message };
+  }
 
   revalidatePath('/');
   revalidatePath('/admin/settings/homepage-display');

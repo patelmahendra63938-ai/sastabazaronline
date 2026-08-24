@@ -3,7 +3,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
-import { AlertCircle, CheckCircle2, Clock, Package, Printer, RefreshCw, Search, ShoppingCart, XCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock, Package, Printer, RefreshCw, Search, ShoppingCart } from 'lucide-react';
+import OrderStatusBadge from '@/components/admin/OrderStatusBadge';
+import { isCancelledOrderStatus, normalizeAdminOrderStatus } from '@/lib/orders/admin-order-status';
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -31,13 +33,13 @@ export default function AdminOrdersPage() {
 
   useEffect(() => { fetchOrders(); }, []);
 
-  const cancelledCount = useMemo(() => orders.filter(o => o.order_status === 'CANCELLED').length, [orders]);
-  const activeCount = useMemo(() => orders.filter(o => o.order_status !== 'CANCELLED' && o.order_status !== 'DELIVERED').length, [orders]);
+  const cancelledCount = useMemo(() => orders.filter(o => isCancelledOrderStatus(o.order_status)).length, [orders]);
+  const activeCount = useMemo(() => orders.filter(o => !isCancelledOrderStatus(o.order_status) && normalizeAdminOrderStatus(o.order_status) !== 'DELIVERED').length, [orders]);
 
   const filteredOrders = useMemo(() => {
     const q = search.trim().toLowerCase();
     return orders.filter(o => {
-      const statusOk = statusFilter === 'ALL' || o.order_status === statusFilter;
+      const statusOk = statusFilter === 'ALL' || normalizeAdminOrderStatus(o.order_status) === statusFilter;
       const textOk = !q || [o.order_number, o.customer_name, o.customer_phone, o.customer_email]
         .some(v => String(v || '').toLowerCase().includes(q));
       return statusOk && textOk;
@@ -101,17 +103,17 @@ export default function AdminOrdersPage() {
       ) : (
         <div className="space-y-4">
           {filteredOrders.map(ord => {
-            const cancelled = ord.order_status === 'CANCELLED';
+            const cancelled = isCancelledOrderStatus(ord.order_status);
             const delivered = ord.order_status === 'DELIVERED';
             return (
-              <div key={ord.id} className={`rounded-2xl border p-5 shadow-xs ${cancelled ? 'border-red-300 bg-red-50/50' : 'border-gray-200 bg-white'}`}>
+              <div key={ord.id} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-xs">
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b pb-3">
                   <div>
-                    <div className="flex items-center gap-2 flex-wrap"><span className="font-mono text-sm font-black text-indigo-950">{ord.order_number}</span>{cancelled && <span className="inline-flex items-center gap-1 rounded-full bg-red-600 px-2.5 py-1 text-[10px] font-black text-white"><XCircle size={12}/> CUSTOMER CANCELLED</span>}{delivered && <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-1 text-[10px] font-black text-green-800"><CheckCircle2 size={12}/> DELIVERED</span>}</div>
+                    <div className="flex items-center gap-2 flex-wrap"><span className="font-mono text-sm font-black text-indigo-950">{ord.order_number}</span>{cancelled && <OrderStatusBadge status={ord.order_status} />}{delivered && <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-1 text-[10px] font-black text-green-800"><CheckCircle2 size={12}/> DELIVERED</span>}</div>
                     <p className="text-[11px] text-gray-500 mt-1">{new Date(ord.created_at).toLocaleString('en-IN')}</p>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <select value={ord.order_status || 'CONFIRMED'} onChange={e => handleUpdateStatus(ord.id, e.target.value)} disabled={cancelled} className={`rounded-lg border px-3 py-2 text-xs font-bold ${cancelled ? 'bg-red-100 text-red-700 cursor-not-allowed' : 'bg-gray-50'}`}>
+                    <select value={normalizeAdminOrderStatus(ord.order_status) || 'CONFIRMED'} onChange={e => handleUpdateStatus(ord.id, e.target.value)} disabled={cancelled} className={`rounded-lg border px-3 py-2 text-xs font-bold ${cancelled ? 'bg-red-100 text-red-700 cursor-not-allowed' : 'bg-gray-50'}`}>
                       <option value="PENDING">PENDING</option><option value="CONFIRMED">CONFIRMED</option><option value="PACKED">PACKED</option><option value="SHIPPED">SHIPPED</option><option value="DELIVERED">DELIVERED</option><option value="CANCELLED">CANCELLED</option>
                     </select>
                     {!cancelled && <Link href={`/admin/orders/${ord.id}/label`} target="_blank" className="inline-flex items-center gap-1 rounded-lg bg-gray-100 px-3 py-2 text-xs font-bold text-gray-700"><Printer size={13}/> Label</Link>}

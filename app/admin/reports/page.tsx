@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { BarChart3, TrendingUp, ShoppingCart, DollarSign, Package, Loader2, Calendar } from 'lucide-react';
+import { isCancelledOrderStatus } from '@/lib/orders/admin-order-status';
 
 export default function AdminReportsPage() {
   const [stats, setStats] = useState({
@@ -10,7 +11,9 @@ export default function AdminReportsPage() {
     grossSales: 0,
     totalItems: 0,
     deliveredOrders: 0,
-    pendingOrders: 0
+    pendingOrders: 0,
+    cancelledOrders: 0,
+    cancelledAmount: 0
   });
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState('ALL');
@@ -18,12 +21,14 @@ export default function AdminReportsPage() {
   useEffect(() => {
     const fetchReportData = async () => {
       setLoading(true);
-      const { data: orders, error } = await supabase.from('orders').select('*');
-      const { data: items } = await supabase.from('order_items').select('quantity');
+      const { data: orders, error } = await supabase.from('orders').select('*, order_items(quantity)');
 
       if (!error && orders) {
-        const gross = orders.reduce((sum, o) => sum + Number(o.grand_total || o.total_amount || 0), 0);
-        const totalQty = items ? items.reduce((sum, i) => sum + Number(i.quantity || 1), 0) : 0;
+        const gross = orders.filter(o => !isCancelledOrderStatus(o.order_status)).reduce((sum, o) => sum + Number(o.grand_total || o.total_amount || 0), 0);
+        const activeOrders = orders.filter(o => !isCancelledOrderStatus(o.order_status));
+        const totalQty = activeOrders.reduce((sum, order) => sum + (order.order_items || []).reduce((itemSum: number, item: any) => itemSum + Number(item.quantity || 1), 0), 0);
+        const cancelledOrders = orders.filter(o => isCancelledOrderStatus(o.order_status));
+        const cancelledAmount = cancelledOrders.reduce((sum, o) => sum + Number(o.grand_total || o.total_amount || 0), 0);
         const delivered = orders.filter(o => o.order_status === 'DELIVERED').length;
         const pending = orders.filter(o => o.order_status === 'PENDING' || !o.order_status).length;
 
@@ -32,7 +37,9 @@ export default function AdminReportsPage() {
           grossSales: gross,
           totalItems: totalQty,
           deliveredOrders: delivered,
-          pendingOrders: pending
+          pendingOrders: pending,
+          cancelledOrders: cancelledOrders.length,
+          cancelledAmount
         });
       }
       setLoading(false);
@@ -69,7 +76,7 @@ export default function AdminReportsPage() {
               <DollarSign size={20} className="text-green-600" />
             </div>
             <p className="text-2xl font-black text-indigo-950">₹{stats.grossSales.toLocaleString()}</p>
-            <p className="text-[10px] text-green-600 font-bold">Total revenue across all orders</p>
+            <p className="text-[10px] text-green-600 font-bold">Revenue excluding cancelled orders</p>
           </div>
 
           <div className="bg-white p-6 rounded-2xl border shadow-sm space-y-2">
@@ -78,7 +85,7 @@ export default function AdminReportsPage() {
               <ShoppingCart size={20} className="text-blue-600" />
             </div>
             <p className="text-2xl font-black text-indigo-950">{stats.totalOrders}</p>
-            <p className="text-[10px] text-blue-600 font-bold">Successful customer orders</p>
+            <p className="text-[10px] text-blue-600 font-bold">All customer orders</p>
           </div>
 
           <div className="bg-white p-6 rounded-2xl border shadow-sm space-y-2">
@@ -87,7 +94,7 @@ export default function AdminReportsPage() {
               <Package size={20} className="text-orange-600" />
             </div>
             <p className="text-2xl font-black text-indigo-950">{stats.totalItems}</p>
-            <p className="text-[10px] text-orange-600 font-bold">Total product units sold</p>
+            <p className="text-[10px] text-orange-600 font-bold">Units excluding cancelled orders</p>
           </div>
 
           <div className="bg-white p-6 rounded-2xl border shadow-sm space-y-2">
@@ -98,6 +105,14 @@ export default function AdminReportsPage() {
             <p className="text-2xl font-black text-indigo-950">{stats.deliveredOrders} <span className="text-xs text-gray-400 font-normal">/ {stats.pendingOrders}</span></p>
             <p className="text-[10px] text-purple-600 font-bold">Fulfillment ratio</p>
           </div>
+        </div>
+      )}
+
+      {!loading && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-5">
+          <p className="text-xs font-black uppercase text-red-700">Cancelled Orders</p>
+          <p className="mt-1 text-2xl font-black text-red-800">{stats.cancelledOrders}</p>
+          <p className="text-xs font-bold text-red-600">₹{stats.cancelledAmount.toLocaleString()} excluded from revenue and dispatched units</p>
         </div>
       )}
     </div>

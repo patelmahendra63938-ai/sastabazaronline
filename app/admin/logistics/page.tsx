@@ -16,6 +16,7 @@ import {
   Truck,
   X,
 } from 'lucide-react';
+import { isCancelledOrderStatus } from '@/lib/orders/admin-order-status';
 
 export default function LogisticsDashboard() {
   const [loading, setLoading] = useState(true);
@@ -55,7 +56,7 @@ export default function LogisticsDashboard() {
   }, []);
 
   const isCancelledOrder = (order: any) =>
-    String(order?.order_status || '').toUpperCase() === 'CANCELLED';
+    isCancelledOrderStatus(order?.order_status);
 
   const openOrderDetails = async (order: any) => {
     setSelectedOrder(order);
@@ -304,10 +305,10 @@ export default function LogisticsDashboard() {
                       return (
                         <tr
                           key={order.id}
-                          className={`transition ${cancelled ? 'bg-red-50/70 border-l-4 border-l-red-500' : 'hover:bg-indigo-50/50 border-l-4 border-l-transparent'} ${selectedOrder?.id === order.id && !cancelled ? 'bg-indigo-50 border-l-indigo-600' : ''}`}
+                          className={`border-l-4 border-l-transparent transition hover:bg-indigo-50/50 ${selectedOrder?.id === order.id && !cancelled ? 'bg-indigo-50 border-l-indigo-600' : ''}`}
                         >
                           <td className="px-4 py-3">
-                            <p className={`font-mono font-bold ${cancelled ? 'text-red-800' : 'text-indigo-900'}`}>{order.order_number}</p>
+                            <p className="font-mono font-bold text-indigo-900">{order.order_number}</p>
                             <p className="text-xs text-gray-500 mt-0.5">{new Date(order.created_at).toLocaleDateString('en-IN')}</p>
                           </td>
                           <td className="px-4 py-3">

@@ -14,6 +14,7 @@ import {
   Receipt,
   Truck,
   BarChart3,
+  Landmark,
   RotateCcw,
   MessageSquare,
   Ticket,
@@ -45,10 +46,10 @@ const adminNavGroups = [
   ] },
   { label: 'Shipping', items: [{ name: 'Shipping & Logistics', href: '/admin/logistics', icon: Truck }] },
   { label: 'Reports', items: [{ name: 'Reports', href: '/admin/reports', icon: BarChart3 }] },
+  { label: 'Accounts', items: [{ name: 'Accounts & GST', href: '/admin/accounts', icon: Landmark }] },
   { label: 'Settings', items: [
     { name: 'General', href: '/admin/settings', icon: Settings },
     { name: 'Integrations', href: '/admin/integrations', icon: Plug },
-    { name: 'Filters', href: '/admin/settings/filters', icon: SlidersHorizontal },
     { name: 'Homepage Display Settings', href: '/admin/settings/homepage-display', icon: LayoutDashboard },
   ] },
 ];
