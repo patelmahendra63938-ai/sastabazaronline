@@ -8,6 +8,7 @@ import {
   X, Package, ChevronRight
 } from 'lucide-react';
 import Link from 'next/link';
+import OrderStatusBadge from '@/components/admin/OrderStatusBadge';
 
 interface CustomerRecord {
   email: string;
@@ -380,13 +381,7 @@ export default function AdminCustomersPage() {
                         </div>
 
                         <div className="flex items-center gap-2">
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md uppercase ${
-                            ord.order_status === 'DELIVERED' ? 'bg-green-50 text-green-700 border border-green-200' :
-                            ord.order_status === 'SHIPPED' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
-                            'bg-orange-50 text-orange-700 border border-orange-200'
-                          }`}>
-                            {ord.order_status || 'CONFIRMED'}
-                          </span>
+                          <OrderStatusBadge status={ord.order_status} />
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-gray-100 text-gray-700">
                             {ord.payment_method || 'COD'} ({ord.payment_status || 'PENDING'})
                           </span>
