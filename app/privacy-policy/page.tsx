@@ -44,11 +44,11 @@ export default function PrivacyPolicyPage() {
       </section>
       <section>
         <h2>Grievance Officer</h2>
-        <p>Insert Name of the Office:</p>
-        <p>Designation:</p>
-        <p>Insert Name and Address of the Company:</p>
-        <p>Contact us:</p>
-        <p>Phone: Time: Monday - Friday(9:00 - 18:00)</p>
+        <p>Mahendra Patel</p>
+        <p>Designation: Grievance Officer</p>
+        <p>ADHYEY BROTHERS<br />3rd Floor, 33 Shaktinagar Society,<br />Peoples Char Rasta,<br />Katargam, Surat,<br />Gujarat - 395004, India</p>
+        <p>Contact us: <a href="mailto:sales@sastabazaronline.in">sales@sastabazaronline.in</a></p>
+        <p>Time: Monday - Friday(9:00 - 18:00)</p>
       </section>
     </LegalPage>
   );
