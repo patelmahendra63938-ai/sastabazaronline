@@ -1,21 +1,14 @@
 # SASTABAZARONLINE
 
-> SASTABAZARONLINE is an online shopping website operated by ADHYEY BROTHERS in India.
+> SASTABAZARONLINE is an online shopping website operated by ADHYEY BROTHERS in India. Customers can browse products, view product details, add items to cart, and place orders through the storefront.
 
-## Website
-- Home: https://www.sastabazaronline.in/
-- Products and categories are available through the storefront navigation and search.
+## Key pages
 
-## Shopping
-- Customers can browse products, view product details, add items to cart, and proceed through checkout.
-- Product price, availability, shipping eligibility, and applicable charges should be taken from the live product and checkout pages.
+- [SASTABAZARONLINE Home](https://www.sastabazaronline.in/): Browse featured products, categories, search, and shopping options.
+- [Refund Policy](https://www.sastabazaronline.in/refund-policy): Read the current cancellation, return, and refund terms.
 
-## Customer information
-- Customers should use the website's published policy pages for current cancellation, return, refund, shipping, privacy, and other applicable terms.
+## Shopping guidance
 
-## Crawling guidance
-- Public storefront pages may be discovered and summarized by search engines and AI agents subject to robots.txt and applicable website policies.
-- Do not treat admin, authentication, account, checkout, or other private/user-specific pages as public information.
-
-## Canonical domain
-https://www.sastabazaronline.in/
+- Use the live product pages and checkout for current product prices, availability, shipping eligibility, discounts, and applicable charges.
+- Public storefront pages may be discovered and summarized subject to robots.txt and applicable website policies.
+- Admin, authentication, customer account, and checkout information may contain private or user-specific data and should not be treated as public website content.
