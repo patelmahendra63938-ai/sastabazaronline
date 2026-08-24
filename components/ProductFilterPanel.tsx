@@ -277,32 +277,16 @@ export function ProductFilterPanel({
     }
   };
 
+  const sortedConfigs = [...filterConfigs]
+    .filter(config => supportedFilterKeys.has(config.filter_key))
+    .sort((a, b) => a.display_order - b.display_order);
+
   const defaultFilterConfigs: FilterGroupConfig[] = [
     { filter_key: 'category', display_name: 'Categories', is_enabled: true, display_order: 1 },
     { filter_key: 'price', display_name: 'Price Range', is_enabled: true, display_order: 2 },
-    { filter_key: 'size', display_name: 'Size', is_enabled: true, display_order: 3 },
-    { filter_key: 'brand', display_name: 'Brand', is_enabled: true, display_order: 4 },
-    { filter_key: 'fabric', display_name: 'Fabric', is_enabled: true, display_order: 5 },
-    { filter_key: 'pattern', display_name: 'Pattern', is_enabled: true, display_order: 6 },
-    { filter_key: 'occasion', display_name: 'Occasion', is_enabled: true, display_order: 7 },
-    { filter_key: 'fit', display_name: 'Fit', is_enabled: true, display_order: 8 },
   ];
 
-  const configuredByKey = new Map(
-    filterConfigs
-      .filter(config => supportedFilterKeys.has(config.filter_key))
-      .map(config => [config.filter_key, config])
-  );
-
-  // The homepage-level switch controls the whole panel. When it is ON,
-  // expose every supported filter that has product data.
-  const activeConfigs = defaultFilterConfigs
-    .map(defaultConfig => ({
-      ...defaultConfig,
-      ...configuredByKey.get(defaultConfig.filter_key),
-      is_enabled: true,
-    }))
-    .sort((a, b) => a.display_order - b.display_order);
+  const activeConfigs = sortedConfigs.length > 0 ? sortedConfigs : defaultFilterConfigs;
 
   const filterContent = (
     <div className="flex flex-col h-full">
