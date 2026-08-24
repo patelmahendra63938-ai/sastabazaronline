@@ -65,59 +65,61 @@ export default function Header() {
     <header className="bg-indigo-950 text-white sticky top-0 z-50 shadow-md">
       <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
         <div className="flex items-center justify-between w-full sm:w-auto">
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2 min-h-11" aria-label="SASTABAZARONLINE home">
             <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center font-black text-xl shadow">SO</div>
             <div>
               <span className="text-sm md:text-base font-black tracking-wider text-white">SASTABAZARONLINE</span>
-              <span className="block text-[10px] text-orange-400 font-bold uppercase tracking-widest">Wholesale Hub (Surat)</span>
+              <span className="block text-[10px] text-orange-300 font-bold uppercase tracking-widest">Wholesale Hub (Surat)</span>
             </div>
           </Link>
         </div>
 
-        <form onSubmit={handleSearch} className="w-full sm:max-w-md lg:max-w-lg relative">
+        <form onSubmit={handleSearch} className="w-full sm:max-w-md lg:max-w-lg relative" role="search">
+          <label htmlFor="site-search" className="sr-only">Search products</label>
           <input
-            type="text"
+            id="site-search"
+            type="search"
             placeholder="Search home, kitchen & fashion products..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-4 pr-10 py-2.5 rounded-xl text-xs bg-white text-gray-900 font-medium focus:outline-none shadow-inner"
+            className="w-full pl-4 pr-12 py-2.5 min-h-11 rounded-xl text-xs bg-white text-gray-900 font-medium focus:outline-none shadow-inner"
           />
-          <button type="submit" aria-label="Search" className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-orange-600 transition cursor-pointer">
-            <Search size={18} />
+          <button type="submit" aria-label="Search products" className="absolute right-0 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center text-gray-600 hover:text-orange-700 transition cursor-pointer rounded-xl">
+            <Search size={18} aria-hidden="true" />
           </button>
         </form>
 
-        <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-end">
+        <nav aria-label="Customer shortcuts" className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-end">
           <LanguageSwitcher />
 
-          <Link href="/account?redirectTo=/orders" className="flex items-center gap-1 text-xs font-bold hover:text-orange-400 transition bg-indigo-900/50 px-3 py-2 rounded-xl border border-indigo-800" aria-label="Customer account">
-            <UserRound size={16} className="text-green-400" />
+          <Link href="/account?redirectTo=/orders" className="flex items-center gap-1 text-xs font-bold hover:text-orange-300 transition bg-indigo-900/50 px-3 min-h-11 rounded-xl border border-indigo-800" aria-label="Customer account">
+            <UserRound size={16} className="text-green-400" aria-hidden="true" />
             <span className="hidden sm:inline">Account</span>
           </Link>
 
-          <Link href="/wishlist" className="relative flex items-center gap-1.5 hover:text-orange-400 transition" aria-label="Wishlist">
-            <div className="relative p-2 bg-indigo-900/80 rounded-xl border border-indigo-800">
-              <Heart size={18} className="text-red-400" fill={wishlistCount > 0 ? 'currentColor' : 'none'} />
+          <Link href="/wishlist" className="relative flex items-center gap-1.5 hover:text-orange-300 transition min-h-11" aria-label={`Wishlist${wishlistCount > 0 ? `, ${wishlistCount} items` : ''}`}>
+            <div className="relative w-11 h-11 flex items-center justify-center bg-indigo-900/80 rounded-xl border border-indigo-800">
+              <Heart size={18} className="text-red-400" fill={wishlistCount > 0 ? 'currentColor' : 'none'} aria-hidden="true" />
               {wishlistCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center border-2 border-indigo-950 shadow">{wishlistCount}</span>
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-black min-w-4 h-4 px-0.5 rounded-full flex items-center justify-center border-2 border-indigo-950 shadow" aria-hidden="true">{wishlistCount}</span>
               )}
             </div>
             <span className="hidden xl:inline text-xs font-bold">Wishlist</span>
           </Link>
 
-          <Link href="/cart" className="relative flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded-xl text-xs font-bold transition shadow" aria-label="Shopping Cart">
-            <ShoppingCart size={18} />
+          <Link href="/cart" className="relative flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white px-3 min-h-11 rounded-xl text-xs font-bold transition shadow" aria-label={`Shopping cart${cartCount > 0 ? `, ${cartCount} items` : ''}`}>
+            <ShoppingCart size={18} aria-hidden="true" />
             <span className="hidden sm:inline">Cart</span>
             {cartCount > 0 && (
-              <span className="bg-white text-orange-600 text-[10px] font-black px-1.5 py-0.5 rounded-full ml-0.5">{cartCount}</span>
+              <span className="bg-white text-orange-700 text-[10px] font-black px-1.5 py-0.5 rounded-full ml-0.5" aria-hidden="true">{cartCount}</span>
             )}
           </Link>
 
-          <Link href="/orders" className="flex items-center gap-1 text-xs font-bold hover:text-orange-400 transition bg-indigo-900/50 px-3 py-2 rounded-xl border border-indigo-800">
-            <Package size={16} className="text-blue-400" />
+          <Link href="/orders" className="flex items-center gap-1 text-xs font-bold hover:text-orange-300 transition bg-indigo-900/50 px-3 min-h-11 rounded-xl border border-indigo-800" aria-label="My orders">
+            <Package size={16} className="text-blue-400" aria-hidden="true" />
             <span className="hidden sm:inline">My Orders</span>
           </Link>
-        </div>
+        </nav>
       </div>
     </header>
   );
