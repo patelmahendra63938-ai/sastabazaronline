@@ -8,12 +8,12 @@ const footerLinkClass = 'inline-flex min-h-11 items-center hover:text-white tran
 export default function Footer() {
   return (
     <footer className="bg-indigo-950 text-white pt-12 pb-8 border-t border-indigo-900 mt-20">
-      <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-8 pb-12 border-b border-indigo-900">
+      <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-10 pb-12 border-b border-indigo-900">
         <div className="space-y-4">
           <Link href="/" className="inline-flex min-h-11 items-center text-xl font-black tracking-wider text-white" aria-label="SASTABAZARONLINE home">
             SASTABAZAR<span className="text-orange-400">ONLINE</span>
           </Link>
-          <p className="text-xs text-gray-300 leading-relaxed">
+          <p className="text-xs text-gray-300 leading-relaxed max-w-sm">
             Your trusted destination for quality home, kitchen, and lifestyle products at direct wholesale pricing in Surat and across India.
           </p>
           <div className="flex items-center gap-2 text-xs text-yellow-300 font-bold">
@@ -36,17 +36,6 @@ export default function Footer() {
           </ul>
         </div>
 
-        <div>
-          <h4 className="text-sm font-bold uppercase tracking-wider text-orange-300 mb-2">Categories</h4>
-          {/* Temporarily hidden footer category links. Remove `hidden` to show them again. */}
-          <ul className="hidden text-xs text-gray-300">
-            <li><Link href="/category/Kitchenware" className={footerLinkClass}>Kitchen Appliances</Link></li>
-            <li><Link href="/category/Storage" className={footerLinkClass}>Storage & Organization</Link></li>
-            <li><Link href="/category/Cleaning" className={footerLinkClass}>Cleaning Utilities</Link></li>
-            <li><Link href="/category/Home Decor" className={footerLinkClass}>Home Decor</Link></li>
-          </ul>
-        </div>
-
         <div className="space-y-4">
           <h4 className="text-sm font-bold uppercase tracking-wider text-orange-300 mb-2">Contact Us</h4>
           <div className="space-y-1 text-xs text-gray-300">
@@ -64,6 +53,16 @@ export default function Footer() {
             </p>
           </div>
         </div>
+
+        {/*
+          Footer categories are intentionally kept here for easy restoration later.
+          Re-enable this block and change the desktop grid back to four columns when needed.
+          Categories preserved:
+          Kitchen Appliances -> /category/Kitchenware
+          Storage & Organization -> /category/Storage
+          Cleaning Utilities -> /category/Cleaning
+          Home Decor -> /category/Home Decor
+        */}
       </div>
 
       <div className="max-w-7xl mx-auto px-4 pt-6 flex flex-col sm:flex-row justify-between items-center text-xs text-gray-300 gap-4">
