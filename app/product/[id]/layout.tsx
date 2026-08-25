@@ -23,9 +23,10 @@ async function getProduct(id: string): Promise<ProductSeoRecord | null> {
 
   const url = new URL(`${supabaseUrl}/rest/v1/products`);
   url.searchParams.set('id', `eq.${id}`);
-  // Keep this projection limited to columns already used by the storefront.
-  // A single missing PostgREST column makes the entire request fail.
-  url.searchParams.set('select', 'id,title,description,price,category,brand,images,image,is_active');
+  // Match the storefront's working .select('*').eq('id', id).single() query.
+  // Avoid a fragile explicit column projection: one missing optional column makes
+  // the whole PostgREST request fail and forces generic SEO metadata.
+  url.searchParams.set('select', '*');
   url.searchParams.set('limit', '1');
 
   try {
@@ -33,8 +34,9 @@ async function getProduct(id: string): Promise<ProductSeoRecord | null> {
       headers: {
         apikey: anonKey,
         Authorization: `Bearer ${anonKey}`,
+        Accept: 'application/json',
       },
-      next: { revalidate: 300 },
+      cache: 'no-store',
     });
 
     if (!response.ok) {
