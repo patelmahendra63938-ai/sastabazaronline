@@ -8,12 +8,10 @@ type ProductSeoRecord = {
   title: string;
   description?: string | null;
   price?: number | null;
-  mrp?: number | null;
   category?: string | null;
   brand?: string | null;
   images?: string[] | null;
   image?: string | null;
-  stock?: number | null;
   is_active?: boolean | null;
 };
 
@@ -25,7 +23,9 @@ async function getProduct(id: string): Promise<ProductSeoRecord | null> {
 
   const url = new URL(`${supabaseUrl}/rest/v1/products`);
   url.searchParams.set('id', `eq.${id}`);
-  url.searchParams.set('select', 'id,title,description,price,mrp,category,brand,images,image,stock,is_active');
+  // Keep this projection limited to columns already used by the storefront.
+  // A single missing PostgREST column makes the entire request fail.
+  url.searchParams.set('select', 'id,title,description,price,category,brand,images,image,is_active');
   url.searchParams.set('limit', '1');
 
   try {
@@ -37,10 +37,15 @@ async function getProduct(id: string): Promise<ProductSeoRecord | null> {
       next: { revalidate: 300 },
     });
 
-    if (!response.ok) return null;
+    if (!response.ok) {
+      console.error('Product SEO fetch failed:', response.status, await response.text());
+      return null;
+    }
+
     const rows = (await response.json()) as ProductSeoRecord[];
     return rows[0] || null;
-  } catch {
+  } catch (error) {
+    console.error('Product SEO fetch failed:', error);
     return null;
   }
 }
@@ -67,11 +72,11 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params;
   const product = await getProduct(id);
-  const canonical = `${SITE_URL}/product/${id}`;
+  const canonical = `${SITE_URL}/product/${encodeURIComponent(id)}`;
 
   if (!product) {
     return {
-      title: 'Product | SASTABAZARONLINE',
+      title: 'Product',
       alternates: { canonical },
       robots: { index: false, follow: true },
     };
@@ -118,7 +123,7 @@ export default async function ProductLayout({
   if (!product) return children;
 
   const image = productImage(product);
-  const canonical = `${SITE_URL}/product/${id}`;
+  const canonical = `${SITE_URL}/product/${encodeURIComponent(id)}`;
   const price = Number(product.price || 0);
 
   const productJsonLd = {
@@ -131,16 +136,17 @@ export default async function ProductLayout({
     ...(product.category ? { category: product.category } : {}),
     ...(image ? { image: [image] } : {}),
     url: canonical,
-    offers: {
-      '@type': 'Offer',
-      url: canonical,
-      priceCurrency: 'INR',
-      price: price.toFixed(2),
-      availability: (product.stock ?? 1) > 0
-        ? 'https://schema.org/InStock'
-        : 'https://schema.org/OutOfStock',
-      itemCondition: 'https://schema.org/NewCondition',
-    },
+    ...(price > 0
+      ? {
+          offers: {
+            '@type': 'Offer',
+            url: canonical,
+            priceCurrency: 'INR',
+            price: price.toFixed(2),
+            itemCondition: 'https://schema.org/NewCondition',
+          },
+        }
+      : {}),
   };
 
   return (
