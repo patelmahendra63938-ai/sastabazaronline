@@ -1,6 +1,7 @@
 import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
+import Script from 'next/script';
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -46,6 +47,19 @@ export default function RootLayout({
         className={`${inter.className} bg-[#F8F9FB] text-gray-900 antialiased min-h-screen flex flex-col selection:bg-orange-500 selection:text-white`}
       >
         {children}
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-KYE1SBDLCY"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            window.gtag = gtag;
+            gtag('js', new Date());
+            gtag('config', 'G-KYE1SBDLCY');
+          `}
+        </Script>
       </body>
     </html>
   );
