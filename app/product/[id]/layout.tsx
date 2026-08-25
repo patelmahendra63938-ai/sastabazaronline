@@ -57,6 +57,23 @@ function cleanDescription(value?: string | null) {
   return text || 'Shop this product online at SASTABAZARONLINE with delivery across India.';
 }
 
+function seoDescription(value?: string | null, maxLength = 155) {
+  const text = cleanDescription(value);
+  if (text.length <= maxLength) return text;
+
+  // Prefer a complete specification field when descriptions use bullet separators.
+  const withinLimit = text.slice(0, maxLength + 1);
+  const lastBullet = withinLimit.lastIndexOf(' • ');
+  if (lastBullet >= 80) {
+    return withinLimit.slice(0, lastBullet).replace(/[,:;\s]+$/, '').trim();
+  }
+
+  // Otherwise finish on a word boundary instead of cutting a word or label in half.
+  const lastSpace = withinLimit.lastIndexOf(' ');
+  const cutAt = lastSpace >= 80 ? lastSpace : maxLength;
+  return `${withinLimit.slice(0, cutAt).replace(/[,:;\s]+$/, '').trim()}…`;
+}
+
 function productImage(product: ProductSeoRecord) {
   const candidate = Array.isArray(product.images) && product.images.length > 0
     ? product.images[0]
@@ -84,7 +101,7 @@ export async function generateMetadata({
     };
   }
 
-  const description = cleanDescription(product.description).slice(0, 160);
+  const description = seoDescription(product.description);
   const image = productImage(product);
 
   return {
