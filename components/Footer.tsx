@@ -38,7 +38,8 @@ export default function Footer() {
 
         <div>
           <h4 className="text-sm font-bold uppercase tracking-wider text-orange-300 mb-2">Categories</h4>
-          <ul className="text-xs text-gray-300">
+          {/* Temporarily hidden footer category links. Remove `hidden` to show them again. */}
+          <ul className="hidden text-xs text-gray-300">
             <li><Link href="/category/Kitchenware" className={footerLinkClass}>Kitchen Appliances</Link></li>
             <li><Link href="/category/Storage" className={footerLinkClass}>Storage & Organization</Link></li>
             <li><Link href="/category/Cleaning" className={footerLinkClass}>Cleaning Utilities</Link></li>
