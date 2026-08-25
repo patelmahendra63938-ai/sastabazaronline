@@ -2,6 +2,7 @@ import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import Script from 'next/script';
+import GA4EcommerceTracker from '@/components/GA4EcommerceTracker';
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -47,6 +48,7 @@ export default function RootLayout({
         className={`${inter.className} bg-[#F8F9FB] text-gray-900 antialiased min-h-screen flex flex-col selection:bg-orange-500 selection:text-white`}
       >
         {children}
+        <GA4EcommerceTracker />
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-KYE1SBDLCY"
           strategy="afterInteractive"
