@@ -1,7 +1,7 @@
 export const metadata = {
-  title: 'Data Deletion Instructions | SASTABAZARONLINE',
+  title: 'Data Deletion Instructions | ADHYEY BROTHERS',
   description:
-    'Instructions for requesting deletion of personal data associated with SASTABAZARONLINE.',
+    'Instructions for requesting deletion of personal data associated with ADHYEY BROTHERS.',
 };
 
 export default function DataDeletionPage() {
@@ -12,7 +12,7 @@ export default function DataDeletionPage() {
       </h1>
 
       <p className="mt-4">
-        SASTABAZARONLINE is operated by Adhyey Brothers.
+        ADHYEY BROTHERS operates this website.
         You may request deletion of personal information associated with
         your account, enquiries, or use of our services.
       </p>
