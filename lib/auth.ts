@@ -56,3 +56,20 @@ export async function requireAdminUser() {
 
   return currentUser;
 }
+
+
+/**
+ * Non-redirecting authorization helper for API routes and server actions.
+ */
+export async function getAdminSession() {
+  const session = await getCurrentUser();
+
+  return {
+    ...session,
+    authorized: Boolean(
+      session.user &&
+      session.role &&
+      ADMIN_ROLES.includes(session.role)
+    ),
+  };
+}
