@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import React from 'react';
 
-const SITE_URL = 'https://www.sastabazaronline.in';
+const SITE_URL = 'https://www.adhyeybrothers.in';
 
 type ProductSeoRecord = {
   id: string;
@@ -20,13 +20,23 @@ type InventoryRow = {
   available_quantity?: number | null;
 };
 
-async function getProduct(id: string): Promise<ProductSeoRecord | null> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+async function getProduct(
+  id: string
+): Promise<ProductSeoRecord | null> {
+  const supabaseUrl =
+    process.env.NEXT_PUBLIC_SUPABASE_URL;
 
-  if (!supabaseUrl || !anonKey || !id) return null;
+  const anonKey =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  const url = new URL(`${supabaseUrl}/rest/v1/products`);
+  if (!supabaseUrl || !anonKey || !id) {
+    return null;
+  }
+
+  const url = new URL(
+    `${supabaseUrl}/rest/v1/products`
+  );
+
   url.searchParams.set('id', `eq.${id}`);
   url.searchParams.set('select', '*');
   url.searchParams.set('limit', '1');
@@ -42,21 +52,37 @@ async function getProduct(id: string): Promise<ProductSeoRecord | null> {
     });
 
     if (!response.ok) {
-      console.error('Product SEO fetch failed:', response.status, await response.text());
+      console.error(
+        'Product SEO fetch failed:',
+        response.status,
+        await response.text()
+      );
+
       return null;
     }
 
-    const rows = (await response.json()) as ProductSeoRecord[];
+    const rows =
+      (await response.json()) as ProductSeoRecord[];
+
     return rows[0] || null;
   } catch (error) {
-    console.error('Product SEO fetch failed:', error);
+    console.error(
+      'Product SEO fetch failed:',
+      error
+    );
+
     return null;
   }
 }
 
-async function getProductAvailability(product: ProductSeoRecord): Promise<string> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+async function getProductAvailability(
+  product: ProductSeoRecord
+): Promise<string> {
+  const supabaseUrl =
+    process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+  const anonKey =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !anonKey) {
     return Number(product.stock ?? 0) > 0
@@ -64,9 +90,19 @@ async function getProductAvailability(product: ProductSeoRecord): Promise<string
       : 'https://schema.org/OutOfStock';
   }
 
-  const url = new URL(`${supabaseUrl}/rest/v1/inventory`);
-  url.searchParams.set('product_id', `eq.${product.id}`);
-  url.searchParams.set('select', 'available_quantity');
+  const url = new URL(
+    `${supabaseUrl}/rest/v1/inventory`
+  );
+
+  url.searchParams.set(
+    'product_id',
+    `eq.${product.id}`
+  );
+
+  url.searchParams.set(
+    'select',
+    'available_quantity'
+  );
 
   try {
     const response = await fetch(url.toString(), {
@@ -79,21 +115,36 @@ async function getProductAvailability(product: ProductSeoRecord): Promise<string
     });
 
     if (response.ok) {
-      const rows = (await response.json()) as InventoryRow[];
+      const rows =
+        (await response.json()) as InventoryRow[];
+
       if (rows.length > 0) {
         const totalAvailable = rows.reduce(
-          (sum, row) => sum + Math.max(0, Number(row.available_quantity ?? 0)),
-          0,
+          (sum, row) =>
+            sum +
+            Math.max(
+              0,
+              Number(row.available_quantity ?? 0)
+            ),
+          0
         );
+
         return totalAvailable > 0
           ? 'https://schema.org/InStock'
           : 'https://schema.org/OutOfStock';
       }
     } else {
-      console.error('Product inventory SEO fetch failed:', response.status, await response.text());
+      console.error(
+        'Product inventory SEO fetch failed:',
+        response.status,
+        await response.text()
+      );
     }
   } catch (error) {
-    console.error('Product inventory SEO fetch failed:', error);
+    console.error(
+      'Product inventory SEO fetch failed:',
+      error
+    );
   }
 
   return Number(product.stock ?? 0) > 0
@@ -101,34 +152,80 @@ async function getProductAvailability(product: ProductSeoRecord): Promise<string
     : 'https://schema.org/OutOfStock';
 }
 
-function cleanDescription(value?: string | null) {
-  const text = (value || '').replace(/\s+/g, ' ').trim();
-  return text || 'Shop this product online at SASTABAZARONLINE with delivery across India.';
+function cleanDescription(
+  value?: string | null
+) {
+  const text = (value || '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return (
+    text ||
+    'Shop this product online at ADHYEY BROTHERS with delivery across India.'
+  );
 }
 
-function seoDescription(value?: string | null, maxLength = 155) {
+function seoDescription(
+  value?: string | null,
+  maxLength = 155
+) {
   const text = cleanDescription(value);
-  if (text.length <= maxLength) return text;
 
-  const withinLimit = text.slice(0, maxLength + 1);
-  const lastBullet = withinLimit.lastIndexOf(' • ');
-  if (lastBullet >= 80) {
-    return withinLimit.slice(0, lastBullet).replace(/[,:;\s]+$/, '').trim();
+  if (text.length <= maxLength) {
+    return text;
   }
 
-  const lastSpace = withinLimit.lastIndexOf(' ');
-  const cutAt = lastSpace >= 80 ? lastSpace : maxLength;
-  return `${withinLimit.slice(0, cutAt).replace(/[,:;\s]+$/, '').trim()}…`;
+  const withinLimit = text.slice(
+    0,
+    maxLength + 1
+  );
+
+  const lastBullet =
+    withinLimit.lastIndexOf(' • ');
+
+  if (lastBullet >= 80) {
+    return withinLimit
+      .slice(0, lastBullet)
+      .replace(/[,:;\s]+$/, '')
+      .trim();
+  }
+
+  const lastSpace =
+    withinLimit.lastIndexOf(' ');
+
+  const cutAt =
+    lastSpace >= 80
+      ? lastSpace
+      : maxLength;
+
+  return `${withinLimit
+    .slice(0, cutAt)
+    .replace(/[,:;\s]+$/, '')
+    .trim()}…`;
 }
 
-function productImage(product: ProductSeoRecord) {
-  const candidate = Array.isArray(product.images) && product.images.length > 0
-    ? product.images[0]
-    : product.image;
+function productImage(
+  product: ProductSeoRecord
+) {
+  const candidate =
+    Array.isArray(product.images) &&
+    product.images.length > 0
+      ? product.images[0]
+      : product.image;
 
-  if (!candidate) return undefined;
-  if (/^https?:\/\//i.test(candidate)) return candidate;
-  return `${SITE_URL}${candidate.startsWith('/') ? candidate : `/${candidate}`}`;
+  if (!candidate) {
+    return undefined;
+  }
+
+  if (/^https?:\/\//i.test(candidate)) {
+    return candidate;
+  }
+
+  return `${SITE_URL}${
+    candidate.startsWith('/')
+      ? candidate
+      : `/${candidate}`
+  }`;
 }
 
 export async function generateMetadata({
@@ -137,41 +234,83 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
+
   const product = await getProduct(id);
-  const canonical = `${SITE_URL}/product/${encodeURIComponent(id)}`;
+
+  const canonical =
+    `${SITE_URL}/product/${encodeURIComponent(id)}`;
 
   if (!product) {
     return {
       title: 'Product',
-      alternates: { canonical },
-      robots: { index: false, follow: true },
+
+      alternates: {
+        canonical,
+      },
+
+      robots: {
+        index: false,
+        follow: true,
+      },
     };
   }
 
-  const description = seoDescription(product.description);
-  const image = productImage(product);
+  const description =
+    seoDescription(product.description);
+
+  const image =
+    productImage(product);
 
   return {
     title: product.title,
+
     description,
-    alternates: { canonical },
+
+    alternates: {
+      canonical,
+    },
+
     robots: {
-      index: product.is_active !== false,
+      index:
+        product.is_active !== false,
       follow: true,
     },
+
     openGraph: {
       type: 'website',
+
       url: canonical,
+
       title: product.title,
+
       description,
-      siteName: 'SASTABAZARONLINE',
-      ...(image ? { images: [{ url: image, alt: product.title }] } : {}),
+
+      siteName: 'ADHYEY BROTHERS',
+
+      ...(image
+        ? {
+            images: [
+              {
+                url: image,
+                alt: product.title,
+              },
+            ],
+          }
+        : {}),
     },
+
     twitter: {
       card: 'summary_large_image',
+
       title: product.title,
+
       description,
-      ...(image ? { images: [image] } : {}),
+
+      ...(image
+        ? {
+            images: [image],
+          }
+        : {}),
     },
   };
 }
@@ -184,40 +323,94 @@ export default async function ProductLayout({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+
   const product = await getProduct(id);
 
-  if (!product) return children;
+  if (!product) {
+    return children;
+  }
 
-  const image = productImage(product);
-  const canonical = `${SITE_URL}/product/${encodeURIComponent(id)}`;
-  const price = Number(product.price || 0);
-  const availability = await getProductAvailability(product);
+  const image =
+    productImage(product);
+
+  const canonical =
+    `${SITE_URL}/product/${encodeURIComponent(id)}`;
+
+  const price =
+    Number(product.price || 0);
+
+  const availability =
+    await getProductAvailability(product);
 
   const productJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Product',
+
     name: product.title,
-    description: cleanDescription(product.description),
+
+    description:
+      cleanDescription(
+        product.description
+      ),
+
     sku: product.id,
-    ...(product.brand ? { brand: { '@type': 'Brand', name: product.brand } } : {}),
-    ...(product.category ? { category: product.category } : {}),
-    ...(image ? { image: [image] } : {}),
+
+    ...(product.brand
+      ? {
+          brand: {
+            '@type': 'Brand',
+            name: product.brand,
+          },
+        }
+      : {}),
+
+    ...(product.category
+      ? {
+          category:
+            product.category,
+        }
+      : {}),
+
+    ...(image
+      ? {
+          image: [image],
+        }
+      : {}),
+
     url: canonical,
+
     ...(price > 0
       ? {
           offers: {
             '@type': 'Offer',
+
             url: canonical,
+
             priceCurrency: 'INR',
-            price: price.toFixed(2),
-            itemCondition: 'https://schema.org/NewCondition',
+
+            price:
+              price.toFixed(2),
+
+            itemCondition:
+              'https://schema.org/NewCondition',
+
             availability,
+
             hasMerchantReturnPolicy: {
-              '@type': 'MerchantReturnPolicy',
-              applicableCountry: 'IN',
-              returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow',
-              merchantReturnDays: 7,
-              merchantReturnLink: `${SITE_URL}/return-policy`,
+              '@type':
+                'MerchantReturnPolicy',
+
+              applicableCountry:
+                'IN',
+
+              returnPolicyCategory:
+                'https://schema.org/MerchantReturnFiniteReturnWindow',
+
+              merchantReturnDays:
+                7,
+
+              merchantReturnLink:
+                `${SITE_URL}/return-policy`,
             },
           },
         }
@@ -228,8 +421,14 @@ export default async function ProductLayout({
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+        dangerouslySetInnerHTML={{
+          __html:
+            JSON.stringify(
+              productJsonLd
+            ),
+        }}
       />
+
       {children}
     </>
   );
