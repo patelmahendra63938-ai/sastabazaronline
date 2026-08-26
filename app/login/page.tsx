@@ -23,10 +23,11 @@ export default function AdminLoginPage() {
     setErrorMsg('');
 
     try {
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password: password,
-      });
+      const { data: authData, error: authError } =
+        await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password: password,
+        });
 
       if (authError || !authData.user) {
         throw new Error(authError?.message || 'Invalid credentials.');
@@ -38,17 +39,26 @@ export default function AdminLoginPage() {
         .eq('id', authData.user.id)
         .single();
 
-      if (profileError || !profile || !['admin', 'super_admin', 'staff'].includes(profile.role)) {
+      if (
+        profileError ||
+        !profile ||
+        !['admin', 'super_admin', 'staff'].includes(profile.role)
+      ) {
         await supabase.auth.signOut();
-        throw new Error('Access Denied: You do not possess staff or administrative authorization.');
+        throw new Error(
+          'Access Denied: You do not possess staff or administrative authorization.'
+        );
       }
 
-      const requestedPath = new URLSearchParams(window.location.search).get('redirect');
-      const redirectPath = requestedPath && (
-        requestedPath === '/admin' || requestedPath.startsWith('/admin/')
-      )
-        ? requestedPath
-        : '/admin/dashboard';
+      const requestedPath = new URLSearchParams(
+        window.location.search
+      ).get('redirect');
+
+      const redirectPath =
+        requestedPath &&
+        (requestedPath === '/admin' || requestedPath.startsWith('/admin/'))
+          ? requestedPath
+          : '/admin/dashboard';
 
       router.replace(redirectPath);
       router.refresh();
@@ -60,45 +70,57 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col justify-center items-center px-4 py-12">
-      <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-orange-500/10 border border-orange-500/20 rounded-2xl mb-4">
-            <ShieldCheck size={36} className="text-orange-500" />
+    <div className="flex min-h-screen items-center justify-center bg-[#5e171b] px-4 py-12">
+      <div className="w-full max-w-md rounded-3xl border border-[#ead8b8] bg-[#fffdf9] p-8 shadow-2xl">
+        <div className="mb-8 text-center">
+          <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl border border-[#ead8b8] bg-[#fff7e8]">
+            <ShieldCheck size={36} className="text-[#741f23]" />
           </div>
-          <h1 className="text-2xl font-black text-white tracking-tight">SASTABAZARONLINE Staff Portal</h1>
-          <p className="text-xs text-slate-400 mt-1">Authorized personnel and operations login only.</p>
+
+          <h1 className="text-2xl font-black tracking-tight text-[#741f23]">
+            ADHYEY BROTHERS Staff Portal
+          </h1>
+
+          <p className="mt-1 text-xs text-stone-500">
+            Authorized personnel and operations login only.
+          </p>
         </div>
 
         {errorMsg && (
-          <div className="mb-6 p-4 rounded-xl bg-red-950/50 border border-red-800/60 text-red-300 text-xs font-semibold flex items-center gap-2">
-            <AlertCircle size={16} className="shrink-0 text-red-400" />
+          <div className="mb-6 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-semibold text-red-700">
+            <AlertCircle size={16} className="shrink-0 text-red-600" />
             <span>{errorMsg}</span>
           </div>
         )}
 
         <form onSubmit={handleAdminLogin} className="space-y-4">
           <div>
-            <label className="block text-[11px] font-bold text-slate-300 uppercase mb-1.5 tracking-wider">
+            <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-stone-600">
               Staff Email
             </label>
+
             <div className="relative">
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@sastabazaronline.in"
-                className="w-full pl-10 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white text-xs placeholder-slate-500 focus:outline-none focus:border-orange-500 transition"
+                placeholder="adhyeybrothers@gmail.com"
+                className="w-full rounded-xl border border-[#e7ded4] bg-white py-3 pl-10 pr-4 text-xs text-gray-900 placeholder-stone-400 transition focus:border-[#741f23] focus:outline-none focus:ring-2 focus:ring-[#741f23]/20"
               />
-              <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+
+              <Mail
+                size={16}
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400"
+              />
             </div>
           </div>
 
           <div>
-            <label className="block text-[11px] font-bold text-slate-300 uppercase mb-1.5 tracking-wider">
+            <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-stone-600">
               Password
             </label>
+
             <div className="relative">
               <input
                 type="password"
@@ -106,24 +128,35 @@ export default function AdminLoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••••••"
-                className="w-full pl-10 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white text-xs placeholder-slate-500 focus:outline-none focus:border-orange-500 transition"
+                className="w-full rounded-xl border border-[#e7ded4] bg-white py-3 pl-10 pr-4 text-xs text-gray-900 placeholder-stone-400 transition focus:border-[#741f23] focus:outline-none focus:ring-2 focus:ring-[#741f23]/20"
               />
-              <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+
+              <Lock
+                size={16}
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400"
+              />
             </div>
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-3.5 rounded-xl transition flex items-center justify-center gap-2 text-xs shadow-lg shadow-orange-600/20 disabled:opacity-60"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#741f23] py-3.5 text-xs font-bold text-white shadow-lg transition hover:bg-[#5e171b] disabled:opacity-60"
           >
-            {loading ? <Loader2 size={16} className="animate-spin" /> : <ShieldCheck size={16} />}
-            <span>{loading ? 'Authenticating...' : 'Access Dashboard'}</span>
+            {loading ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <ShieldCheck size={16} />
+            )}
+
+            <span>
+              {loading ? 'Authenticating...' : 'Access Dashboard'}
+            </span>
           </button>
         </form>
 
-        <div className="mt-8 pt-6 border-t border-slate-800/80 text-center">
-          <p className="text-[11px] text-slate-500">
+        <div className="mt-8 border-t border-[#ead8b8] pt-6 text-center">
+          <p className="text-[11px] text-stone-500">
             Unauthorized access attempts are logged and monitored.
           </p>
         </div>
