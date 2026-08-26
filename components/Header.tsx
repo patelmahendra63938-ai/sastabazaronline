@@ -1,26 +1,49 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Search, ShoppingCart, Heart, Package, UserRound } from 'lucide-react';
+import {
+  Search,
+  ShoppingCart,
+  Heart,
+  Package,
+  UserRound,
+  Menu,
+  Truck,
+  Headphones,
+  ChevronDown,
+} from 'lucide-react';
 import LanguageSwitcher from './LanguageSwitcher';
 
 export default function Header() {
   const router = useRouter();
+
   const [searchQuery, setSearchQuery] = useState('');
   const [cartCount, setCartCount] = useState(0);
   const [wishlistCount, setWishlistCount] = useState(0);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const syncCounts = () => {
       if (typeof window === 'undefined') return;
 
       try {
-        const savedCart = localStorage.getItem('sastabazaronline_cart') || localStorage.getItem('sastabazar_cart');
+        const savedCart =
+          localStorage.getItem('sastabazaronline_cart') ||
+          localStorage.getItem('sastabazar_cart');
+
         if (savedCart) {
           const cart = JSON.parse(savedCart);
-          const totalItems = cart.reduce((sum: number, item: any) => sum + (item.quantity || 1), 0);
+
+          const totalItems = Array.isArray(cart)
+            ? cart.reduce(
+                (sum: number, item: any) =>
+                  sum + Number(item?.quantity || 1),
+                0
+              )
+            : 0;
+
           setCartCount(totalItems);
         } else {
           setCartCount(0);
@@ -30,10 +53,16 @@ export default function Header() {
       }
 
       try {
-        const savedWishlist = localStorage.getItem('sastabazaronline_wishlist') || localStorage.getItem('sastabazar_wishlist');
+        const savedWishlist =
+          localStorage.getItem('sastabazaronline_wishlist') ||
+          localStorage.getItem('sastabazar_wishlist');
+
         if (savedWishlist) {
           const wishlist = JSON.parse(savedWishlist);
-          setWishlistCount(Array.isArray(wishlist) ? wishlist.length : 0);
+
+          setWishlistCount(
+            Array.isArray(wishlist) ? wishlist.length : 0
+          );
         } else {
           setWishlistCount(0);
         }
@@ -43,6 +72,7 @@ export default function Header() {
     };
 
     syncCounts();
+
     window.addEventListener('storage', syncCounts);
     window.addEventListener('cartUpdated', syncCounts);
     window.addEventListener('wishlistUpdated', syncCounts);
@@ -56,71 +86,339 @@ export default function Header() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
-    }
+
+    const query = searchQuery.trim();
+
+    if (!query) return;
+
+    router.push(`/search?q=${encodeURIComponent(query)}`);
   };
 
+  const navItems = [
+    { label: 'HOME', href: '/' },
+    { label: 'WOMEN', href: '/search?q=women' },
+    { label: 'MEN', href: '/search?q=men' },
+    { label: 'KIDS', href: '/search?q=kids' },
+    { label: 'HOME & LIVING', href: '/search?q=home' },
+    { label: 'ACCESSORIES', href: '/search?q=accessories' },
+    { label: 'NEW ARRIVALS', href: '/search?q=new arrivals' },
+    { label: 'OFFERS', href: '/#offers' },
+  ];
+
   return (
-    <header className="bg-indigo-950 text-white sticky top-0 z-50 shadow-md">
-      <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
-        <div className="flex items-center justify-between w-full sm:w-auto">
-          <Link href="/" className="flex items-center gap-2 min-h-11" aria-label="SASTABAZARONLINE home">
-            <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center font-black text-xl shadow">SO</div>
-            <div>
-              <span className="text-sm md:text-base font-black tracking-wider text-white">SASTABAZARONLINE</span>
-              <span className="block text-[10px] text-orange-300 font-bold uppercase tracking-widest">Wholesale Hub (Surat)</span>
+    <header className="sticky top-0 z-50 bg-white shadow-sm">
+      {/* =========================================================
+          TOP ANNOUNCEMENT BAR
+      ========================================================= */}
+      <div className="bg-[#741f23] text-white">
+        <div className="mx-auto flex min-h-9 max-w-7xl items-center justify-between gap-4 px-4 text-[11px] font-medium sm:text-xs">
+          <div className="hidden md:block">
+            Welcome to Adhyey Brothers — Your Trusted Online Shopping
+            Destination
+          </div>
+
+          <div className="flex w-full items-center justify-between gap-4 md:w-auto md:justify-end">
+            <span className="flex items-center gap-1.5 whitespace-nowrap">
+              <Truck size={14} aria-hidden="true" />
+              Pan India Delivery
+            </span>
+
+            <Link
+              href="/orders"
+              className="hidden whitespace-nowrap hover:text-amber-200 sm:inline"
+            >
+              Track Order
+            </Link>
+
+            <Link
+              href="/contact"
+              className="flex items-center gap-1.5 whitespace-nowrap hover:text-amber-200"
+            >
+              <Headphones size={14} aria-hidden="true" />
+              Help
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* =========================================================
+          MAIN HEADER
+      ========================================================= */}
+      <div className="border-b border-stone-200 bg-[#fffdf9]">
+        <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3 lg:gap-8 lg:py-4">
+          {/* Mobile menu button */}
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen((value) => !value)}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-stone-200 text-[#741f23] lg:hidden"
+            aria-label="Open navigation menu"
+            aria-expanded={mobileMenuOpen}
+          >
+            <Menu size={22} />
+          </button>
+
+          {/* =====================================================
+              BRAND / LOGO
+          ===================================================== */}
+          <Link
+            href="/"
+            className="flex shrink-0 items-center gap-3"
+            aria-label="ADHYEY BROTHERS home"
+          >
+            <div className="relative flex h-12 w-12 items-center justify-center rounded-full border-2 border-[#c89b52] bg-[#fffaf0] sm:h-14 sm:w-14">
+              <div className="absolute inset-1 rounded-full border border-[#dfbd82]" />
+
+              <span className="relative font-serif text-xl font-bold text-[#741f23] sm:text-2xl">
+                AB
+              </span>
+            </div>
+
+            <div className="hidden leading-none sm:block">
+              <div className="font-serif text-[19px] font-bold tracking-[0.08em] text-[#741f23] lg:text-[23px]">
+                ADHYEY
+              </div>
+
+              <div className="mt-1 font-serif text-[15px] font-bold tracking-[0.18em] text-[#741f23] lg:text-[18px]">
+                BROTHERS
+              </div>
+
+              <div className="mt-1 text-[8px] font-bold uppercase tracking-[0.22em] text-[#b5843d] lg:text-[9px]">
+                Quality • Trust • Style
+              </div>
             </div>
           </Link>
+
+          {/* =====================================================
+              SEARCH
+          ===================================================== */}
+          <form
+            onSubmit={handleSearch}
+            role="search"
+            className="relative hidden flex-1 md:block"
+          >
+            <label htmlFor="site-search" className="sr-only">
+              Search products
+            </label>
+
+            <div className="flex min-h-12 overflow-hidden rounded-lg border border-stone-300 bg-white shadow-sm">
+              <div className="hidden min-w-36 items-center gap-2 border-r border-stone-200 px-4 text-xs font-semibold text-stone-800 lg:flex">
+                All Categories
+                <ChevronDown size={14} />
+              </div>
+
+              <input
+                id="site-search"
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search for products, brands and more..."
+                className="min-w-0 flex-1 bg-white px-4 text-sm text-stone-800 outline-none placeholder:text-stone-400"
+              />
+
+              <button
+                type="submit"
+                aria-label="Search products"
+                className="flex w-14 items-center justify-center bg-[#741f23] text-white transition hover:bg-[#5e171b]"
+              >
+                <Search size={20} />
+              </button>
+            </div>
+          </form>
+
+          {/* =====================================================
+              CUSTOMER ACTIONS
+          ===================================================== */}
+          <nav
+            aria-label="Customer shortcuts"
+            className="ml-auto flex items-center gap-1 sm:gap-2"
+          >
+            <div className="hidden xl:block">
+              <LanguageSwitcher />
+            </div>
+
+            <Link
+              href="/account?redirectTo=/orders"
+              className="hidden min-h-11 items-center gap-2 rounded-lg px-2 text-stone-800 transition hover:bg-stone-100 lg:flex"
+              aria-label="Login or customer account"
+            >
+              <UserRound size={22} strokeWidth={1.7} />
+
+              <div className="hidden text-[11px] font-semibold xl:block">
+                <div>Login</div>
+                <div>/ Register</div>
+              </div>
+            </Link>
+
+            <Link
+              href="/wishlist"
+              className="group relative flex h-11 min-w-11 items-center justify-center rounded-lg px-2 text-stone-800 transition hover:bg-stone-100"
+              aria-label={`Wishlist${
+                wishlistCount > 0
+                  ? `, ${wishlistCount} items`
+                  : ''
+              }`}
+            >
+              <Heart
+                size={23}
+                strokeWidth={1.7}
+                fill={wishlistCount > 0 ? 'currentColor' : 'none'}
+              />
+
+              {wishlistCount > 0 && (
+                <span className="absolute right-0 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#741f23] px-1 text-[9px] font-bold text-white">
+                  {wishlistCount}
+                </span>
+              )}
+
+              <span className="ml-1 hidden text-xs font-semibold xl:inline">
+                Wishlist
+              </span>
+            </Link>
+
+            <Link
+              href="/cart"
+              className="group relative flex h-11 min-w-11 items-center justify-center rounded-lg px-2 text-stone-800 transition hover:bg-stone-100"
+              aria-label={`Shopping cart${
+                cartCount > 0 ? `, ${cartCount} items` : ''
+              }`}
+            >
+              <ShoppingCart size={24} strokeWidth={1.7} />
+
+              {cartCount > 0 && (
+                <span className="absolute right-0 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#741f23] px-1 text-[9px] font-bold text-white">
+                  {cartCount}
+                </span>
+              )}
+
+              <div className="ml-1 hidden text-[11px] font-semibold xl:block">
+                <div>Cart</div>
+                <div className="font-bold">
+                  {cartCount > 0
+                    ? `${cartCount} item${cartCount > 1 ? 's' : ''}`
+                    : '₹0.00'}
+                </div>
+              </div>
+            </Link>
+
+            <Link
+              href="/orders"
+              className="hidden h-11 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-stone-800 transition hover:bg-stone-100 2xl:flex"
+              aria-label="My orders"
+            >
+              <Package size={21} strokeWidth={1.7} />
+              My Orders
+            </Link>
+          </nav>
         </div>
 
-        <form onSubmit={handleSearch} className="w-full sm:max-w-md lg:max-w-lg relative" role="search">
-          <label htmlFor="site-search" className="sr-only">Search products</label>
-          <input
-            id="site-search"
-            type="search"
-            placeholder="Search home, kitchen & fashion products..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-4 pr-12 py-2.5 min-h-11 rounded-xl text-xs bg-white text-gray-900 font-medium focus:outline-none shadow-inner"
-          />
-          <button type="submit" aria-label="Search products" className="absolute right-0 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center text-gray-600 hover:text-orange-700 transition cursor-pointer rounded-xl">
-            <Search size={18} aria-hidden="true" />
-          </button>
-        </form>
+        {/* =========================================================
+            MOBILE SEARCH
+        ========================================================= */}
+        <div className="mx-auto max-w-7xl px-4 pb-3 md:hidden">
+          <form
+            onSubmit={handleSearch}
+            role="search"
+            className="flex min-h-11 overflow-hidden rounded-lg border border-stone-300 bg-white"
+          >
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search products..."
+              aria-label="Search products"
+              className="min-w-0 flex-1 px-4 text-sm text-stone-800 outline-none"
+            />
 
-        <nav aria-label="Customer shortcuts" className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-end">
-          <LanguageSwitcher />
-
-          <Link href="/account?redirectTo=/orders" className="flex items-center gap-1 text-xs font-bold hover:text-orange-300 transition bg-indigo-900/50 px-3 min-h-11 rounded-xl border border-indigo-800" aria-label="Customer account">
-            <UserRound size={16} className="text-green-400" aria-hidden="true" />
-            <span className="hidden sm:inline">Account</span>
-          </Link>
-
-          <Link href="/wishlist" className="relative flex items-center gap-1.5 hover:text-orange-300 transition min-h-11" aria-label={`Wishlist${wishlistCount > 0 ? `, ${wishlistCount} items` : ''}`}>
-            <div className="relative w-11 h-11 flex items-center justify-center bg-indigo-900/80 rounded-xl border border-indigo-800">
-              <Heart size={18} className="text-red-400" fill={wishlistCount > 0 ? 'currentColor' : 'none'} aria-hidden="true" />
-              {wishlistCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-black min-w-4 h-4 px-0.5 rounded-full flex items-center justify-center border-2 border-indigo-950 shadow" aria-hidden="true">{wishlistCount}</span>
-              )}
-            </div>
-            <span className="hidden xl:inline text-xs font-bold">Wishlist</span>
-          </Link>
-
-          <Link href="/cart" className="relative flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white px-3 min-h-11 rounded-xl text-xs font-bold transition shadow" aria-label={`Shopping cart${cartCount > 0 ? `, ${cartCount} items` : ''}`}>
-            <ShoppingCart size={18} aria-hidden="true" />
-            <span className="hidden sm:inline">Cart</span>
-            {cartCount > 0 && (
-              <span className="bg-white text-orange-700 text-[10px] font-black px-1.5 py-0.5 rounded-full ml-0.5" aria-hidden="true">{cartCount}</span>
-            )}
-          </Link>
-
-          <Link href="/orders" className="flex items-center gap-1 text-xs font-bold hover:text-orange-300 transition bg-indigo-900/50 px-3 min-h-11 rounded-xl border border-indigo-800" aria-label="My orders">
-            <Package size={16} className="text-blue-400" aria-hidden="true" />
-            <span className="hidden sm:inline">My Orders</span>
-          </Link>
-        </nav>
+            <button
+              type="submit"
+              aria-label="Search products"
+              className="flex w-12 items-center justify-center bg-[#741f23] text-white"
+            >
+              <Search size={18} />
+            </button>
+          </form>
+        </div>
       </div>
+
+      {/* =========================================================
+          DESKTOP CATEGORY NAVIGATION
+      ========================================================= */}
+      <div className="hidden border-b border-stone-200 bg-white lg:block">
+        <div className="mx-auto flex max-w-7xl items-center px-4">
+          <Link
+            href="/#categories"
+            className="mr-4 flex min-h-11 items-center gap-2 bg-[#741f23] px-5 text-xs font-bold text-white transition hover:bg-[#5e171b]"
+          >
+            <Menu size={17} />
+            ALL CATEGORIES
+          </Link>
+
+          <nav
+            aria-label="Product categories"
+            className="flex flex-1 items-center justify-between"
+          >
+            {navItems.map((item) => (
+              <Link
+                key={item.label}
+                href={item.href}
+                className="flex min-h-11 items-center px-3 text-[12px] font-bold text-stone-800 transition hover:text-[#741f23]"
+              >
+                {item.label}
+              </Link>
+            ))}
+
+            <Link
+              href="/contact"
+              className="flex min-h-11 items-center px-3 text-[12px] font-bold text-stone-800 transition hover:text-[#741f23]"
+            >
+              CONTACT US
+            </Link>
+          </nav>
+        </div>
+      </div>
+
+      {/* =========================================================
+          MOBILE NAVIGATION
+      ========================================================= */}
+      {mobileMenuOpen && (
+        <div className="border-b border-stone-200 bg-white lg:hidden">
+          <nav
+            aria-label="Mobile navigation"
+            className="mx-auto grid max-w-7xl grid-cols-2 gap-1 px-4 py-3 sm:grid-cols-3"
+          >
+            {navItems.map((item) => (
+              <Link
+                key={item.label}
+                href={item.href}
+                onClick={() => setMobileMenuOpen(false)}
+                className="rounded-lg px-3 py-3 text-xs font-bold text-stone-800 transition hover:bg-[#fff6e9] hover:text-[#741f23]"
+              >
+                {item.label}
+              </Link>
+            ))}
+
+            <Link
+              href="/orders"
+              onClick={() => setMobileMenuOpen(false)}
+              className="rounded-lg px-3 py-3 text-xs font-bold text-stone-800 hover:bg-[#fff6e9] hover:text-[#741f23]"
+            >
+              MY ORDERS
+            </Link>
+
+            <Link
+              href="/contact"
+              onClick={() => setMobileMenuOpen(false)}
+              className="rounded-lg px-3 py-3 text-xs font-bold text-stone-800 hover:bg-[#fff6e9] hover:text-[#741f23]"
+            >
+              CONTACT US
+            </Link>
+
+            <div className="px-3 py-2">
+              <LanguageSwitcher />
+            </div>
+          </nav>
+        </div>
+      )}
     </header>
   );
 }

@@ -8,7 +8,7 @@ export default function PrivacyPolicyPage() {
     <LegalPage title="Privacy Policy">
       <section>
         <h2>Introduction</h2>
-        <p>This Privacy Policy describes how Adhyey brothers and its affiliates (collectively "Adhyey brothers, we, our, us") collect, use, share, protect or otherwise process your information/ personal data through our website https://www.sastabazaronline.in/ (hereinafter referred to as Platform). Please note that you may be able to browse certain sections of the Platform without registering with us.We do not offer any product/service under this Platform outside India and your personal data will primarily be stored and processed in India. By visiting this Platform, providing your information or availing any product/service offered on the Platform, you expressly agree to be bound by the terms and conditions of this Privacy Policy, the Terms of Use and the applicable service/product terms and conditions, and agree to be governed by the laws of India including but not limited to the laws applicable to data protection and privacy. If you do not agree please do not use or access our Platform.</p>
+        <p>This Privacy Policy describes how Adhyey brothers and its affiliates (collectively "Adhyey brothers, we, our, us") collect, use, share, protect or otherwise process your information/ personal data through our website https://www.adhyeybrothers.in/ (hereinafter referred to as Platform). Please note that you may be able to browse certain sections of the Platform without registering with us.We do not offer any product/service under this Platform outside India and your personal data will primarily be stored and processed in India. By visiting this Platform, providing your information or availing any product/service offered on the Platform, you expressly agree to be bound by the terms and conditions of this Privacy Policy, the Terms of Use and the applicable service/product terms and conditions, and agree to be governed by the laws of India including but not limited to the laws applicable to data protection and privacy. If you do not agree please do not use or access our Platform.</p>
       </section>
       <section>
         <h2>Collection</h2>
@@ -47,7 +47,7 @@ export default function PrivacyPolicyPage() {
         <p>Mahendra Patel</p>
         <p>Designation: Grievance Officer</p>
         <p>ADHYEY BROTHERS<br />3rd Floor, 33 Shaktinagar Society,<br />Peoples Char Rasta,<br />Katargam, Surat,<br />Gujarat - 395004, India</p>
-        <p>Contact us: <a href="mailto:sales@sastabazaronline.in">sales@sastabazaronline.in</a></p>
+        <p>Contact us: <a href="mailto:adhyeybrothers@gmail.com">adhyeybrothers@gmail.com</a></p>
         <p>Time: Monday - Friday(9:00 - 18:00)</p>
       </section>
     </LegalPage>

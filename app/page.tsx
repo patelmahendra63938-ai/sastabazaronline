@@ -28,8 +28,8 @@ import {
 } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'SASTABAZARONLINE – Festival Offers & Collections',
-  description: 'Shop curated collections with seasonal and festival discounts at SASTABAZARONLINE.',
+  title: 'ADHYEY BROTHERS – Fashion, Lifestyle & Online Shopping',
+  description: 'Shop curated fashion, lifestyle and everyday collections at ADHYEY BROTHERS.',
 };
 
 interface PageProps {
@@ -269,11 +269,11 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
   };
 
   return (
-    <main className="min-h-screen bg-[#F8F9FB] flex flex-col justify-between font-sans">
+    <main className="min-h-screen bg-[#fffaf5] flex flex-col justify-between font-sans text-stone-900">
       <div>
         <Header />
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-10 sm:space-y-14">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-8 sm:space-y-10">
           
           {/* Top Promotional Sale Banner (Redirects to /sale/[slug]) */}
           {homepageBannerCampaign && (
@@ -285,12 +285,12 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
             <section aria-labelledby="shop-by-category-heading" className="space-y-5">
               <div className="flex items-end justify-between gap-4">
                 <div>
-                  <p className="text-[11px] font-black uppercase tracking-[0.2em] text-orange-600">Browse collections</p>
-                  <h2 id="shop-by-category-heading" className="mt-1 text-2xl font-black tracking-tight text-indigo-950 sm:text-3xl">
+                  <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#b5843d]">Browse collections</p>
+                  <h2 id="shop-by-category-heading" className="mt-1 text-2xl font-black tracking-tight text-[#741f23] sm:text-3xl">
                     Shop by Category
                   </h2>
                 </div>
-                <a href="#all-products" className="hidden items-center gap-1 text-xs font-bold text-indigo-900 hover:text-orange-600 sm:flex">
+                <a href="#all-products" className="hidden items-center gap-1 text-xs font-bold text-[#741f23] hover:text-[#b5843d] sm:flex">
                   View catalog <ArrowRight size={14} />
                 </a>
               </div>
@@ -300,10 +300,10 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
                   <Link
                     key={category.id}
                     href={`/category/${encodeURIComponent(category.name)}`}
-                    className={`group relative flex min-h-28 overflow-hidden rounded-2xl border bg-white p-4 shadow-xs transition hover:-translate-y-0.5 hover:border-orange-300 hover:shadow-md ${
+                    className={`group relative flex min-h-28 overflow-hidden rounded-2xl border bg-white p-4 shadow-xs transition hover:-translate-y-0.5 hover:border-[#d7b06a] hover:shadow-md ${
                       category.homepage_featured
-                        ? 'col-span-2 min-h-36 border-orange-200 sm:col-span-2 lg:col-span-2'
-                        : 'border-indigo-100'
+                        ? 'col-span-2 min-h-36 border-[#e7c88d] sm:col-span-2 lg:col-span-2'
+                        : 'border-stone-200'
                     }`}
                   >
                     {category.homepage_image_url && (
@@ -317,14 +317,14 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
                         className="absolute inset-0 size-full object-cover"
                       />
                     )}
-                    {category.homepage_image_url && <span className="absolute inset-0 bg-gradient-to-t from-indigo-950/90 via-indigo-950/30 to-transparent" />}
+                    {category.homepage_image_url && <span className="absolute inset-0 bg-gradient-to-t from-[#741f23]/90 via-[#741f23]/30 to-transparent" />}
                     <span className="relative z-10 flex size-full flex-col justify-between">
                       <ShoppingBag
                         size={22}
-                        className={category.homepage_image_url ? 'text-white' : 'text-orange-500'}
+                        className={category.homepage_image_url ? 'text-white' : 'text-[#b5843d]'}
                         aria-hidden="true"
                       />
-                      <span className={`flex items-end justify-between gap-2 text-sm font-black ${category.homepage_image_url ? 'text-white' : 'text-indigo-950'}`}>
+                      <span className={`flex items-end justify-between gap-2 text-sm font-black ${category.homepage_image_url ? 'text-white' : 'text-[#741f23]'}`}>
                         {category.name}
                         <ArrowRight size={14} className="shrink-0 transition-transform group-hover:translate-x-1" aria-hidden="true" />
                       </span>
@@ -336,21 +336,21 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
           )}
 
           {featuredProducts.length > 0 && (
-            <section aria-labelledby="featured-products-heading" className="space-y-5 rounded-3xl bg-indigo-950 px-4 py-7 sm:px-6 sm:py-9">
+            <section aria-labelledby="featured-products-heading" className="space-y-5 rounded-3xl bg-[#741f23] px-4 py-7 sm:px-6 sm:py-9">
               <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
                 <div>
-                  <p className="text-[11px] font-black uppercase tracking-[0.2em] text-orange-400">From our active catalog</p>
+                  <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#f0c987]">From our active catalog</p>
                   <h2 id="featured-products-heading" className="mt-1 text-2xl font-black tracking-tight text-white sm:text-3xl">
                     Featured Products
                   </h2>
-                  <p className="mt-1 text-xs text-indigo-200">A selection of recently added active products.</p>
+                  <p className="mt-1 text-xs text-[#f4dfbf]">A selection of recently added active products.</p>
                 </div>
-                <a href="#all-products" className="inline-flex items-center gap-1 text-xs font-bold text-orange-300 hover:text-white">
+                <a href="#all-products" className="inline-flex items-center gap-1 text-xs font-bold text-[#f0c987] hover:text-white">
                   Browse all products <ArrowRight size={14} />
                 </a>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                 {featuredProducts.map((product) => (
                   <ProductCard key={`featured-${product.id}`} product={product} activeCampaigns={activeCampaigns} />
                 ))}
@@ -360,8 +360,8 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
 
           <section aria-labelledby="why-shop-heading" className="space-y-5">
             <div className="text-center">
-              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-orange-600">Clear buying experience</p>
-              <h2 id="why-shop-heading" className="mt-1 text-2xl font-black tracking-tight text-indigo-950 sm:text-3xl">Why Shop With Us</h2>
+              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#b5843d]">Clear buying experience</p>
+              <h2 id="why-shop-heading" className="mt-1 text-2xl font-black tracking-tight text-[#741f23] sm:text-3xl">Why Shop With Us</h2>
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
               {[
@@ -372,27 +372,27 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
                 { title: 'Order Tracking', detail: 'View your placed orders from the orders page.', icon: PackageSearch },
               ].map(({ title, detail, icon: Icon }) => (
                 <div key={title} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-xs">
-                  <div className="mb-4 flex size-10 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
+                  <div className="mb-4 flex size-10 items-center justify-center rounded-xl bg-[#fff2dc] text-[#a96d20]">
                     <Icon size={20} aria-hidden="true" />
                   </div>
-                  <h3 className="text-sm font-black text-indigo-950">{title}</h3>
+                  <h3 className="text-sm font-black text-[#741f23]">{title}</h3>
                   <p className="mt-1 text-xs leading-relaxed text-gray-500">{detail}</p>
                 </div>
               ))}
             </div>
           </section>
 
-          <section aria-labelledby="customer-help-heading" className="rounded-3xl border border-indigo-100 bg-white p-6 shadow-xs sm:p-8">
+          <section aria-labelledby="customer-help-heading" className="rounded-3xl border border-[#ead8b8] bg-[#fffdf9] p-6 shadow-xs sm:p-8">
             <div className="flex flex-col justify-between gap-5 md:flex-row md:items-center">
               <div>
-                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-orange-600">Customer help</p>
-                <h2 id="customer-help-heading" className="mt-1 text-xl font-black text-indigo-950 sm:text-2xl">Orders, policies and support</h2>
+                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#b5843d]">Customer help</p>
+                <h2 id="customer-help-heading" className="mt-1 text-xl font-black text-[#741f23] sm:text-2xl">Orders, policies and support</h2>
                 <p className="mt-2 max-w-xl text-xs leading-relaxed text-gray-500">Use these customer pages to view orders and read our store policies.</p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Link href="/orders" className="rounded-xl bg-indigo-950 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-indigo-900">View Orders</Link>
-                <Link href="/privacy-policy" className="rounded-xl border border-gray-200 px-4 py-2.5 text-xs font-bold text-gray-700 transition hover:border-indigo-300">Privacy Policy</Link>
-                <Link href="/terms" className="rounded-xl border border-gray-200 px-4 py-2.5 text-xs font-bold text-gray-700 transition hover:border-indigo-300">Terms</Link>
+                <Link href="/orders" className="rounded-xl bg-[#741f23] px-4 py-2.5 text-xs font-bold text-white transition hover:bg-[#5e171b]">View Orders</Link>
+                <Link href="/privacy-policy" className="rounded-xl border border-gray-200 px-4 py-2.5 text-xs font-bold text-gray-700 transition hover:border-[#d7b06a]">Privacy Policy</Link>
+                <Link href="/terms" className="rounded-xl border border-gray-200 px-4 py-2.5 text-xs font-bold text-gray-700 transition hover:border-[#d7b06a]">Terms</Link>
               </div>
             </div>
           </section>
@@ -405,7 +405,7 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
 
           {/* Main Layout: Left Sidebar Filters + Right Catalog Grid */}
           <section id="all-products" aria-labelledby="all-products-heading" className="scroll-mt-24">
-          <div className="flex flex-col md:flex-row gap-6 pt-2">
+          <div className="flex flex-col md:flex-row gap-4 pt-2">
             
             {/* Desktop & Mobile Left Filter Panel */}
             {homepageDisplay.show_filter_panel && <aside className="w-full md:w-64 shrink-0">
@@ -423,7 +423,7 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
 
               {/* Toolbar Bar */}
               <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-gray-200/80 shadow-2xs">
-                <h2 id="all-products-heading" className="text-xs font-black text-indigo-950 uppercase tracking-wider">
+                <h2 id="all-products-heading" className="text-xs font-black text-[#741f23] uppercase tracking-wider">
                   {effectiveSearchParams.category ? `${effectiveSearchParams.category} Collection` : 'All Store Products'} ({totalProducts} Items)
                 </h2>
                 <span className="text-[11px] text-gray-500 font-semibold">
@@ -444,7 +444,7 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
                   <p className="text-[11px] font-semibold text-gray-500">
                     Showing {rangeFrom + 1}–{Math.min(rangeFrom + products.length, totalProducts)} of {totalProducts}
                   </p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
                     {products.map((product) => (
                       <ProductCard
                         key={product.id}

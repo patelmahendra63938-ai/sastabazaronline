@@ -1,80 +1,199 @@
 import React from 'react';
 import Link from 'next/link';
-import { PhoneCall, Mail, MapPin, ShieldCheck, Heart } from 'lucide-react';
+import {
+  PhoneCall,
+  Mail,
+  MapPin,
+  ShieldCheck,
+  Heart,
+  ShoppingBag,
+} from 'lucide-react';
 import { BUSINESS_INFO } from '@/lib/business-info';
 
-const footerLinkClass = 'inline-flex min-h-10 items-center hover:text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 rounded';
+const footerLinkClass =
+  'inline-flex min-h-10 items-center text-stone-300 hover:text-[#e7c98d] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d7aa5b] rounded';
 
 export default function Footer() {
   return (
-    <footer className="bg-indigo-950 text-white pt-9 pb-6 border-t border-indigo-900 mt-16">
-      <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-10 pb-8 border-b border-indigo-900">
-        <div className="space-y-3">
-          <Link href="/" className="inline-flex min-h-10 items-center text-xl font-black tracking-wider text-white" aria-label="SASTABAZARONLINE home">
-            SASTABAZAR<span className="text-orange-400">ONLINE</span>
+    <footer className="mt-20 border-t border-[#6a1b1f] bg-[#64191d] text-white">
+      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-10 px-4 py-12 sm:grid-cols-2 lg:grid-cols-4">
+
+        {/* Brand */}
+        <div className="space-y-4">
+          <Link
+            href="/"
+            className="inline-flex min-h-11 items-center gap-3"
+            aria-label="ADHYEY BROTHERS home"
+          >
+            <div className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-[#d7aa5b] bg-[#fff7e8]">
+              <span className="font-serif text-lg font-bold text-[#741f23]">
+                AB
+              </span>
+            </div>
+
+            <div>
+              <div className="font-serif text-lg font-bold tracking-[0.08em] text-white">
+                ADHYEY
+              </div>
+              <div className="font-serif text-sm font-bold tracking-[0.16em] text-[#e7c98d]">
+                BROTHERS™
+              </div>
+            </div>
           </Link>
-          <p className="text-xs text-gray-300 leading-relaxed max-w-sm">
-            Your trusted destination for quality home, kitchen, and lifestyle products at direct wholesale pricing in Surat and across India.
+
+          <p className="text-xs leading-relaxed text-stone-300">
+            Your trusted online shopping destination for fashion, lifestyle,
+            home and everyday products across India.
           </p>
-          <div className="flex items-center gap-2 text-xs text-yellow-300 font-bold">
-            <ShieldCheck size={16} aria-hidden="true" /> 100% Trusted & Verified Wholesale Store
+
+          <div className="flex items-center gap-2 text-xs font-bold text-[#e7c98d]">
+            <ShieldCheck size={16} aria-hidden="true" />
+            Trusted Shopping Experience
+          </div>
+
+          <div className="flex items-center gap-2 text-xs font-semibold text-stone-300">
+            <ShoppingBag size={16} className="text-[#e7c98d]" aria-hidden="true" />
+            Quality • Trust • Style
           </div>
         </div>
 
+        {/* Shopping Links */}
         <div>
-          <h4 className="text-sm font-bold uppercase tracking-wider text-orange-300 mb-2">Quick Links</h4>
-          <ul className="text-xs text-gray-300 grid grid-cols-2 sm:grid-cols-1 gap-x-4">
-            <li><Link href="/" className={footerLinkClass}>Home</Link></li>
-            <li><Link href="/cart" className={footerLinkClass}>My Shopping Cart</Link></li>
-            <li><Link href="/wishlist" className={footerLinkClass}>My Wishlist</Link></li>
-            <li><Link href="/orders" className={footerLinkClass}>Track My Orders</Link></li>
+          <h4 className="mb-3 text-sm font-bold uppercase tracking-wider text-[#e7c98d]">
+            Shopping
+          </h4>
+
+          <ul className="text-xs">
+            <li>
+              <Link href="/" className={footerLinkClass}>
+                Home
+              </Link>
+            </li>
+            <li>
+              <Link href="/cart" className={footerLinkClass}>
+                My Shopping Cart
+              </Link>
+            </li>
+            <li>
+              <Link href="/wishlist" className={footerLinkClass}>
+                My Wishlist
+              </Link>
+            </li>
+            <li>
+              <Link href="/orders" className={footerLinkClass}>
+                Track My Orders
+              </Link>
+            </li>
+            <li>
+              <Link href="/account" className={footerLinkClass}>
+                My Account
+              </Link>
+            </li>
           </ul>
         </div>
 
+        {/* Policies */}
         <div>
-          <h4 className="text-sm font-bold uppercase tracking-wider text-orange-300 mb-2">Policies</h4>
-          <ul className="text-xs text-gray-300 grid grid-cols-2 sm:grid-cols-1 gap-x-4">
-            <li><Link href="/terms-and-conditions" className={footerLinkClass}>Terms & Conditions</Link></li>
-            <li><Link href="/refund-policy" className={footerLinkClass}>Refund Policy</Link></li>
-            <li><Link href="/return-policy" className={footerLinkClass}>Return Policy</Link></li>
-            <li><Link href="/shipping-policy" className={footerLinkClass}>Shipping Policy</Link></li>
-            <li><Link href="/privacy-policy" className={footerLinkClass}>Privacy Policy</Link></li>
+          <h4 className="mb-3 text-sm font-bold uppercase tracking-wider text-[#e7c98d]">
+            Customer Policies
+          </h4>
+
+          <ul className="text-xs">
+            <li>
+              <Link href="/terms-and-conditions" className={footerLinkClass}>
+                Terms & Conditions
+              </Link>
+            </li>
+            <li>
+              <Link href="/refund-policy" className={footerLinkClass}>
+                Refund Policy
+              </Link>
+            </li>
+            <li>
+              <Link href="/return-policy" className={footerLinkClass}>
+                Return Policy
+              </Link>
+            </li>
+            <li>
+              <Link href="/shipping-policy" className={footerLinkClass}>
+                Shipping Policy
+              </Link>
+            </li>
+            <li>
+              <Link href="/privacy-policy" className={footerLinkClass}>
+                Privacy Policy
+              </Link>
+            </li>
           </ul>
         </div>
 
-        <div className="space-y-3">
-          <h4 className="text-sm font-bold uppercase tracking-wider text-orange-300 mb-2">Contact Us</h4>
-          <div className="space-y-1 text-xs text-gray-300">
-            <p className="flex items-start gap-2 py-1.5">
-              <MapPin size={16} className="text-orange-400 flex-shrink-0 mt-0.5" aria-hidden="true" />
+        {/* Contact */}
+        <div className="space-y-4">
+          <h4 className="mb-2 text-sm font-bold uppercase tracking-wider text-[#e7c98d]">
+            Contact Us
+          </h4>
+
+          <div className="space-y-2 text-xs text-stone-300">
+            <p className="flex items-start gap-2 py-1">
+              <MapPin
+                size={16}
+                className="mt-0.5 shrink-0 text-[#e7c98d]"
+                aria-hidden="true"
+              />
               <span>{BUSINESS_INFO.addressLines.join(' ')}</span>
             </p>
+
             <p className="flex items-center gap-2">
-              <PhoneCall size={16} className="text-orange-400 flex-shrink-0" aria-hidden="true" />
-              <a className="inline-flex min-h-10 items-center underline-offset-2 hover:underline" href={BUSINESS_INFO.officePhoneHref} aria-label={`Call ${BUSINESS_INFO.officePhone}`}>{BUSINESS_INFO.officePhone}</a>
+              <PhoneCall
+                size={16}
+                className="shrink-0 text-[#e7c98d]"
+                aria-hidden="true"
+              />
+
+              <a
+                className="inline-flex min-h-10 items-center underline-offset-2 hover:text-white hover:underline"
+                href={BUSINESS_INFO.officePhoneHref}
+                aria-label={`Call ${BUSINESS_INFO.officePhone}`}
+              >
+                {BUSINESS_INFO.officePhone}
+              </a>
             </p>
+
             <p className="flex items-center gap-2">
-              <Mail size={16} className="text-orange-400 flex-shrink-0" aria-hidden="true" />
-              <a className="inline-flex min-h-10 items-center underline-offset-2 hover:underline" href={`mailto:${BUSINESS_INFO.email}`} aria-label={`Email ${BUSINESS_INFO.email}`}>{BUSINESS_INFO.email}</a>
+              <Mail
+                size={16}
+                className="shrink-0 text-[#e7c98d]"
+                aria-hidden="true"
+              />
+
+              <a
+                className="inline-flex min-h-10 items-center underline-offset-2 hover:text-white hover:underline"
+                href="mailto:adhyeybrothers@gmail.com"
+                aria-label="Email adhyeybrothers@gmail.com"
+              >
+                adhyeybrothers@gmail.com
+              </a>
             </p>
           </div>
         </div>
-
-        {/*
-          Footer categories are intentionally kept here for easy restoration later.
-          Categories preserved:
-          Kitchen Appliances -> /category/Kitchenware
-          Storage & Organization -> /category/Storage
-          Cleaning Utilities -> /category/Cleaning
-          Home Decor -> /category/Home Decor
-        */}
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 pt-5 flex flex-col sm:flex-row justify-between items-center text-xs text-gray-300 gap-3">
-        <p>© {new Date().getFullYear()} SASTABAZARONLINE. All rights reserved.</p>
-        <p className="flex items-center gap-1">
-          Operated by ADHYEY BROTHERS with <Heart size={14} className="text-red-400 fill-red-400" aria-hidden="true" />
-        </p>
+      {/* Bottom Bar */}
+      <div className="border-t border-white/10 bg-[#561317]">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-4 py-5 text-xs text-stone-300 sm:flex-row">
+          <p>
+            © {new Date().getFullYear()} ADHYEY BROTHERS™. All rights reserved.
+          </p>
+
+          <p className="flex items-center gap-1">
+            Operated by ADHYEY BROTHERS with
+            <Heart
+              size={14}
+              className="fill-[#e7c98d] text-[#e7c98d]"
+              aria-hidden="true"
+            />
+          </p>
+        </div>
       </div>
     </footer>
   );
