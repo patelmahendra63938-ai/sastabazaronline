@@ -24,3 +24,10 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Temporary PhonePe onboarding state: hide the manual UPI/QR payment option.
+   Keep the underlying checkout code intact so it can be replaced by the
+   official PhonePe Payment Gateway flow after merchant approval. */
+label:has(input[name="paymentMethod"][value="ONLINE"]) {
+  display: none !important;
+}
