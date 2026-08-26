@@ -81,12 +81,12 @@ export default function AdminInvoicesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-black text-indigo-950">GST Invoices & Tax Management</h1>
+        <h1 className="text-2xl font-black text-[#741f23]">GST Invoices & Tax Management</h1>
         <p className="text-xs text-gray-500 mt-1">Official B2C tax invoices synchronized directly from active orders (GSTIN: 24AKBPD1704F1Z1).</p>
       </div>
 
       {/* Search Bar */}
-      <div className="bg-white p-4 rounded-2xl border shadow-sm flex items-center justify-between">
+      <div className="flex items-center justify-between rounded-2xl border border-[#ead8b8] bg-white p-4 shadow-sm">
         <div className="relative flex-1 max-w-sm">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
@@ -94,14 +94,14 @@ export default function AdminInvoicesPage() {
             placeholder="Search by Order #, Customer Name, Phone..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 text-xs border rounded-xl bg-gray-50 outline-none focus:ring-2 focus:ring-indigo-600"
+            className="w-full pl-9 pr-3 py-2 text-xs border rounded-xl bg-gray-50 outline-none focus:ring-2 focus:ring-[#741f23]"
           />
         </div>
         <span className="text-xs font-bold text-gray-500">Total Invoices Available: {orders.length}</span>
       </div>
 
       {/* Invoices Table linked to Orders */}
-      <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
+      <div className="overflow-hidden rounded-2xl border border-[#ead8b8] bg-white shadow-sm">
         {loading ? (
           <div className="p-16 text-center text-xs text-gray-400 flex items-center justify-center gap-2">
             <Loader2 size={16} className="animate-spin" /> Loading invoices from orders...
@@ -130,7 +130,7 @@ export default function AdminInvoicesPage() {
 
                   return (
                     <tr key={order.id} className="hover:bg-gray-50 transition">
-                      <td className="p-3.5 font-mono font-bold text-indigo-950">
+                      <td className="p-3.5 font-mono font-bold text-[#741f23]">
                         INV-{orderNum}
                         {isCancelledOrderStatus(order.order_status) && <span className="mt-1 block"><OrderStatusBadge status={order.order_status} /></span>}
                       </td>
@@ -139,12 +139,12 @@ export default function AdminInvoicesPage() {
                         <p className="text-[10px] font-normal text-gray-500">{order.customer_phone || order.phone}</p>
                       </td>
                       <td className="p-3.5 font-mono text-gray-700">₹{breakdown.grandTaxable.toFixed(2)}</td>
-                      <td className="p-3.5 font-mono text-indigo-700 font-bold">₹{breakdown.grandTax.toFixed(2)}</td>
+                      <td className="p-3.5 font-mono text-[#741f23] font-bold">₹{breakdown.grandTax.toFixed(2)}</td>
                       <td className="p-3.5 font-mono font-black text-gray-950">₹{grandTotal}</td>
                       <td className="p-3.5 text-right">
                         <button
                           onClick={() => setSelectedInvoice({ ...order, computedBreakdown: breakdown, itemsList: items, invoiceNum: orderNum })}
-                          className="bg-indigo-50 hover:bg-indigo-100 text-indigo-950 font-bold px-3 py-1.5 rounded-lg transition inline-flex items-center gap-1.5"
+                          className="bg-[#fff7e8] hover:bg-[#f8ead2] text-[#741f23] font-bold px-3 py-1.5 rounded-lg transition inline-flex items-center gap-1.5"
                         >
                           <FileText size={14} /> View Tax Invoice
                         </button>
@@ -167,14 +167,14 @@ export default function AdminInvoicesPage() {
             
             {/* Modal Actions Header */}
             <div className="flex items-center justify-between border-b pb-4 print:hidden">
-              <h3 className="font-black text-indigo-950 text-sm flex items-center gap-2">
-                <Receipt size={18} className="text-orange-500" /> Tax Invoice — INV-{selectedInvoice.invoiceNum}
+              <h3 className="font-black text-[#741f23] text-sm flex items-center gap-2">
+                <Receipt size={18} className="text-[#b5843d]" /> Tax Invoice — INV-{selectedInvoice.invoiceNum}
                   <OrderStatusBadge status={selectedInvoice.order_status} />
               </h3>
               <div className="flex items-center gap-2">
                 <button 
                   onClick={() => window.print()}
-                  className="bg-indigo-950 text-white font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 hover:bg-indigo-900 transition shadow"
+                  className="bg-[#741f23] text-white font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 hover:bg-[#5e171b] transition shadow"
                 >
                   <Printer size={14} /> Print / Download PDF
                 </button>
@@ -185,18 +185,21 @@ export default function AdminInvoicesPage() {
             </div>
 
             {/* Printable Invoice Container */}
-            <div className="space-y-6 border p-6 rounded-2xl bg-white shadow-sm">
+            <div className="space-y-6 rounded-2xl border border-[#ead8b8] bg-white p-6 shadow-sm">
               
               {/* Company Header */}
               <div className="flex justify-between items-start border-b pb-4">
                 <div>
-                  <h2 className="text-xl font-black text-indigo-950">Sastabazar Online</h2>
-                  <p className="text-gray-500">Surat, Gujarat, India - 395006</p>
-                  <p className="text-gray-500 font-mono mt-1 font-bold">GSTIN: 24AKBPD1704F1Z1</p>
+                  <h2 className="text-xl font-black text-[#741f23]">ADHYEY BROTHERS</h2>
+                  <p className="mt-1 text-gray-500">3rd Floor, 33 Shaktinagar Society,</p>
+                  <p className="text-gray-500">Peoples Char Rasta, Katargam, Surat,</p>
+                  <p className="text-gray-500">Gujarat - 395004, India</p>
+                  <p className="mt-1 text-gray-500">Email: adhyeybrothers@gmail.com</p>
+                  <p className="mt-1 font-mono font-bold text-gray-500">GSTIN: 24AKBPD1704F1Z1</p>
                 </div>
                 <div className="text-right">
                   <h3 className="font-bold text-gray-900 text-sm">TAX INVOICE</h3>
-                  <p className="font-mono text-indigo-950 font-bold mt-1">INV-{selectedInvoice.invoiceNum}</p>
+                  <p className="font-mono text-[#741f23] font-bold mt-1">INV-{selectedInvoice.invoiceNum}</p>
                   <p className="text-gray-500 mt-0.5">Order Date: {new Date(selectedInvoice.created_at).toLocaleDateString()}</p>
                   <p className="text-gray-500">Payment: {selectedInvoice.payment_method} ({selectedInvoice.payment_status})</p>
                 </div>
@@ -300,7 +303,7 @@ export default function AdminInvoicesPage() {
                           <span>₹{selectedInvoice.shipping_charge || 0}</span>
                         </div>
                         {resolveOrderTotals(selectedInvoice).isCod && <div className="flex justify-between text-gray-600"><span>COD Charge:</span><span>₹{resolveOrderTotals(selectedInvoice).codCharge}</span></div>}
-                        <div className="flex justify-between font-black text-indigo-950 text-sm border-t pt-2">
+                        <div className="flex justify-between font-black text-[#741f23] text-sm border-t pt-2">
                           <span>Grand Total:</span>
                           <span>₹{selectedInvoice.grand_total}</span>
                         </div>
