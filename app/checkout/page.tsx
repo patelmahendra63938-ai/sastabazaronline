@@ -282,27 +282,27 @@ export default function CheckoutPage() {
 
   if (orderPlaced) {
     return (
-      <main className="min-h-screen bg-[#F8F9FB] flex flex-col justify-between font-sans">
+      <main className="min-h-screen bg-[#fffaf5] flex flex-col justify-between font-sans">
         <Header />
         <div className="flex-1 max-w-xl mx-auto px-4 py-16 text-center space-y-4">
           <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
             <CheckCircle2 size={40} />
           </div>
-          <h1 className="text-2xl font-black text-indigo-950">Order Placed Successfully!</h1>
+          <h1 className="text-2xl font-black text-[#741f23]">Order Placed Successfully!</h1>
           <p className="text-sm text-gray-600">
-            Thank you for shopping with SASTABAZARONLINE. Your verified order reference is{' '}
-            <span className="font-mono font-bold text-indigo-950">{orderId}</span>.
+            Thank you for shopping with ADHYEY BROTHERS. Your verified order reference is{' '}
+            <span className="font-mono font-bold text-[#741f23]">{orderId}</span>.
           </p>
           <div className="pt-6 flex flex-col sm:flex-row gap-3 justify-center">
             <Link 
               href={`/orders/${orderId}`}
-              className="bg-indigo-950 hover:bg-indigo-900 text-white font-bold py-3.5 px-8 rounded-xl transition shadow-md text-xs uppercase tracking-wider"
+              className="bg-[#741f23] hover:bg-[#5e171b] text-white font-bold py-3.5 px-8 rounded-xl transition shadow-md text-xs uppercase tracking-wider"
             >
               Track My Order
             </Link>
             <Link 
               href="/" 
-              className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3.5 px-8 rounded-xl transition shadow-md text-xs uppercase tracking-wider"
+              className="bg-[#741f23] hover:bg-[#5e171b] text-white font-bold py-3.5 px-8 rounded-xl transition shadow-md text-xs uppercase tracking-wider"
             >
               Continue Shopping
             </Link>
@@ -315,17 +315,17 @@ export default function CheckoutPage() {
 
   if (isCartLoaded && cart.length === 0) {
     return (
-      <main className="min-h-screen bg-[#F8F9FB] flex flex-col justify-between font-sans">
+      <main className="min-h-screen bg-[#fffaf5] flex flex-col justify-between font-sans">
         <Header />
         <div className="flex-1 max-w-md mx-auto px-4 py-24 text-center space-y-4">
-          <div className="w-20 h-20 bg-gray-100 text-gray-400 rounded-full flex items-center justify-center mx-auto mb-4 shadow-2xs">
+          <div className="w-20 h-20 bg-[#fff2dc] text-[#741f23] rounded-full flex items-center justify-center mx-auto mb-4 shadow-2xs">
             <ShoppingBag size={36} />
           </div>
           <h2 className="text-xl font-bold text-gray-800">Your cart is empty</h2>
           <p className="text-xs text-gray-500">You have no items in your checkout summary.</p>
           <Link 
             href="/" 
-            className="inline-block bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-6 rounded-xl transition shadow text-xs uppercase tracking-wider"
+            className="inline-block bg-[#741f23] hover:bg-[#5e171b] text-white font-bold py-3 px-6 rounded-xl transition shadow text-xs uppercase tracking-wider"
           >
             Continue Shopping
           </Link>
@@ -336,19 +336,19 @@ export default function CheckoutPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#F8F9FB] flex flex-col justify-between font-sans pb-16">
+    <main className="min-h-screen bg-[#fffaf5] flex flex-col justify-between font-sans pb-16">
       <div>
         <Header />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
           <Link 
             href="/cart" 
-            className="inline-flex items-center gap-2 text-xs font-bold text-indigo-950 mb-6 hover:underline bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-2xs"
+            className="inline-flex items-center gap-2 text-xs font-bold text-[#741f23] mb-6 bg-[#fffdf9] px-4 py-2 rounded-xl border border-[#ead8b8] shadow-2xs transition hover:bg-[#fff7e8] hover:text-[#5e171b]"
           >
             <ArrowLeft size={16} /> Back to Cart
           </Link>
 
-          <h1 className="text-2xl font-black text-indigo-950 mb-6">Secure Checkout</h1>
+          <h1 className="text-2xl font-black text-[#741f23] mb-6">Secure Checkout</h1>
 
           {errorMsg && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center gap-2 text-xs font-bold text-red-700">
@@ -361,16 +361,16 @@ export default function CheckoutPage() {
             
             {/* Left: Customer Details & PIN Verification */}
             <div className="lg:col-span-7 space-y-6">
-              <div className="bg-white rounded-3xl border border-gray-200/80 p-6 sm:p-8 shadow-xs space-y-6">
-                <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-                  <h2 className="text-sm font-black text-indigo-950 uppercase tracking-wider flex items-center gap-2">
-                    <User size={18} className="text-indigo-600" /> 1. Customer & Delivery Address
+              <div className="bg-[#fffdf9] rounded-3xl border border-[#ead8b8] p-6 sm:p-8 shadow-xs space-y-6">
+                <div className="flex items-center justify-between border-b border-[#ead8b8] pb-4">
+                  <h2 className="text-sm font-black text-[#741f23] uppercase tracking-wider flex items-center gap-2">
+                    <User size={18} className="text-[#b5843d]" /> 1. Customer & Delivery Address
                   </h2>
                   <button
                     type="button"
                     onClick={handleGetLocation}
                     disabled={locating}
-                    className="flex items-center gap-1.5 text-xs font-bold bg-indigo-50 text-indigo-900 hover:bg-indigo-100 px-3 py-2 rounded-xl transition border border-indigo-200 cursor-pointer"
+                    className="flex items-center gap-1.5 text-xs font-bold bg-[#fff7e8] text-[#741f23] hover:bg-[#fff2dc] px-3 py-2 rounded-xl transition border border-[#ead8b8] cursor-pointer"
                   >
                     {locating ? <Loader2 size={14} className="animate-spin" /> : <Navigation size={14} />}
                     <span>{locating ? 'Detecting...' : 'Use Current Location'}</span>
@@ -390,7 +390,7 @@ export default function CheckoutPage() {
                           value={formData.fullName}
                           onChange={handleChange}
                           placeholder="Recipient full name"
-                          className="w-full pl-9 pr-3 py-2.5 rounded-xl border text-xs font-medium focus:ring-2 focus:ring-indigo-950 focus:outline-hidden bg-gray-50 focus:bg-white"
+                          className="w-full pl-9 pr-3 py-2.5 rounded-xl border text-xs font-medium focus:ring-2 focus:ring-[#d7aa5b] focus:outline-hidden bg-white border-[#ead8b8]"
                         />
                       </div>
                     </div>
@@ -407,7 +407,7 @@ export default function CheckoutPage() {
                           value={formData.phone}
                           onChange={handleChange}
                           placeholder="10-digit mobile number"
-                          className="w-full pl-9 pr-3 py-2.5 rounded-xl border text-xs font-mono font-medium focus:ring-2 focus:ring-indigo-950 focus:outline-hidden bg-gray-50 focus:bg-white"
+                          className="w-full pl-9 pr-3 py-2.5 rounded-xl border text-xs font-mono font-medium focus:ring-2 focus:ring-[#d7aa5b] focus:outline-hidden bg-white border-[#ead8b8]"
                         />
                       </div>
                     </div>
@@ -421,7 +421,7 @@ export default function CheckoutPage() {
                       value={formData.email}
                       onChange={handleChange}
                       placeholder="customer@example.com"
-                      className="w-full px-3 py-2.5 rounded-xl border text-xs font-medium focus:ring-2 focus:ring-indigo-950 focus:outline-hidden bg-gray-50 focus:bg-white"
+                      className="w-full px-3 py-2.5 rounded-xl border text-xs font-medium focus:ring-2 focus:ring-[#d7aa5b] focus:outline-hidden bg-white border-[#ead8b8]"
                     />
                   </div>
 
@@ -434,7 +434,7 @@ export default function CheckoutPage() {
                       value={formData.address}
                       onChange={handleChange}
                       placeholder="Flat/House No, Building, Street, Landmark"
-                      className="w-full px-3 py-2.5 rounded-xl border text-xs font-medium focus:ring-2 focus:ring-indigo-950 focus:outline-hidden bg-gray-50 focus:bg-white"
+                      className="w-full px-3 py-2.5 rounded-xl border text-xs font-medium focus:ring-2 focus:ring-[#d7aa5b] focus:outline-hidden bg-white border-[#ead8b8]"
                     />
                   </div>
 
@@ -447,7 +447,7 @@ export default function CheckoutPage() {
                         required
                         value={formData.city}
                         onChange={handleChange}
-                        className="w-full px-3 py-2.5 rounded-xl border text-xs font-medium focus:ring-2 focus:ring-indigo-950 focus:outline-hidden bg-gray-50 focus:bg-white"
+                        className="w-full px-3 py-2.5 rounded-xl border text-xs font-medium focus:ring-2 focus:ring-[#d7aa5b] focus:outline-hidden bg-white border-[#ead8b8]"
                       />
                     </div>
 
@@ -464,13 +464,13 @@ export default function CheckoutPage() {
                           value={formData.pincode}
                           onChange={handlePincodeChange}
                           placeholder="e.g. 395007"
-                          className="flex-1 px-3 py-2.5 rounded-xl border text-xs font-mono font-bold focus:ring-2 focus:ring-indigo-950 focus:outline-hidden bg-gray-50 focus:bg-white"
+                          className="flex-1 px-3 py-2.5 rounded-xl border text-xs font-mono font-bold focus:ring-2 focus:ring-[#d7aa5b] focus:outline-hidden bg-white border-[#ead8b8]"
                         />
                         <button
                           type="button"
                           onClick={() => handleCheckPincode()}
                           disabled={isCheckingPin || formData.pincode.length !== 6}
-                          className="px-4 py-2.5 bg-indigo-950 hover:bg-indigo-900 text-white font-bold text-xs rounded-xl transition disabled:opacity-40 cursor-pointer shrink-0 flex items-center gap-1.5"
+                          className="px-4 py-2.5 bg-[#741f23] hover:bg-[#5e171b] text-white font-bold text-xs rounded-xl transition disabled:opacity-40 cursor-pointer shrink-0 flex items-center gap-1.5"
                         >
                           {isCheckingPin ? (
                             <>
@@ -513,7 +513,7 @@ export default function CheckoutPage() {
                           </div>
                         )}
                         {pinStatus === 'idle' && formData.pincode.length === 6 && !isPincodeVerified && (
-                          <p className="text-[11px] font-bold text-orange-600">
+                          <p className="text-[11px] font-bold text-[#b5843d]">
                             Click &quot;Check Delivery&quot; to calculate shipping and enable order placement.
                           </p>
                         )}
@@ -522,7 +522,7 @@ export default function CheckoutPage() {
                   </div>
 
                   {/* Payment Method Selector */}
-                  <div className="pt-4 border-t border-gray-100">
+                  <div className="pt-4 border-t border-[#ead8b8]">
                     <h3 className="text-xs font-bold text-gray-800 uppercase tracking-wider mb-3">
                       2. Payment Method
                     </h3>
@@ -530,7 +530,7 @@ export default function CheckoutPage() {
                       <label 
                         onClick={() => handlePaymentMethodChange('COD')}
                         className={`flex items-center gap-3 p-4 rounded-2xl border-2 cursor-pointer transition ${
-                          formData.paymentMethod === 'COD' ? 'border-indigo-600 bg-indigo-50/50' : 'border-gray-200 hover:border-gray-300'
+                          formData.paymentMethod === 'COD' ? 'border-[#d7aa5b] bg-[#fff7e8]' : 'border-[#ead8b8] hover:border-[#d7aa5b]'
                         }`}
                       >
                         <input 
@@ -539,7 +539,7 @@ export default function CheckoutPage() {
                           value="COD" 
                           checked={formData.paymentMethod === 'COD'} 
                           onChange={() => handlePaymentMethodChange('COD')}
-                          className="text-indigo-600"
+                          className="text-[#b5843d]"
                         />
                         <div>
                           <span className="block text-xs font-bold text-gray-900">Cash on Delivery</span>
@@ -550,7 +550,7 @@ export default function CheckoutPage() {
                       <label 
                         onClick={() => handlePaymentMethodChange('ONLINE')}
                         className={`flex items-center gap-3 p-4 rounded-2xl border-2 cursor-pointer transition ${
-                          formData.paymentMethod === 'ONLINE' ? 'border-indigo-600 bg-indigo-50/50' : 'border-gray-200 hover:border-gray-300'
+                          formData.paymentMethod === 'ONLINE' ? 'border-[#d7aa5b] bg-[#fff7e8]' : 'border-[#ead8b8] hover:border-[#d7aa5b]'
                         }`}
                       >
                         <input 
@@ -559,7 +559,7 @@ export default function CheckoutPage() {
                           value="ONLINE" 
                           checked={formData.paymentMethod === 'ONLINE'} 
                           onChange={() => handlePaymentMethodChange('ONLINE')}
-                          className="text-indigo-600"
+                          className="text-[#b5843d]"
                         />
                         <div>
                           <span className="block text-xs font-bold text-gray-900">Scan QR & Pay Online</span>
@@ -570,17 +570,17 @@ export default function CheckoutPage() {
                   </div>
 
                   {formData.paymentMethod === 'ONLINE' && (
-                    <div className="p-6 bg-indigo-50/80 border-2 border-indigo-200 rounded-2xl text-center space-y-4">
-                      <div className="flex items-center justify-center gap-2 text-indigo-950 font-bold text-sm">
-                        <QrCode size={20} className="text-orange-500" />
-                        <span>Scan to Pay: <b className="text-orange-600 font-black text-base">₹{grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</b></span>
+                    <div className="p-6 bg-[#fff7e8] border-2 border-[#ead8b8] rounded-2xl text-center space-y-4">
+                      <div className="flex items-center justify-center gap-2 text-[#741f23] font-bold text-sm">
+                        <QrCode size={20} className="text-[#b5843d]" />
+                        <span>Scan to Pay: <b className="text-[#b5843d] font-black text-base">₹{grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</b></span>
                       </div>
                       <div className="w-48 h-48 bg-white p-2 rounded-xl border mx-auto flex items-center justify-center shadow-sm">
                         {/* Generated payment QR stays direct; it is not a storefront media asset. */}
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={qrCodeImageUrl} alt="UPI QR" className="w-full h-full object-contain" />
                       </div>
-                      <p className="text-[11px] text-gray-600">UPI ID: <span className="font-mono font-bold text-indigo-950">{storeUpiId}</span></p>
+                      <p className="text-[11px] text-gray-600">UPI ID: <span className="font-mono font-bold text-[#741f23]">{storeUpiId}</span></p>
                       <div>
                         <label className="block text-[11px] font-bold text-gray-700 uppercase mb-1">Enter UPI Reference / UTR ID *</label>
                         <input
@@ -590,7 +590,7 @@ export default function CheckoutPage() {
                           value={formData.upiRefId}
                           onChange={handleChange}
                           placeholder="e.g. 4235xxxxxxxx"
-                          className="w-full max-w-sm mx-auto px-4 py-2.5 bg-white rounded-xl border text-xs font-mono text-center outline-none focus:ring-2 focus:ring-indigo-950"
+                          className="w-full max-w-sm mx-auto px-4 py-2.5 bg-white rounded-xl border border-[#ead8b8] text-xs font-mono text-center outline-none focus:ring-2 focus:ring-[#d7aa5b]"
                         />
                       </div>
                     </div>
@@ -601,8 +601,8 @@ export default function CheckoutPage() {
 
             {/* Right: Order Summary with Weight-Based Shipping & Separate COD */}
             <div className="lg:col-span-5">
-              <div className="bg-white rounded-3xl border border-gray-200/80 p-6 shadow-sm sticky top-24 space-y-4">
-                <div className="flex justify-between items-center border-b border-gray-100 pb-3">
+              <div className="bg-[#fffdf9] rounded-3xl border border-[#ead8b8] p-6 shadow-sm sticky top-24 space-y-4">
+                <div className="flex justify-between items-center border-b border-[#ead8b8] pb-3">
                   <h3 className="text-base font-bold text-gray-900">Order Summary ({cart.length} items)</h3>
                   <span className="text-[11px] font-mono font-bold bg-gray-100 text-gray-700 px-2.5 py-1 rounded-lg border border-gray-200">
                     GSTIN: 24AKBPD1704F1Z1
@@ -640,7 +640,7 @@ export default function CheckoutPage() {
                         </div>
 
                         <div className="flex items-center gap-3 shrink-0">
-                          <span className="font-black text-indigo-950">₹{(itemPrice * itemQty).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                          <span className="font-black text-[#741f23]">₹{(itemPrice * itemQty).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                           <button
                             type="button"
                             onClick={() => setItemToRemove(item)}
@@ -689,7 +689,7 @@ export default function CheckoutPage() {
                       {isCheckingPin ? (
                         <span className="text-gray-400 font-normal">Calculating...</span>
                       ) : !quote ? (
-                        <span className="text-orange-600 font-bold">Pending PIN check</span>
+                        <span className="text-[#b5843d] font-bold">Pending PIN check</span>
                       ) : (
                         `₹${quote.shippingCharge.toFixed(2)}`
                       )}
@@ -703,9 +703,9 @@ export default function CheckoutPage() {
                     </span>
                   </div>
 
-                  <div className="border-t border-gray-200 pt-3 flex justify-between items-baseline text-sm font-black text-indigo-950">
+                  <div className="border-t border-[#ead8b8] pt-3 flex justify-between items-baseline text-sm font-black text-[#741f23]">
                     <span>Total Payable Amount</span>
-                    <span className="text-base text-orange-600 font-black">
+                    <span className="text-base text-[#b5843d] font-black">
                       ₹{grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                     </span>
                   </div>
@@ -715,7 +715,7 @@ export default function CheckoutPage() {
                   type="submit"
                   form="checkout-form"
                   disabled={loading || cart.length === 0 || !quote || !isPincodeVerified || pinStatus !== 'available' || isCheckingPin}
-                  className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 rounded-2xl transition shadow-md shadow-orange-500/25 flex items-center justify-center gap-2 text-xs uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer active:scale-98"
+                  className="w-full bg-[#741f23] hover:bg-[#5e171b] text-white font-bold py-4 rounded-2xl transition shadow-md shadow-[#741f23]/20 flex items-center justify-center gap-2 text-xs uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer active:scale-98"
                 >
                   {loading ? (
                     <>
@@ -735,9 +735,9 @@ export default function CheckoutPage() {
                   )}
                 </button>
 
-                <div className="bg-indigo-50/80 rounded-2xl p-3 border border-indigo-100 text-[11px] text-indigo-950 space-y-1">
+                <div className="bg-[#fff7e8] rounded-2xl p-3 border border-[#ead8b8] text-[11px] text-[#741f23] space-y-1">
                   <p className="flex items-center gap-1.5 font-bold">
-                    <FileText size={14} className="text-orange-500" /> Tax Breakdown Info:
+                    <FileText size={14} className="text-[#b5843d]" /> Tax Breakdown Info:
                   </p>
                   <p className="text-gray-600 text-[10px]">
                     All prices are inclusive of GST. Official tax invoice generated under <b>24AKBPD1704F1Z1</b>.
@@ -752,7 +752,7 @@ export default function CheckoutPage() {
 
       {itemToRemove && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4">
+          <div className="bg-[#fffdf9] rounded-2xl border border-[#ead8b8] max-w-sm w-full p-6 shadow-2xl space-y-4">
             <h3 className="text-base font-bold text-gray-900">Remove from cart?</h3>
             <p className="text-xs text-gray-600">
               Are you sure you want to remove <span className="font-bold text-gray-900">{itemToRemove.title} ({itemToRemove.size || 'Free Size'})</span> from your checkout?
