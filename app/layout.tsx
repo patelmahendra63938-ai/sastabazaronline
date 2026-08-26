@@ -4,33 +4,46 @@ import { Inter } from 'next/font/google';
 import Script from 'next/script';
 import GA4EcommerceTracker from '@/components/GA4EcommerceTracker';
 
-const inter = Inter({ 
+const inter = Inter({
   subsets: ['latin'],
   display: 'swap',
 });
 
 export const viewport: Viewport = {
-  themeColor: '#0f172a',
+  themeColor: '#741f23',
   width: 'device-width',
   initialScale: 1,
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://sastabazaronline.in'),
+  metadataBase: new URL('https://www.adhyeybrothers.in'),
+
   title: {
-    default: 'SASTABAZARONLINE – Wholesale Home & Kitchen Items Online',
-    template: '%s | SASTABAZARONLINE',
+    default: 'ADHYEY BROTHERS – Online Shopping for Fashion, Home & More',
+    template: '%s | ADHYEY BROTHERS',
   },
-  description: 'Buy premium home, kitchen, and fashion items at unbeatable wholesale prices online. Managed by Adhyey Brothers from Surat, Gujarat.',
-  keywords: ['wholesale kitchenware', 'home utility', 'Surat wholesale market', 'SASTABAZARONLINE', 'Adhyey Brothers'],
+
+  description:
+    'Shop fashion, home, kitchen and lifestyle products online from ADHYEY BROTHERS, Surat, Gujarat. Quality products delivered across India.',
+
+  keywords: [
+    'ADHYEY BROTHERS',
+    'online shopping India',
+    'fashion online',
+    'home and kitchen products',
+    'Surat online shopping',
+  ],
+
   openGraph: {
-    title: 'SASTABAZARONLINE – Wholesale Home & Kitchen Items Online',
-    description: 'Direct factory-rate home and kitchen products delivered across India.',
-    url: 'https://sastabazaronline.in',
-    siteName: 'SASTABAZARONLINE',
+    title: 'ADHYEY BROTHERS – Online Shopping for Fashion, Home & More',
+    description:
+      'Shop fashion, home, kitchen and lifestyle products online from ADHYEY BROTHERS.',
+    url: 'https://www.adhyeybrothers.in',
+    siteName: 'ADHYEY BROTHERS',
     locale: 'en_IN',
     type: 'website',
   },
+
   robots: {
     index: true,
     follow: true,
@@ -44,15 +57,18 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="scroll-smooth">
-      <body 
-        className={`${inter.className} bg-[#F8F9FB] text-gray-900 antialiased min-h-screen flex flex-col selection:bg-orange-500 selection:text-white`}
+      <body
+        className={`${inter.className} bg-[#fffaf5] text-gray-900 antialiased min-h-screen flex flex-col selection:bg-[#d7aa5b] selection:text-[#5e171b]`}
       >
         {children}
+
         <GA4EcommerceTracker />
+
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-KYE1SBDLCY"
           strategy="afterInteractive"
         />
+
         <Script id="google-analytics" strategy="afterInteractive">
           {`
             window.dataLayer = window.dataLayer || [];

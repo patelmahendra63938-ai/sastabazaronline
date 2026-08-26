@@ -1,7 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { createClient } from '@supabase/supabase-js';
 
-const BASE_URL = 'https://www.sastabazaronline.in';
+const BASE_URL = 'https://www.adhyeybrothers.in';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticRoutes: MetadataRoute.Sitemap = [
@@ -38,7 +38,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     .order('id', { ascending: true });
 
   if (error || !products) {
-    console.error('Sitemap product fetch failed:', error?.message ?? 'Unknown error');
+    console.error(
+      'Sitemap product fetch failed:',
+      error?.message ?? 'Unknown error'
+    );
+
     return staticRoutes;
   }
 
