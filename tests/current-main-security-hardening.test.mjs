@@ -47,3 +47,9 @@ test('checkout pricing route remains unchanged by safe hardening', async () => {
   const source = await readProjectFile('app/api/shipping/check-pincode/route.ts');
   assert.match(source, /calculateAuthoritativeOrderPricing/);
 });
+
+
+test('legacy vision route reuses the protected implementation', async () => {
+  const source = await readProjectFile('app/vision/route.ts');
+  assert.match(source, /api\/vision\/route/);
+});
