@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
+import { requireAdminApiSession } from '@/lib/api/admin-authorization';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
+  const admin = await requireAdminApiSession();
+  if (!admin.authorized) return admin.response;
+
   try {
     const host = process.env.SMTP_HOST || 'smtp.titan.email';
     const port = Number(process.env.SMTP_PORT) || 465;
@@ -13,7 +17,7 @@ export async function GET() {
     if (!user || !pass) {
       return NextResponse.json({
         success: false,
-        error: 'SMTP_USER or SMTP_PASS is missing in .env.local',
+        error: 'Email service is not configured.',
       }, { status: 400 });
     }
 
@@ -29,7 +33,13 @@ export async function GET() {
     await transporter.verify();
 
     // 3. Send Test Email
-    const testRecipient = 'patelmahendra63938@gmail.com';
+    const testRecipient = process.env.TEST_EMAIL_RECIPIENT || admin.user.email;
+    if (!testRecipient) {
+      return NextResponse.json(
+        { success: false, error: 'A test recipient email is not configured.' },
+        { status: 400 }
+      );
+    }
     const fromAddress = process.env.EMAIL_FROM_ADDRESS || 'sales@sastabazaronline.in';
     const fromName = process.env.EMAIL_FROM_NAME || 'Sastabazar';
 
@@ -58,11 +68,11 @@ export async function GET() {
       message: `Test email sent successfully to ${testRecipient}`,
       messageId: info.messageId,
     });
-  } catch (error: any) {
-    console.error('SMTP Connection / Send Error:', error);
+  } catch (error: unknown) {
+    console.error('SMTP connection or test send failed.', error);
     return NextResponse.json({
       success: false,
-      error: error.message || 'Failed to send email via SMTP',
+      error: 'Failed to send the test email.',
     }, { status: 500 });
   }
 }
