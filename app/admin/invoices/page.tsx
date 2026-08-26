@@ -32,7 +32,7 @@ export default function AdminInvoicesPage() {
   }, []);
 
   // Professional Tax & GST Breakdown Calculator using real order items
-  const calculateTaxBreakdown = (items: any[], customerState: string = 'Gujarat', businessState: string = 'Gujarat') => {
+  const calculateTaxBreakdown = (items: any[], customerState: string, businessState: string = 'Gujarat') => {
     const taxSummary: Record<number, { taxable: number; cgst: number; sgst: number; igst: number; totalTax: number }> = {};
     let grandTaxable = 0;
     let grandTax = 0;
@@ -124,7 +124,11 @@ export default function AdminInvoicesPage() {
               <tbody className="divide-y divide-gray-100">
                 {filteredOrders.map(order => {
                   const items = order.order_items || [];
-                  const breakdown = calculateTaxBreakdown(items);
+                  const customerState =
+                    typeof order.shipping_address === 'object' && order.shipping_address
+                      ? String(order.shipping_address.state || 'Gujarat').trim()
+                      : 'Gujarat';
+                  const breakdown = calculateTaxBreakdown(items, customerState);
                   const orderNum = order.order_number || order.id?.slice(0, 8) || 'SBZ-000';
                   const grandTotal = Number(order.grand_total || order.total_amount || 0);
 
@@ -212,13 +216,18 @@ export default function AdminInvoicesPage() {
                   <p className="font-bold text-gray-900 mt-0.5">{selectedInvoice.customer_name}</p>
                   <p className="text-gray-600">{selectedInvoice.customer_phone || selectedInvoice.phone}</p>
                   <p className="text-gray-600">{selectedInvoice.customer_email}</p>
+                  <p className="mt-1 font-bold text-gray-700">
+                    Place of Supply: {typeof selectedInvoice.shipping_address === 'object' && selectedInvoice.shipping_address
+                      ? selectedInvoice.shipping_address.state || 'Gujarat'
+                      : 'Gujarat'}
+                  </p>
                 </div>
                 <div>
                   <span className="font-bold text-gray-400 uppercase text-[10px]">Shipping Address:</span>
                   <p className="text-gray-800 mt-0.5">
                     {typeof selectedInvoice.shipping_address === 'string'
                       ? selectedInvoice.shipping_address
-                      : `${selectedInvoice.shipping_address?.address || ''}, ${selectedInvoice.shipping_address?.city || ''} - ${selectedInvoice.shipping_address?.pincode || ''}`}
+                      : `${selectedInvoice.shipping_address?.address || ''}, ${selectedInvoice.shipping_address?.city || ''}, ${selectedInvoice.shipping_address?.state || ''} - ${selectedInvoice.shipping_address?.pincode || ''}`}
                   </p>
                 </div>
               </div>
