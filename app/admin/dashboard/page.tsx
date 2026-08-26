@@ -1,10 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import Header from '@/components/Header';
 import OrderStatusBadge from '@/components/admin/OrderStatusBadge';
 import { isCancelledOrderStatus, normalizeAdminOrderStatus } from '@/lib/orders/admin-order-status';
-import Footer from '@/components/Footer';
 import { supabase } from '@/lib/supabase';
 import { 
   Package, ShoppingCart, TrendingUp, AlertTriangle, CheckCircle2, 
@@ -192,25 +190,30 @@ export default function AdminOrderInventoryDashboard() {
   }, [inventoryList, invSearch, invCategoryFilter, invStockStatusFilter]);
 
   return (
-    <main className="min-h-screen bg-gray-50 flex flex-col font-sans" suppressHydrationWarning>
-      <Header />
-
+    <main className="min-h-screen bg-[#f8f5f1] flex flex-col font-sans" suppressHydrationWarning>
       {/* Top Header with Prominent Add Product Button */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-30">
+      <div className="bg-[#741f23] border-b border-[#5e171b] sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <span className="bg-indigo-950 text-white text-xs font-black px-2 py-0.5 rounded">ADMIN</span>
-              <h1 className="text-xl sm:text-2xl font-black text-indigo-950">Sastabazar Control Panel</h1>
+              <span className="bg-[#d7aa5b] text-[#5e171b] text-xs font-black px-2.5 py-1 rounded-md tracking-wide">ADMIN</span>
+              <h1 className="text-xl sm:text-2xl font-black text-white">ADHYEY BROTHERS Control Panel</h1>
             </div>
-            <p className="text-xs text-gray-500 mt-0.5">Real-time Order Book, Inventory Ledger, and Product Management</p>
+            <p className="text-xs text-[#f4dfbf] mt-0.5">Real-time Order Book, Inventory Ledger, and Product Management</p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href="/"
+              className="p-2.5 text-white bg-white/10 hover:bg-white/15 rounded-xl transition flex items-center gap-1.5 text-xs font-bold border border-white/20"
+            >
+              <ArrowLeft size={14} /> Storefront
+            </Link>
+
             <button 
               onClick={fetchData} 
               disabled={refreshing}
-              className="p-2.5 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition flex items-center gap-1.5 text-xs font-bold"
+              className="p-2.5 text-white bg-white/10 hover:bg-white/15 rounded-xl transition flex items-center gap-1.5 text-xs font-bold border border-white/20 disabled:opacity-60"
             >
               <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} /> Refresh
             </button>
@@ -218,7 +221,7 @@ export default function AdminOrderInventoryDashboard() {
             {/* ⭐ PROMINENT ADD NEW PRODUCT BUTTON ⭐ */}
             <Link 
               href="/admin/add-product" 
-              className="bg-orange-500 hover:bg-orange-600 text-white text-xs font-black px-5 py-2.5 rounded-xl transition flex items-center gap-2 shadow-md hover:shadow-lg"
+              className="bg-[#d7aa5b] hover:bg-[#b5843d] text-[#5e171b] text-xs font-black px-5 py-2.5 rounded-xl transition flex items-center gap-2 shadow-md hover:shadow-lg"
             >
               <PlusCircle size={16} /> + Add New Product
             </Link>
@@ -230,62 +233,62 @@ export default function AdminOrderInventoryDashboard() {
         
         {/* KPI Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
-          <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
+          <div className="bg-white p-4 rounded-2xl border border-[#e7ded4] shadow-sm">
             <p className="text-[11px] font-bold text-gray-500 uppercase">Today Revenue</p>
-            <p className="text-lg sm:text-xl font-black text-indigo-950 mt-1">₹{kpis.todayRevenue.toLocaleString()}</p>
+            <p className="text-lg sm:text-xl font-black text-[#741f23] mt-1">₹{kpis.todayRevenue.toLocaleString()}</p>
             <span className="text-[10px] text-gray-400 font-semibold">{kpis.todayOrdersCount} orders</span>
           </div>
 
-          <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
+          <div className="bg-white p-4 rounded-2xl border border-[#e7ded4] shadow-sm">
             <p className="text-[11px] font-bold text-gray-500 uppercase">Action Required</p>
             <p className="text-lg sm:text-xl font-black text-orange-600 mt-1">{kpis.pendingCount + kpis.toPackCount}</p>
             <span className="text-[10px] text-gray-400">{kpis.pendingCount} Pending | {kpis.toPackCount} Ready</span>
           </div>
 
-          <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
+          <div className="bg-white p-4 rounded-2xl border border-[#e7ded4] shadow-sm">
             <p className="text-[11px] font-bold text-gray-500 uppercase">Available Stock</p>
             <p className="text-lg sm:text-xl font-black text-green-700 mt-1">{kpis.totalAvailableStock.toLocaleString()}</p>
             <span className="text-[10px] text-gray-400 font-semibold">{inventoryList.length} items</span>
           </div>
 
-          <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
+          <div className="bg-white p-4 rounded-2xl border border-[#e7ded4] shadow-sm">
             <p className="text-[11px] font-bold text-gray-500 uppercase">Low Stock</p>
             <p className="text-lg sm:text-xl font-black text-red-600 mt-1">{kpis.lowStockCount + kpis.outOfStockCount}</p>
             <span className="text-[10px] text-gray-400">{kpis.lowStockCount} Low | {kpis.outOfStockCount} Out</span>
           </div>
 
-          <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
+          <div className="bg-white p-4 rounded-2xl border border-[#e7ded4] shadow-sm">
             <p className="text-[11px] font-bold text-gray-500 uppercase">Total Orders</p>
-            <p className="text-lg sm:text-xl font-black text-indigo-900 mt-1">{kpis.totalOrders}</p>
+            <p className="text-lg sm:text-xl font-black text-[#741f23] mt-1">{kpis.totalOrders}</p>
             <span className="text-[10px] text-gray-400 font-semibold">Lifetime bookings</span>
           </div>
 
-          <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
+          <div className="bg-white p-4 rounded-2xl border border-[#e7ded4] shadow-sm">
             <p className="text-[11px] font-bold text-gray-500 uppercase">Inventory Value</p>
-            <p className="text-lg sm:text-xl font-black text-indigo-900 mt-1">₹{kpis.totalInventoryValue.toLocaleString()}</p>
+            <p className="text-lg sm:text-xl font-black text-[#741f23] mt-1">₹{kpis.totalInventoryValue.toLocaleString()}</p>
             <span className="text-[10px] text-gray-400 font-semibold">At Selling Price</span>
           </div>
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex border-b border-gray-200 gap-6">
+        <div className="flex border-b border-[#e7ded4] gap-6">
           <button 
             onClick={() => setActiveTab('orders')}
-            className={`pb-3 text-sm font-bold flex items-center gap-2 border-b-2 transition ${activeTab === 'orders' ? 'border-indigo-600 text-indigo-950' : 'border-transparent text-gray-500 hover:text-gray-800'}`}
+            className={`pb-3 text-sm font-bold flex items-center gap-2 border-b-2 transition ${activeTab === 'orders' ? 'border-[#741f23] text-[#741f23]' : 'border-transparent text-gray-500 hover:text-gray-800'}`}
           >
             <ShoppingCart size={16} /> Order Book ({orders.length})
           </button>
 
           <button 
             onClick={() => setActiveTab('inventory')}
-            className={`pb-3 text-sm font-bold flex items-center gap-2 border-b-2 transition ${activeTab === 'inventory' ? 'border-indigo-600 text-indigo-950' : 'border-transparent text-gray-500 hover:text-gray-800'}`}
+            className={`pb-3 text-sm font-bold flex items-center gap-2 border-b-2 transition ${activeTab === 'inventory' ? 'border-[#741f23] text-[#741f23]' : 'border-transparent text-gray-500 hover:text-gray-800'}`}
           >
             <Package size={16} /> Inventory Ledger ({inventoryList.length})
           </button>
 
           <button 
             onClick={() => setActiveTab('movements')}
-            className={`pb-3 text-sm font-bold flex items-center gap-2 border-b-2 transition ${activeTab === 'movements' ? 'border-indigo-600 text-indigo-950' : 'border-transparent text-gray-500 hover:text-gray-800'}`}
+            className={`pb-3 text-sm font-bold flex items-center gap-2 border-b-2 transition ${activeTab === 'movements' ? 'border-[#741f23] text-[#741f23]' : 'border-transparent text-gray-500 hover:text-gray-800'}`}
           >
             <History size={16} /> Stock Movements Audit
           </button>
@@ -294,7 +297,7 @@ export default function AdminOrderInventoryDashboard() {
         {/* TAB 1: ORDER BOOK */}
         {activeTab === 'orders' && (
           <div className="space-y-4">
-            <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="bg-white p-4 rounded-2xl border border-[#e7ded4] shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
               <div className="flex flex-1 items-center gap-2 w-full sm:w-auto">
                 <div className="relative flex-1 sm:max-w-xs">
                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -303,7 +306,7 @@ export default function AdminOrderInventoryDashboard() {
                     placeholder="Search Order #, Name, Phone..." 
                     value={orderSearch}
                     onChange={(e) => setOrderSearch(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                    className="w-full pl-9 pr-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#741f23]"
                   />
                 </div>
 
@@ -323,17 +326,17 @@ export default function AdminOrderInventoryDashboard() {
 
               <Link 
                 href="/admin/add-product"
-                className="w-full sm:w-auto bg-indigo-950 hover:bg-indigo-900 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center justify-center gap-1.5 transition"
+                className="w-full sm:w-auto bg-[#741f23] hover:bg-[#5e171b] text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center justify-center gap-1.5 transition"
               >
                 <Plus size={14} /> Add Product
               </Link>
             </div>
 
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-2xl border border-[#e7ded4] shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
-                    <tr className="bg-gray-50 border-b text-gray-600 font-bold uppercase text-[10px]">
+                    <tr className="bg-[#fbf8f4] border-b text-gray-600 font-bold uppercase text-[10px]">
                       <th className="p-3.5">Order #</th>
                       <th className="p-3.5">Date</th>
                       <th className="p-3.5">Customer</th>
@@ -342,15 +345,15 @@ export default function AdminOrderInventoryDashboard() {
                       <th className="p-3.5 text-right">Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody className="divide-y divide-[#eee7df]">
                     {filteredOrders.length === 0 ? (
                       <tr>
                         <td colSpan={6} className="p-8 text-center text-gray-400">No matching orders found.</td>
                       </tr>
                     ) : (
                       filteredOrders.map((order) => (
-                        <tr key={order.id} className="hover:bg-gray-50/80 transition">
-                          <td className="p-3.5 font-mono font-bold text-indigo-950">{order.order_number}</td>
+                        <tr key={order.id} className="hover:bg-[#fffaf5] transition">
+                          <td className="p-3.5 font-mono font-bold text-[#741f23]">{order.order_number}</td>
                           <td className="p-3.5 text-gray-500">{new Date(order.created_at).toLocaleDateString('en-IN')}</td>
                           <td className="p-3.5 font-bold text-gray-900">{order.customer_name}</td>
                           <td className="p-3.5 font-bold text-gray-950">₹{order.grand_total}</td>
@@ -358,7 +361,7 @@ export default function AdminOrderInventoryDashboard() {
                           <td className="p-3.5 text-right">
                             <button 
                               onClick={() => setSelectedOrder(order)}
-                              className="bg-indigo-50 hover:bg-indigo-100 text-indigo-950 text-xs font-bold px-3 py-1.5 rounded-lg border border-indigo-200"
+                              className="bg-[#fff6e9] hover:bg-[#f7e8cf] text-[#741f23] text-xs font-bold px-3 py-1.5 rounded-lg border border-[#ead8b8]"
                             >
                               Manage
                             </button>
@@ -376,7 +379,7 @@ export default function AdminOrderInventoryDashboard() {
         {/* TAB 2: INVENTORY LEDGER */}
         {activeTab === 'inventory' && (
           <div className="space-y-4">
-            <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="bg-white p-4 rounded-2xl border border-[#e7ded4] shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
               <div className="flex flex-1 items-center gap-2 w-full sm:w-auto">
                 <div className="relative flex-1 sm:max-w-xs">
                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -385,7 +388,7 @@ export default function AdminOrderInventoryDashboard() {
                     placeholder="Search product title..." 
                     value={invSearch}
                     onChange={(e) => setInvSearch(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                    className="w-full pl-9 pr-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#741f23]"
                   />
                 </div>
               </div>
@@ -393,17 +396,17 @@ export default function AdminOrderInventoryDashboard() {
               {/* Add Product Shortcut Button */}
               <Link 
                 href="/admin/add-product"
-                className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center justify-center gap-1.5 transition shadow-sm"
+                className="w-full sm:w-auto bg-[#741f23] hover:bg-[#5e171b] text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center justify-center gap-1.5 transition shadow-sm"
               >
                 <Plus size={14} /> + Add New Product
               </Link>
             </div>
 
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-2xl border border-[#e7ded4] shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
-                    <tr className="bg-gray-50 border-b text-gray-600 font-bold uppercase text-[10px]">
+                    <tr className="bg-[#fbf8f4] border-b text-gray-600 font-bold uppercase text-[10px]">
                       <th className="p-3.5">Product</th>
                       <th className="p-3.5">Size/Variant</th>
                       <th className="p-3.5">Available Stock</th>
@@ -411,11 +414,11 @@ export default function AdminOrderInventoryDashboard() {
                       <th className="p-3.5 text-right">Adjust Stock</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody className="divide-y divide-[#eee7df]">
                     {filteredInventory.map((item) => (
-                      <tr key={item.id || item.product_id} className="hover:bg-gray-50/80 transition">
+                      <tr key={item.id || item.product_id} className="hover:bg-[#fffaf5] transition">
                         <td className="p-3.5 font-bold text-gray-900">{item.products?.title}</td>
-                        <td className="p-3.5 font-bold text-indigo-700">{item.size || 'Free Size'}</td>
+                        <td className="p-3.5 font-bold text-[#741f23]">{item.size || 'Free Size'}</td>
                         <td className="p-3.5 font-bold text-sm text-green-700">{item.available_quantity}</td>
                         <td className="p-3.5 text-gray-600">{item.sold_quantity || 0}</td>
                         <td className="p-3.5 text-right">
@@ -437,7 +440,6 @@ export default function AdminOrderInventoryDashboard() {
 
       </div>
 
-      <Footer />
     </main>
   );
 }

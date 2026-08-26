@@ -1,8 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
 import { supabase } from '@/lib/supabase';
 import { 
   Package, Search, Trash2, Plus, Edit, ShieldCheck, 
@@ -84,8 +82,6 @@ export default function AdminProductsPage() {
 
   return (
     <main className="min-h-screen bg-gray-50 flex flex-col font-sans" suppressHydrationWarning>
-      <Header />
-
       <div className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         
         {/* Header with Prominent Add Product Button */}
@@ -264,7 +260,6 @@ export default function AdminProductsPage() {
 
       </div>
 
-      <Footer />
     </main>
   );
 }

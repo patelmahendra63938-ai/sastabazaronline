@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Header from '@/components/Header';
-import Footer from '@/components/Footer';
 import { supabase } from '@/lib/supabase';
 import { 
   RefreshCw, PackageX, Truck, ShieldAlert, CheckCircle2, 
@@ -400,7 +399,6 @@ export default function AdminReturnsRefundsDashboard() {
           </form>
         </div>
       )}
-      <Footer />
     </main>
   );
 }

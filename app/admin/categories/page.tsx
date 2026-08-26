@@ -186,11 +186,11 @@ export default function AdminCategoriesPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto p-4 md:p-6">
+    <div className="mx-auto max-w-7xl space-y-6 p-4 md:p-6">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-black text-indigo-950">Category Management</h1>
+          <h1 className="text-2xl font-black text-[#741f23]">Category Management</h1>
           <p className="text-xs text-gray-500 mt-1">
             Manage storefront availability and homepage category merchandising.
           </p>
@@ -218,7 +218,7 @@ export default function AdminCategoriesPage() {
         </div>
       )}
 
-      <div className="grid gap-2 rounded-2xl border border-indigo-100 bg-indigo-50/70 p-4 text-xs text-indigo-950 sm:grid-cols-3">
+      <div className="grid gap-2 rounded-2xl border border-[#ead8b8] bg-[#fff7e8] p-4 text-xs text-[#741f23] sm:grid-cols-3">
         <p><strong>Active in Store OFF:</strong> category is hidden from storefront.</p>
         <p><strong>Show on Homepage OFF:</strong> category remains available in store but does not appear in Shop by Category.</p>
         <p><strong>Featured:</strong> category may receive a larger or stronger visual card.</p>
@@ -226,9 +226,9 @@ export default function AdminCategoriesPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Add Category Form */}
-        <div className="lg:col-span-4 bg-white p-6 rounded-2xl border border-gray-200 shadow-xs space-y-4 h-fit">
+        <div className="lg:col-span-4 h-fit space-y-4 rounded-2xl border border-[#e7ded4] bg-white p-6 shadow-xs">
           <h2 className="text-sm font-bold text-gray-900 flex items-center gap-2">
-            <Tags size={16} className="text-orange-500" /> Add New Category
+            <Tags size={16} className="text-[#b5843d]" /> Add New Category
           </h2>
 
           <form onSubmit={handleAddCategory} className="space-y-4 text-xs">
@@ -240,14 +240,14 @@ export default function AdminCategoriesPage() {
                 value={newCatName}
                 onChange={(e) => setNewCatName(e.target.value)}
                 placeholder="e.g. Sarees & Kurtis, Home Decor"
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-600 outline-hidden bg-gray-50 focus:bg-white text-xs"
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#741f23] outline-hidden bg-gray-50 focus:bg-white text-xs"
               />
             </div>
 
             <button
               type="submit"
               disabled={submitting}
-              className="w-full bg-indigo-950 hover:bg-indigo-900 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 shadow-xs cursor-pointer disabled:opacity-50"
+              className="w-full bg-[#741f23] hover:bg-[#5e171b] text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 shadow-xs cursor-pointer disabled:opacity-50"
             >
               {submitting ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
               <span>{submitting ? 'Adding Category...' : 'Save & Publish Category'}</span>
@@ -256,15 +256,15 @@ export default function AdminCategoriesPage() {
         </div>
 
         {/* Right Column: Existing Categories List */}
-        <div className="lg:col-span-8 bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
-          <div className="p-4 border-b border-gray-100 bg-gray-50 font-bold text-xs text-gray-700 uppercase flex justify-between items-center">
+        <div className="lg:col-span-8 overflow-hidden rounded-2xl border border-[#e7ded4] bg-white shadow-xs">
+          <div className="flex items-center justify-between border-b border-[#eee7df] bg-[#fbf8f4] p-4 text-xs font-bold uppercase text-gray-700">
             <span>Store Categories ({categories.length})</span>
             <span className="text-[10px] text-gray-400 font-normal">Real-time Supabase Sync</span>
           </div>
 
           {loading ? (
             <div className="p-12 text-center text-xs text-gray-400 flex flex-col items-center justify-center gap-2">
-              <Loader2 size={20} className="animate-spin text-orange-500" />
+              <Loader2 size={20} className="animate-spin text-[#b5843d]" />
               <span>Loading categories...</span>
             </div>
           ) : categories.length === 0 ? (
@@ -272,9 +272,9 @@ export default function AdminCategoriesPage() {
               No categories found. Use the form on the left to add your first category.
             </div>
           ) : (
-            <div className="divide-y divide-gray-100 text-xs">
+            <div className="divide-y divide-[#eee7df] text-xs">
               {categories.map((cat) => (
-                <div key={cat.id} className="space-y-4 p-4 transition hover:bg-gray-50/80 sm:p-5">
+                <div key={cat.id} className="space-y-4 p-4 transition hover:bg-[#fffaf5] sm:p-5">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex min-w-0 items-center gap-3">
                       <div className={`flex size-10 shrink-0 items-center justify-center rounded-xl text-xs font-bold ${cat.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-500'}`}>
@@ -312,7 +312,7 @@ export default function AdminCategoriesPage() {
                       onClick={() => updateCategory(cat.id, { show_on_homepage: !cat.show_on_homepage }, `${cat.name} homepage visibility updated.`)}
                       disabled={savingId === cat.id}
                       aria-pressed={cat.show_on_homepage}
-                      className={`rounded-xl border px-3 py-2.5 text-left font-bold transition disabled:opacity-50 ${cat.show_on_homepage ? 'border-indigo-200 bg-indigo-50 text-indigo-900' : 'border-gray-200 bg-gray-100 text-gray-600'}`}
+                      className={`rounded-xl border px-3 py-2.5 text-left font-bold transition disabled:opacity-50 ${cat.show_on_homepage ? 'border-[#ead8b8] bg-[#fff7e8] text-[#741f23]' : 'border-gray-200 bg-gray-100 text-gray-600'}`}
                     >
                       Show on Homepage: {cat.show_on_homepage ? 'ON' : 'OFF'}
                     </button>
@@ -321,7 +321,7 @@ export default function AdminCategoriesPage() {
                       onClick={() => updateCategory(cat.id, { homepage_featured: !cat.homepage_featured }, `${cat.name} featured status updated.`)}
                       disabled={savingId === cat.id}
                       aria-pressed={cat.homepage_featured}
-                      className={`rounded-xl border px-3 py-2.5 text-left font-bold transition disabled:opacity-50 ${cat.homepage_featured ? 'border-orange-200 bg-orange-50 text-orange-800' : 'border-gray-200 bg-gray-100 text-gray-600'}`}
+                      className={`rounded-xl border px-3 py-2.5 text-left font-bold transition disabled:opacity-50 ${cat.homepage_featured ? 'border-[#ead8b8] bg-[#fff7e8] text-[#8a5b20]' : 'border-gray-200 bg-gray-100 text-gray-600'}`}
                     >
                       Featured: {cat.homepage_featured ? 'ON' : 'OFF'}
                     </button>
@@ -336,7 +336,7 @@ export default function AdminCategoriesPage() {
                         step={1}
                         value={cat.homepage_display_order}
                         onChange={(event) => updateDraft(cat.id, { homepage_display_order: Number(event.target.value) })}
-                        className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 outline-hidden focus:ring-2 focus:ring-indigo-600"
+                        className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 outline-hidden focus:ring-2 focus:ring-[#741f23]"
                       />
                     </label>
                     <label className="space-y-1.5 font-bold text-gray-700">
@@ -346,14 +346,14 @@ export default function AdminCategoriesPage() {
                         value={cat.homepage_image_url || ''}
                         onChange={(event) => updateDraft(cat.id, { homepage_image_url: event.target.value })}
                         placeholder="https://..."
-                        className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 outline-hidden focus:ring-2 focus:ring-indigo-600"
+                        className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 outline-hidden focus:ring-2 focus:ring-[#741f23]"
                       />
                     </label>
                     <button
                       type="button"
                       onClick={() => handleSaveMerchandising(cat)}
                       disabled={savingId === cat.id}
-                      className="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-indigo-950 px-4 py-2.5 font-bold text-white transition hover:bg-indigo-900 disabled:opacity-50"
+                      className="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-[#741f23] px-4 py-2.5 font-bold text-white transition hover:bg-[#5e171b] disabled:opacity-50"
                     >
                       {savingId === cat.id ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
                       Save

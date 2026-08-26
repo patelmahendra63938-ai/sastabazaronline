@@ -27,31 +27,136 @@ import {
 } from 'lucide-react';
 
 const adminNavGroups = [
-  { label: 'Dashboard', items: [{ name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard }] },
-  { label: 'Orders', items: [
-    { name: 'All Orders', href: '/admin/orders', icon: ShoppingCart },
-    { name: 'Returns', href: '/admin/returns', icon: RotateCcw },
-    { name: 'Invoices', href: '/admin/invoices', icon: Receipt },
-  ] },
-  { label: 'Products', items: [
-    { name: 'All Products', href: '/admin/products', icon: Package },
-    { name: 'Categories', href: '/admin/categories', icon: Tags },
-    { name: 'Inventory', href: '/admin/inventory', icon: Warehouse },
-    { name: 'Image Optimizer', href: '/admin/image-optimizer', icon: SlidersHorizontal },
-  ] },
-  { label: 'Customers', items: [{ name: 'Customers', href: '/admin/customers', icon: Users }] },
-  { label: 'Marketing', items: [
-    { name: 'Coupons & Discounts', href: '/admin/coupons', icon: Ticket },
-    { name: 'Reviews', href: '/admin/reviews', icon: MessageSquare },
-  ] },
-  { label: 'Shipping', items: [{ name: 'Shipping & Logistics', href: '/admin/logistics', icon: Truck }] },
-  { label: 'Reports', items: [{ name: 'Reports', href: '/admin/reports', icon: BarChart3 }] },
-  { label: 'Accounts', items: [{ name: 'Accounts & GST', href: '/admin/accounts', icon: Landmark }] },
-  { label: 'Settings', items: [
-    { name: 'General', href: '/admin/settings', icon: Settings },
-    { name: 'Integrations', href: '/admin/integrations', icon: Plug },
-    { name: 'Homepage Display Settings', href: '/admin/settings/homepage-display', icon: LayoutDashboard },
-  ] },
+  {
+    label: 'Dashboard',
+    items: [
+      {
+        name: 'Dashboard',
+        href: '/admin/dashboard',
+        icon: LayoutDashboard,
+      },
+    ],
+  },
+  {
+    label: 'Orders',
+    items: [
+      {
+        name: 'All Orders',
+        href: '/admin/orders',
+        icon: ShoppingCart,
+      },
+      {
+        name: 'Returns',
+        href: '/admin/returns',
+        icon: RotateCcw,
+      },
+      {
+        name: 'Invoices',
+        href: '/admin/invoices',
+        icon: Receipt,
+      },
+    ],
+  },
+  {
+    label: 'Products',
+    items: [
+      {
+        name: 'All Products',
+        href: '/admin/products',
+        icon: Package,
+      },
+      {
+        name: 'Categories',
+        href: '/admin/categories',
+        icon: Tags,
+      },
+      {
+        name: 'Inventory',
+        href: '/admin/inventory',
+        icon: Warehouse,
+      },
+      {
+        name: 'Image Optimizer',
+        href: '/admin/image-optimizer',
+        icon: SlidersHorizontal,
+      },
+    ],
+  },
+  {
+    label: 'Customers',
+    items: [
+      {
+        name: 'Customers',
+        href: '/admin/customers',
+        icon: Users,
+      },
+    ],
+  },
+  {
+    label: 'Marketing',
+    items: [
+      {
+        name: 'Coupons & Discounts',
+        href: '/admin/coupons',
+        icon: Ticket,
+      },
+      {
+        name: 'Reviews',
+        href: '/admin/reviews',
+        icon: MessageSquare,
+      },
+    ],
+  },
+  {
+    label: 'Shipping',
+    items: [
+      {
+        name: 'Shipping & Logistics',
+        href: '/admin/logistics',
+        icon: Truck,
+      },
+    ],
+  },
+  {
+    label: 'Reports',
+    items: [
+      {
+        name: 'Reports',
+        href: '/admin/reports',
+        icon: BarChart3,
+      },
+    ],
+  },
+  {
+    label: 'Accounts',
+    items: [
+      {
+        name: 'Accounts & GST',
+        href: '/admin/accounts',
+        icon: Landmark,
+      },
+    ],
+  },
+  {
+    label: 'Settings',
+    items: [
+      {
+        name: 'General',
+        href: '/admin/settings',
+        icon: Settings,
+      },
+      {
+        name: 'Integrations',
+        href: '/admin/integrations',
+        icon: Plug,
+      },
+      {
+        name: 'Homepage Display Settings',
+        href: '/admin/settings/homepage-display',
+        icon: LayoutDashboard,
+      },
+    ],
+  },
 ];
 
 export default function AdminSidebar() {
@@ -73,32 +178,48 @@ export default function AdminSidebar() {
   const navLinks = (
     <nav className="flex-1 overflow-y-auto px-3 py-3">
       {adminNavGroups.map((group) => (
-        <div key={group.label} className="mb-4 last:mb-0">
-          <p className="mb-1.5 px-3 text-[9px] font-black uppercase tracking-[0.18em] text-indigo-400">{group.label}</p>
+        <div
+          key={group.label}
+          className="mb-4 last:mb-0"
+        >
+          <p className="mb-1.5 px-3 text-[9px] font-black uppercase tracking-[0.18em] text-[#d7aa5b]">
+            {group.label}
+          </p>
+
           <div className="space-y-1">
-          {group.items.map((item) => {
-        const isActive =
-          pathname === item.href ||
-          (item.href !== '/admin/dashboard' &&
-            item.href !== '/admin/settings' &&
-            pathname.startsWith(item.href));
-        const Icon = item.icon;
-            return (
-          <Link
-            key={item.href}
-            href={item.href}
-            onClick={() => setMobileOpen(false)}
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-xs font-semibold ${
-              isActive
-                ? 'bg-orange-500 text-white shadow-md font-bold'
-                : 'text-indigo-200/80 hover:bg-indigo-900/60 hover:text-white'
-            }`}
-          >
-            <Icon size={16} className={isActive ? 'text-white' : 'text-indigo-300'} />
-            <span>{item.name}</span>
-          </Link>
-            );
-          })}
+            {group.items.map((item) => {
+              const isActive =
+                pathname === item.href ||
+                (item.href !== '/admin/dashboard' &&
+                  item.href !== '/admin/settings' &&
+                  pathname.startsWith(item.href));
+
+              const Icon = item.icon;
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMobileOpen(false)}
+                  className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold transition-all ${
+                    isActive
+                      ? 'bg-[#d7aa5b] text-[#5e171b] shadow-md font-bold'
+                      : 'text-[#f5e8d6] hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  <Icon
+                    size={16}
+                    className={
+                      isActive
+                        ? 'text-[#5e171b]'
+                        : 'text-[#e7c995]'
+                    }
+                  />
+
+                  <span>{item.name}</span>
+                </Link>
+              );
+            })}
           </div>
         </div>
       ))}
@@ -107,28 +228,41 @@ export default function AdminSidebar() {
 
   return (
     <>
+      {/* Mobile menu button */}
       <button
         onClick={() => setMobileOpen(!mobileOpen)}
-        className="md:hidden fixed top-4 left-4 z-50 p-2 rounded-xl bg-indigo-950 text-white shadow-lg border border-indigo-800"
+        className="fixed left-4 top-4 z-50 rounded-xl border border-[#8d3438] bg-[#741f23] p-2 text-white shadow-lg md:hidden"
         aria-label="Toggle Menu"
       >
-        {mobileOpen ? <X size={20} /> : <Menu size={20} />}
+        {mobileOpen ? (
+          <X size={20} />
+        ) : (
+          <Menu size={20} />
+        )}
       </button>
 
-      <aside className="w-64 bg-indigo-950 text-white hidden md:flex flex-col h-screen sticky top-0 shadow-xl shrink-0 z-30">
-        <div className="p-5 border-b border-indigo-900/80">
-          <span className="text-[10px] font-black tracking-widest text-orange-400 uppercase block">
+      {/* Desktop sidebar */}
+      <aside className="sticky top-0 z-30 hidden h-screen w-64 shrink-0 flex-col bg-[#5e171b] text-white shadow-xl md:flex">
+        <div className="border-b border-white/10 p-5">
+          <span className="block text-[10px] font-black uppercase tracking-widest text-[#d7aa5b]">
             Control Panel
           </span>
-          <h2 className="text-lg font-black text-white">SASTABAZARONLINE</h2>
+
+          <h2 className="mt-1 text-lg font-black tracking-wide text-white">
+            ADHYEY BROTHERS
+          </h2>
+
+          <p className="mt-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#e9cf9f]">
+            Admin Management
+          </p>
         </div>
 
         {navLinks}
 
-        <div className="p-3 border-t border-indigo-900/80">
+        <div className="border-t border-white/10 p-3">
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 px-3 py-2 w-full rounded-xl text-red-300 hover:bg-red-500/10 transition text-xs font-bold"
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-xs font-bold text-red-200 transition hover:bg-red-500/10 hover:text-red-100"
           >
             <LogOut size={16} />
             <span>Sign Out</span>
@@ -136,21 +270,35 @@ export default function AdminSidebar() {
         </div>
       </aside>
 
+      {/* Mobile sidebar */}
       {mobileOpen && (
-        <div className="fixed inset-0 z-40 md:hidden flex">
+        <div className="fixed inset-0 z-40 flex md:hidden">
           <div
             className="fixed inset-0 bg-black/50 backdrop-blur-xs"
             onClick={() => setMobileOpen(false)}
           />
-          <aside className="relative w-64 bg-indigo-950 text-white flex flex-col h-full shadow-2xl z-50 pt-14">
-            <div className="px-5 pb-3 border-b border-indigo-900">
-              <h2 className="text-base font-black text-orange-400">ADMIN MENU</h2>
+
+          <aside className="relative z-50 flex h-full w-64 flex-col bg-[#5e171b] pt-14 text-white shadow-2xl">
+            <div className="border-b border-white/10 px-5 pb-4">
+              <span className="block text-[10px] font-black uppercase tracking-widest text-[#d7aa5b]">
+                Control Panel
+              </span>
+
+              <h2 className="mt-1 text-base font-black text-white">
+                ADHYEY BROTHERS
+              </h2>
+
+              <p className="mt-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#e9cf9f]">
+                Admin Menu
+              </p>
             </div>
+
             {navLinks}
-            <div className="p-3 border-t border-indigo-900">
+
+            <div className="border-t border-white/10 p-3">
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-3 px-3 py-2 w-full rounded-xl text-red-300 hover:bg-red-500/10 transition text-xs font-bold"
+                className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-xs font-bold text-red-200 transition hover:bg-red-500/10 hover:text-red-100"
               >
                 <LogOut size={16} />
                 <span>Sign Out</span>
