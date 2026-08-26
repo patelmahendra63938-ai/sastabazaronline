@@ -80,7 +80,7 @@ export default function CustomerAccountPage() {
 
     setLoading(true);
     try {
-      const emailRedirectTo = `https://www.sastabazaronline.in/account?redirectTo=${encodeURIComponent(safeRedirect)}`;
+      const emailRedirectTo = `https://www.adhyeybrothers.in/account?redirectTo=${encodeURIComponent(safeRedirect)}`;
       const { data, error } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
         password,
@@ -112,7 +112,7 @@ export default function CustomerAccountPage() {
 
     setLoading(true);
     try {
-      const redirectTo = 'https://www.sastabazaronline.in/account/reset-password';
+      const redirectTo = 'https://www.adhyeybrothers.in/account/reset-password';
       const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, { redirectTo });
       if (error) throw error;
       setSuccessMsg('Password reset link sent. Please check your email and open the secure reset link.');
@@ -139,33 +139,33 @@ export default function CustomerAccountPage() {
   };
 
   if (checkingSession) {
-    return <main className="min-h-screen bg-gray-50 flex flex-col"><Header /><div className="flex-1 flex items-center justify-center"><Loader2 className="animate-spin text-indigo-900" /></div><Footer /></main>;
+    return <main className="min-h-screen bg-[#fffaf5] flex flex-col"><Header /><div className="flex-1 flex items-center justify-center"><Loader2 className="animate-spin text-[#741f23]" /></div><Footer /></main>;
   }
 
   if (signedInEmail) {
     return (
-      <main className="min-h-screen bg-gray-50 flex flex-col">
+      <main className="min-h-screen bg-[#fffaf5] flex flex-col">
         <Header />
         <div className="flex-1 w-full max-w-3xl mx-auto px-4 py-10 sm:py-14">
           <div className="bg-white border border-gray-200 rounded-3xl shadow-sm p-6 sm:p-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-5">
               <div>
                 <p className="text-[11px] font-bold uppercase text-green-700">Signed in</p>
-                <h1 className="text-2xl font-black text-indigo-950">My Account</h1>
+                <h1 className="text-2xl font-black text-[#741f23]">My Account</h1>
                 <p className="text-xs text-gray-500 mt-1">{signedInEmail}</p>
               </div>
-              <button onClick={handleLogout} disabled={loading} className="inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-bold text-gray-700 hover:bg-gray-50"><LogOut size={15}/> Sign Out</button>
+              <button onClick={handleLogout} disabled={loading} className="inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-bold text-gray-700 hover:bg-[#fffaf5]"><LogOut size={15}/> Sign Out</button>
             </div>
 
             <div className="grid sm:grid-cols-2 gap-4 mt-6">
-              <Link href="/orders" className="rounded-2xl border border-indigo-100 bg-indigo-50 p-5 hover:bg-indigo-100 transition">
-                <Package className="text-indigo-800" size={24}/>
-                <h2 className="font-black text-indigo-950 mt-3">My Orders</h2>
+              <Link href="/orders" className="rounded-2xl border border-[#ead8b8] bg-[#fff7e8] p-5 hover:bg-[#f8ead2] transition">
+                <Package className="text-[#741f23]" size={24}/>
+                <h2 className="font-black text-[#741f23] mt-3">My Orders</h2>
                 <p className="text-xs text-gray-600 mt-1">View all previous orders, live status, tracking, invoices and eligible cancellation/return actions.</p>
               </Link>
-              <Link href="/" className="rounded-2xl border border-orange-100 bg-orange-50 p-5 hover:bg-orange-100 transition">
-                <ShoppingBag className="text-orange-600" size={24}/>
-                <h2 className="font-black text-indigo-950 mt-3">Continue Shopping</h2>
+              <Link href="/" className="rounded-2xl border border-[#ead8b8] bg-[#fff7e8] p-5 hover:bg-[#f8ead2] transition">
+                <ShoppingBag className="text-[#b5843d]" size={24}/>
+                <h2 className="font-black text-[#741f23] mt-3">Continue Shopping</h2>
                 <p className="text-xs text-gray-600 mt-1">Browse products without signing in again. Your account session stays active until you sign out or it expires.</p>
               </Link>
             </div>
@@ -177,29 +177,29 @@ export default function CustomerAccountPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 flex flex-col">
+    <main className="min-h-screen bg-[#fffaf5] flex flex-col">
       <Header />
       <div className="flex-1 w-full max-w-md mx-auto px-4 py-10 sm:py-16">
         <div className="bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden">
           <div className="px-6 pt-7 sm:px-8 sm:pt-8">
-            <h1 className="text-2xl font-black text-indigo-950">Customer Account</h1>
+            <h1 className="text-2xl font-black text-[#741f23]">Customer Account</h1>
             <p className="text-xs text-gray-500 mt-1">{mode === 'forgot' ? 'Enter your registered email and we will send you a secure password reset link.' : 'Sign in once to keep your order history, tracking and account access available.'}</p>
           </div>
 
-          {mode !== 'forgot' && <div className="grid grid-cols-2 gap-2 p-6 pb-2 sm:px-8"><button type="button" onClick={() => switchMode('login')} className={`py-2.5 rounded-xl text-xs font-bold border ${mode === 'login' ? 'bg-indigo-950 text-white border-indigo-950' : 'bg-white text-gray-700 border-gray-200'}`}>Sign In</button><button type="button" onClick={() => switchMode('signup')} className={`py-2.5 rounded-xl text-xs font-bold border ${mode === 'signup' ? 'bg-indigo-950 text-white border-indigo-950' : 'bg-white text-gray-700 border-gray-200'}`}>Create Account</button></div>}
+          {mode !== 'forgot' && <div className="grid grid-cols-2 gap-2 p-6 pb-2 sm:px-8"><button type="button" onClick={() => switchMode('login')} className={`py-2.5 rounded-xl text-xs font-bold border ${mode === 'login' ? 'bg-[#741f23] text-white border-[#741f23]' : 'bg-white text-gray-700 border-gray-200'}`}>Sign In</button><button type="button" onClick={() => switchMode('signup')} className={`py-2.5 rounded-xl text-xs font-bold border ${mode === 'signup' ? 'bg-[#741f23] text-white border-[#741f23]' : 'bg-white text-gray-700 border-gray-200'}`}>Create Account</button></div>}
 
           <div className={`p-6 sm:px-8 sm:pb-8 ${mode === 'forgot' ? 'pt-6' : 'pt-4'}`}>
             {errorMsg && <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold flex items-start gap-2"><AlertCircle size={16}/><span>{errorMsg}</span></div>}
             {successMsg && <div className="mb-4 p-3 rounded-xl bg-green-50 border border-green-200 text-green-700 text-xs font-semibold flex items-start gap-2"><CheckCircle2 size={16}/><span>{successMsg}</span></div>}
 
             <form onSubmit={mode === 'login' ? handleLogin : mode === 'signup' ? handleSignup : handleForgotPassword} className="space-y-4">
-              <div><label className="block text-[11px] font-bold text-gray-700 uppercase mb-1.5">Email Address</label><div className="relative"><Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"/><input type="email" required autoComplete="email" value={email} onChange={(e)=>setEmail(e.target.value)} placeholder="you@example.com" className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-600"/></div></div>
-              {mode !== 'forgot' && <div><div className="flex items-center justify-between mb-1.5"><label className="block text-[11px] font-bold text-gray-700 uppercase">Password</label>{mode === 'login' && <button type="button" onClick={()=>switchMode('forgot')} className="text-[11px] font-bold text-indigo-700 hover:underline">Forgot Password?</button>}</div><div className="relative"><Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"/><input type="password" required autoComplete={mode === 'login' ? 'current-password' : 'new-password'} value={password} onChange={(e)=>setPassword(e.target.value)} placeholder="Minimum 8 characters" className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-600"/></div></div>}
-              {mode === 'signup' && <div><label className="block text-[11px] font-bold text-gray-700 uppercase mb-1.5">Confirm Password</label><input type="password" required autoComplete="new-password" value={confirmPassword} onChange={(e)=>setConfirmPassword(e.target.value)} placeholder="Repeat your password" className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-600"/></div>}
-              <button type="submit" disabled={loading} className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 text-sm disabled:opacity-60">{loading ? <Loader2 size={17} className="animate-spin"/> : mode === 'login' ? <LogIn size={17}/> : mode === 'signup' ? <UserPlus size={17}/> : <Mail size={17}/>} {loading ? 'Please wait...' : mode === 'login' ? 'Sign In to My Account' : mode === 'signup' ? 'Create My Account' : 'Send Password Reset Link'}</button>
+              <div><label className="block text-[11px] font-bold text-gray-700 uppercase mb-1.5">Email Address</label><div className="relative"><Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"/><input type="email" required autoComplete="email" value={email} onChange={(e)=>setEmail(e.target.value)} placeholder="you@example.com" className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#741f23]"/></div></div>
+              {mode !== 'forgot' && <div><div className="flex items-center justify-between mb-1.5"><label className="block text-[11px] font-bold text-gray-700 uppercase">Password</label>{mode === 'login' && <button type="button" onClick={()=>switchMode('forgot')} className="text-[11px] font-bold text-[#741f23] hover:underline">Forgot Password?</button>}</div><div className="relative"><Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"/><input type="password" required autoComplete={mode === 'login' ? 'current-password' : 'new-password'} value={password} onChange={(e)=>setPassword(e.target.value)} placeholder="Minimum 8 characters" className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#741f23]"/></div></div>}
+              {mode === 'signup' && <div><label className="block text-[11px] font-bold text-gray-700 uppercase mb-1.5">Confirm Password</label><input type="password" required autoComplete="new-password" value={confirmPassword} onChange={(e)=>setConfirmPassword(e.target.value)} placeholder="Repeat your password" className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#741f23]"/></div>}
+              <button type="submit" disabled={loading} className="w-full bg-[#fff7e8]0 hover:bg-[#5e171b] text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 text-sm disabled:opacity-60">{loading ? <Loader2 size={17} className="animate-spin"/> : mode === 'login' ? <LogIn size={17}/> : mode === 'signup' ? <UserPlus size={17}/> : <Mail size={17}/>} {loading ? 'Please wait...' : mode === 'login' ? 'Sign In to My Account' : mode === 'signup' ? 'Create My Account' : 'Send Password Reset Link'}</button>
             </form>
-            {mode === 'forgot' && <button type="button" onClick={()=>switchMode('login')} className="w-full mt-3 text-xs font-bold text-indigo-700 hover:underline">Back to Sign In</button>}
-            <div className="mt-5 pt-5 border-t border-gray-100 text-center"><Link href="/orders" className="text-xs font-bold text-indigo-700 hover:underline">Continue with guest order lookup</Link></div>
+            {mode === 'forgot' && <button type="button" onClick={()=>switchMode('login')} className="w-full mt-3 text-xs font-bold text-[#741f23] hover:underline">Back to Sign In</button>}
+            <div className="mt-5 pt-5 border-t border-gray-100 text-center"><Link href="/orders" className="text-xs font-bold text-[#741f23] hover:underline">Continue with guest order lookup</Link></div>
           </div>
         </div>
       </div>

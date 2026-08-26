@@ -126,70 +126,132 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-50 flex flex-col">
+    <main className="flex min-h-screen flex-col bg-[#fffaf5]">
       <Header />
-      <div className="flex-1 w-full max-w-md mx-auto px-4 py-10 sm:py-16">
-        <div className="bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden">
+
+      <div className="mx-auto w-full max-w-md flex-1 px-4 py-10 sm:py-16">
+        <div className="overflow-hidden rounded-3xl border border-[#ead8b8] bg-white shadow-sm">
           <div className="p-6 sm:p-8">
-            <h1 className="text-2xl font-black text-indigo-950">Create New Password</h1>
-            <p className="text-xs text-gray-500 mt-1 mb-6">Enter a new password for your SASTABAZARONLINE customer account.</p>
+            <h1 className="text-2xl font-black text-[#741f23]">
+              Create New Password
+            </h1>
+
+            <p className="mb-6 mt-1 text-xs text-gray-500">
+              Enter a new password for your ADHYEY BROTHERS customer account.
+            </p>
 
             {sessionLoading && (
-              <div className="mb-4 p-3 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-semibold flex items-center gap-2">
-                <Loader2 size={16} className="animate-spin shrink-0" />
+              <div className="mb-4 flex items-center gap-2 rounded-xl border border-[#ead8b8] bg-[#fff7e8] p-3 text-xs font-semibold text-[#741f23]">
+                <Loader2 size={16} className="shrink-0 animate-spin" />
                 <span>Verifying your secure password reset link...</span>
               </div>
             )}
 
             {errorMsg && (
-              <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold flex items-start gap-2">
-                <AlertCircle size={16} className="shrink-0 mt-0.5" />
+              <div className="mb-4 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">
+                <AlertCircle size={16} className="mt-0.5 shrink-0" />
                 <span>{errorMsg}</span>
               </div>
             )}
 
             {successMsg && (
-              <div className="mb-4 p-3 rounded-xl bg-green-50 border border-green-200 text-green-700 text-xs font-semibold flex items-start gap-2">
-                <CheckCircle2 size={16} className="shrink-0 mt-0.5" />
+              <div className="mb-4 flex items-start gap-2 rounded-xl border border-green-200 bg-green-50 p-3 text-xs font-semibold text-green-700">
+                <CheckCircle2 size={16} className="mt-0.5 shrink-0" />
                 <span>{successMsg}</span>
               </div>
             )}
 
             <form onSubmit={handleReset} className="space-y-4">
               <div>
-                <label className="block text-[11px] font-bold text-gray-700 uppercase mb-1.5">New Password</label>
+                <label className="mb-1.5 block text-[11px] font-bold uppercase text-gray-700">
+                  New Password
+                </label>
+
                 <div className="relative">
-                  <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input type="password" required disabled={!recoveryReady || sessionLoading || loading} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Minimum 8 characters" className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-600 disabled:bg-gray-100 disabled:text-gray-500" />
+                  <Lock
+                    size={16}
+                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"
+                  />
+
+                  <input
+                    type="password"
+                    required
+                    disabled={!recoveryReady || sessionLoading || loading}
+                    autoComplete="new-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Minimum 8 characters"
+                    className="w-full rounded-xl border border-gray-200 py-3 pl-10 pr-4 text-sm outline-none focus:border-[#741f23] focus:ring-2 focus:ring-[#741f23]/20 disabled:bg-gray-100 disabled:text-gray-500"
+                  />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-gray-700 uppercase mb-1.5">Confirm New Password</label>
+                <label className="mb-1.5 block text-[11px] font-bold uppercase text-gray-700">
+                  Confirm New Password
+                </label>
+
                 <div className="relative">
-                  <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input type="password" required disabled={!recoveryReady || sessionLoading || loading} autoComplete="new-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Repeat your new password" className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-600 disabled:bg-gray-100 disabled:text-gray-500" />
+                  <Lock
+                    size={16}
+                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"
+                  />
+
+                  <input
+                    type="password"
+                    required
+                    disabled={!recoveryReady || sessionLoading || loading}
+                    autoComplete="new-password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Repeat your new password"
+                    className="w-full rounded-xl border border-gray-200 py-3 pl-10 pr-4 text-sm outline-none focus:border-[#741f23] focus:ring-2 focus:ring-[#741f23]/20 disabled:bg-gray-100 disabled:text-gray-500"
+                  />
                 </div>
               </div>
 
-              <button type="submit" disabled={loading || sessionLoading || !recoveryReady} className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3.5 rounded-xl transition flex items-center justify-center gap-2 text-sm disabled:opacity-60">
-                {loading || sessionLoading ? <Loader2 size={17} className="animate-spin" /> : <Lock size={17} />}
-                {sessionLoading ? 'Verifying Link...' : loading ? 'Updating Password...' : 'Set New Password'}
+              <button
+                type="submit"
+                disabled={loading || sessionLoading || !recoveryReady}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#741f23] py-3.5 text-sm font-bold text-white transition hover:bg-[#5e171b] disabled:opacity-60"
+              >
+                {loading || sessionLoading ? (
+                  <Loader2 size={17} className="animate-spin" />
+                ) : (
+                  <Lock size={17} />
+                )}
+
+                {sessionLoading
+                  ? 'Verifying Link...'
+                  : loading
+                    ? 'Updating Password...'
+                    : 'Set New Password'}
               </button>
             </form>
 
             {!sessionLoading && !recoveryReady && (
               <div className="mt-4 text-center">
-                <Link href="/account" className="text-xs font-bold text-indigo-700 hover:underline">Request a New Reset Link</Link>
+                <Link
+                  href="/account"
+                  className="text-xs font-bold text-[#741f23] hover:underline"
+                >
+                  Request a New Reset Link
+                </Link>
               </div>
             )}
 
-            <div className="mt-5 pt-5 border-t border-gray-100 text-center">
-              <Link href="/account" className="text-xs font-bold text-indigo-700 hover:underline">Back to Customer Sign In</Link>
+            <div className="mt-5 border-t border-[#ead8b8] pt-5 text-center">
+              <Link
+                href="/account"
+                className="text-xs font-bold text-[#741f23] hover:underline"
+              >
+                Back to Customer Sign In
+              </Link>
             </div>
           </div>
         </div>
       </div>
+
       <Footer />
     </main>
   );
