@@ -12,7 +12,6 @@ import {
   Menu,
   Truck,
   Headphones,
-  ChevronDown,
 } from 'lucide-react';
 import LanguageSwitcher from './LanguageSwitcher';
 
@@ -61,7 +60,9 @@ export default function Header() {
           const wishlist = JSON.parse(savedWishlist);
 
           setWishlistCount(
-            Array.isArray(wishlist) ? wishlist.length : 0
+            Array.isArray(wishlist)
+              ? wishlist.length
+              : 0
           );
         } else {
           setWishlistCount(0);
@@ -91,19 +92,10 @@ export default function Header() {
 
     if (!query) return;
 
-    router.push(`/search?q=${encodeURIComponent(query)}`);
+    router.push(
+      `/search?q=${encodeURIComponent(query)}`
+    );
   };
-
-  const navItems = [
-    { label: 'HOME', href: '/' },
-    { label: 'WOMEN', href: '/search?q=women' },
-    { label: 'MEN', href: '/search?q=men' },
-    { label: 'KIDS', href: '/search?q=kids' },
-    { label: 'HOME & LIVING', href: '/search?q=home' },
-    { label: 'ACCESSORIES', href: '/search?q=accessories' },
-    { label: 'NEW ARRIVALS', href: '/search?q=new arrivals' },
-    { label: 'OFFERS', href: '/#offers' },
-  ];
 
   return (
     <header className="sticky top-0 z-50 bg-white shadow-sm">
@@ -125,16 +117,19 @@ export default function Header() {
 
             <Link
               href="/orders"
-              className="hidden whitespace-nowrap hover:text-amber-200 sm:inline"
+              className="hidden whitespace-nowrap transition hover:text-[#f0c987] sm:inline"
             >
               Track Order
             </Link>
 
             <Link
               href="/contact"
-              className="flex items-center gap-1.5 whitespace-nowrap hover:text-amber-200"
+              className="flex items-center gap-1.5 whitespace-nowrap transition hover:text-[#f0c987]"
             >
-              <Headphones size={14} aria-hidden="true" />
+              <Headphones
+                size={14}
+                aria-hidden="true"
+              />
               Help
             </Link>
           </div>
@@ -144,13 +139,15 @@ export default function Header() {
       {/* =========================================================
           MAIN HEADER
       ========================================================= */}
-      <div className="border-b border-stone-200 bg-[#fffdf9]">
+      <div className="border-b border-[#ead8b8] bg-[#fffdf9]">
         <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3 lg:gap-8 lg:py-4">
           {/* Mobile menu button */}
           <button
             type="button"
-            onClick={() => setMobileMenuOpen((value) => !value)}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-stone-200 text-[#741f23] lg:hidden"
+            onClick={() =>
+              setMobileMenuOpen((value) => !value)
+            }
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[#ead8b8] text-[#741f23] lg:hidden"
             aria-label="Open navigation menu"
             aria-expanded={mobileMenuOpen}
           >
@@ -190,27 +187,28 @@ export default function Header() {
 
           {/* =====================================================
               SEARCH
+              Category selector intentionally hidden for now
           ===================================================== */}
           <form
             onSubmit={handleSearch}
             role="search"
             className="relative hidden flex-1 md:block"
           >
-            <label htmlFor="site-search" className="sr-only">
+            <label
+              htmlFor="site-search"
+              className="sr-only"
+            >
               Search products
             </label>
 
-            <div className="flex min-h-12 overflow-hidden rounded-lg border border-stone-300 bg-white shadow-sm">
-              <div className="hidden min-w-36 items-center gap-2 border-r border-stone-200 px-4 text-xs font-semibold text-stone-800 lg:flex">
-                All Categories
-                <ChevronDown size={14} />
-              </div>
-
+            <div className="flex min-h-12 overflow-hidden rounded-lg border border-[#ead8b8] bg-white shadow-sm">
               <input
                 id="site-search"
                 type="search"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) =>
+                  setSearchQuery(e.target.value)
+                }
                 placeholder="Search for products, brands and more..."
                 className="min-w-0 flex-1 bg-white px-4 text-sm text-stone-800 outline-none placeholder:text-stone-400"
               />
@@ -238,10 +236,13 @@ export default function Header() {
 
             <Link
               href="/account?redirectTo=/orders"
-              className="hidden min-h-11 items-center gap-2 rounded-lg px-2 text-stone-800 transition hover:bg-stone-100 lg:flex"
+              className="hidden min-h-11 items-center gap-2 rounded-lg px-2 text-stone-800 transition hover:bg-[#fff2dc] lg:flex"
               aria-label="Login or customer account"
             >
-              <UserRound size={22} strokeWidth={1.7} />
+              <UserRound
+                size={22}
+                strokeWidth={1.7}
+              />
 
               <div className="hidden text-[11px] font-semibold xl:block">
                 <div>Login</div>
@@ -251,7 +252,7 @@ export default function Header() {
 
             <Link
               href="/wishlist"
-              className="group relative flex h-11 min-w-11 items-center justify-center rounded-lg px-2 text-stone-800 transition hover:bg-stone-100"
+              className="group relative flex h-11 min-w-11 items-center justify-center rounded-lg px-2 text-stone-800 transition hover:bg-[#fff2dc]"
               aria-label={`Wishlist${
                 wishlistCount > 0
                   ? `, ${wishlistCount} items`
@@ -261,7 +262,11 @@ export default function Header() {
               <Heart
                 size={23}
                 strokeWidth={1.7}
-                fill={wishlistCount > 0 ? 'currentColor' : 'none'}
+                fill={
+                  wishlistCount > 0
+                    ? 'currentColor'
+                    : 'none'
+                }
               />
 
               {wishlistCount > 0 && (
@@ -277,12 +282,17 @@ export default function Header() {
 
             <Link
               href="/cart"
-              className="group relative flex h-11 min-w-11 items-center justify-center rounded-lg px-2 text-stone-800 transition hover:bg-stone-100"
+              className="group relative flex h-11 min-w-11 items-center justify-center rounded-lg px-2 text-stone-800 transition hover:bg-[#fff2dc]"
               aria-label={`Shopping cart${
-                cartCount > 0 ? `, ${cartCount} items` : ''
+                cartCount > 0
+                  ? `, ${cartCount} items`
+                  : ''
               }`}
             >
-              <ShoppingCart size={24} strokeWidth={1.7} />
+              <ShoppingCart
+                size={24}
+                strokeWidth={1.7}
+              />
 
               {cartCount > 0 && (
                 <span className="absolute right-0 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#741f23] px-1 text-[9px] font-bold text-white">
@@ -292,9 +302,12 @@ export default function Header() {
 
               <div className="ml-1 hidden text-[11px] font-semibold xl:block">
                 <div>Cart</div>
+
                 <div className="font-bold">
                   {cartCount > 0
-                    ? `${cartCount} item${cartCount > 1 ? 's' : ''}`
+                    ? `${cartCount} item${
+                        cartCount > 1 ? 's' : ''
+                      }`
                     : '₹0.00'}
                 </div>
               </div>
@@ -302,10 +315,13 @@ export default function Header() {
 
             <Link
               href="/orders"
-              className="hidden h-11 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-stone-800 transition hover:bg-stone-100 2xl:flex"
+              className="hidden h-11 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-stone-800 transition hover:bg-[#fff2dc] 2xl:flex"
               aria-label="My orders"
             >
-              <Package size={21} strokeWidth={1.7} />
+              <Package
+                size={21}
+                strokeWidth={1.7}
+              />
               My Orders
             </Link>
           </nav>
@@ -318,12 +334,14 @@ export default function Header() {
           <form
             onSubmit={handleSearch}
             role="search"
-            className="flex min-h-11 overflow-hidden rounded-lg border border-stone-300 bg-white"
+            className="flex min-h-11 overflow-hidden rounded-lg border border-[#ead8b8] bg-white"
           >
             <input
               type="search"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) =>
+                setSearchQuery(e.target.value)
+              }
               placeholder="Search products..."
               aria-label="Search products"
               className="min-w-0 flex-1 px-4 text-sm text-stone-800 outline-none"
@@ -332,7 +350,7 @@ export default function Header() {
             <button
               type="submit"
               aria-label="Search products"
-              className="flex w-12 items-center justify-center bg-[#741f23] text-white"
+              className="flex w-12 items-center justify-center bg-[#741f23] text-white transition hover:bg-[#5e171b]"
             >
               <Search size={18} />
             </button>
@@ -342,78 +360,60 @@ export default function Header() {
 
       {/* =========================================================
           DESKTOP CATEGORY NAVIGATION
+          TEMPORARILY HIDDEN
       ========================================================= */}
-      <div className="hidden border-b border-stone-200 bg-white lg:block">
-        <div className="mx-auto flex max-w-7xl items-center px-4">
-          <Link
-            href="/#categories"
-            className="mr-4 flex min-h-11 items-center gap-2 bg-[#741f23] px-5 text-xs font-bold text-white transition hover:bg-[#5e171b]"
-          >
-            <Menu size={17} />
-            ALL CATEGORIES
-          </Link>
-
-          <nav
-            aria-label="Product categories"
-            className="flex flex-1 items-center justify-between"
-          >
-            {navItems.map((item) => (
-              <Link
-                key={item.label}
-                href={item.href}
-                className="flex min-h-11 items-center px-3 text-[12px] font-bold text-stone-800 transition hover:text-[#741f23]"
-              >
-                {item.label}
-              </Link>
-            ))}
-
-            <Link
-              href="/contact"
-              className="flex min-h-11 items-center px-3 text-[12px] font-bold text-stone-800 transition hover:text-[#741f23]"
-            >
-              CONTACT US
-            </Link>
-          </nav>
-        </div>
-      </div>
 
       {/* =========================================================
           MOBILE NAVIGATION
+          Categories temporarily hidden
       ========================================================= */}
       {mobileMenuOpen && (
-        <div className="border-b border-stone-200 bg-white lg:hidden">
+        <div className="border-b border-[#ead8b8] bg-[#fffdf9] lg:hidden">
           <nav
             aria-label="Mobile navigation"
-            className="mx-auto grid max-w-7xl grid-cols-2 gap-1 px-4 py-3 sm:grid-cols-3"
+            className="mx-auto grid max-w-7xl grid-cols-2 gap-1 px-4 py-3"
           >
-            {navItems.map((item) => (
-              <Link
-                key={item.label}
-                href={item.href}
-                onClick={() => setMobileMenuOpen(false)}
-                className="rounded-lg px-3 py-3 text-xs font-bold text-stone-800 transition hover:bg-[#fff6e9] hover:text-[#741f23]"
-              >
-                {item.label}
-              </Link>
-            ))}
+            <Link
+              href="/"
+              onClick={() =>
+                setMobileMenuOpen(false)
+              }
+              className="rounded-lg px-3 py-3 text-xs font-bold text-stone-800 transition hover:bg-[#fff6e9] hover:text-[#741f23]"
+            >
+              HOME
+            </Link>
 
             <Link
               href="/orders"
-              onClick={() => setMobileMenuOpen(false)}
-              className="rounded-lg px-3 py-3 text-xs font-bold text-stone-800 hover:bg-[#fff6e9] hover:text-[#741f23]"
+              onClick={() =>
+                setMobileMenuOpen(false)
+              }
+              className="rounded-lg px-3 py-3 text-xs font-bold text-stone-800 transition hover:bg-[#fff6e9] hover:text-[#741f23]"
             >
               MY ORDERS
             </Link>
 
             <Link
+              href="/wishlist"
+              onClick={() =>
+                setMobileMenuOpen(false)
+              }
+              className="rounded-lg px-3 py-3 text-xs font-bold text-stone-800 transition hover:bg-[#fff6e9] hover:text-[#741f23]"
+            >
+              WISHLIST
+            </Link>
+
+            <Link
               href="/contact"
-              onClick={() => setMobileMenuOpen(false)}
-              className="rounded-lg px-3 py-3 text-xs font-bold text-stone-800 hover:bg-[#fff6e9] hover:text-[#741f23]"
+              onClick={() =>
+                setMobileMenuOpen(false)
+              }
+              className="rounded-lg px-3 py-3 text-xs font-bold text-stone-800 transition hover:bg-[#fff6e9] hover:text-[#741f23]"
             >
               CONTACT US
             </Link>
 
-            <div className="px-3 py-2">
+            <div className="col-span-2 px-3 py-2">
               <LanguageSwitcher />
             </div>
           </nav>
