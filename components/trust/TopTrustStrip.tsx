@@ -13,16 +13,19 @@ const items = [
     title: 'Secure Payments',
     detail: 'Pay safely through our online checkout.',
     icon: WalletCards,
+    href: '/payment-information',
   },
   {
     title: 'GST Invoice',
     detail: 'GST invoice information available for eligible orders.',
     icon: ReceiptText,
+    href: '/gst-invoice',
   },
   {
     title: 'Tracked Delivery',
     detail: 'Shipment updates and AWB tracking after dispatch.',
     icon: Truck,
+    href: '/orders',
   },
   {
     title: '7-Day Return Policy',
@@ -34,6 +37,7 @@ const items = [
     title: 'Customer Support',
     detail: 'Help for orders, payment, shipping and delivery.',
     icon: Headphones,
+    href: '/contact',
   },
 ];
 
@@ -62,16 +66,18 @@ export default function TopTrustStrip() {
               <div className="mx-auto mb-2 flex size-9 items-center justify-center rounded-xl bg-[#fff2dc] text-[#741f23]">
                 <Icon size={18} aria-hidden="true" />
               </div>
+
               <h3 className="text-[11px] font-black text-[#741f23] sm:text-xs">
                 {title}
               </h3>
+
               <p className="mt-1 text-[10px] leading-relaxed text-gray-500 sm:text-[11px]">
                 {detail}
               </p>
             </div>
           );
 
-          return href ? (
+          return (
             <Link
               key={title}
               href={href}
@@ -79,8 +85,6 @@ export default function TopTrustStrip() {
             >
               {content}
             </Link>
-          ) : (
-            <div key={title}>{content}</div>
           );
         })}
       </div>

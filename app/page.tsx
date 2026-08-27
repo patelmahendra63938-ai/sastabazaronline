@@ -10,6 +10,7 @@ import ActiveFilterChips from '@/components/ActiveFilterChips';
 import CampaignBanner from '@/components/promotions/CampaignBanner';
 import HomepageSellerTrust from '@/components/trust/HomepageSellerTrust';
 import TopTrustStrip from '@/components/trust/TopTrustStrip';
+import BulkWholesaleAdvantage from '@/components/commerce/BulkWholesaleAdvantage';
 import { getActiveCampaigns, Campaign } from '@/lib/promotions';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
@@ -308,6 +309,8 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
               </div>
             </section>
           )}
+
+          <BulkWholesaleAdvantage />
 
           <section aria-labelledby="customer-help-heading" className="rounded-3xl border border-[#ead8b8] bg-[#fffdf9] p-6 shadow-xs sm:p-8">
             <div className="flex flex-col justify-between gap-5 md:flex-row md:items-center">
