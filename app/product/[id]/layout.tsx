@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { createClient } from '@supabase/supabase-js';
 import { cache } from 'react';
 
+import { resolveStorefrontImageSrc } from '@/lib/storefront-image';
+
 const SITE_URL = 'https://www.adhyeybrothers.in';
 
 type ProductSeoRecord = {
@@ -18,7 +20,6 @@ type ProductCategoryRecord = {
 
 type ProductImageRecord = {
   images?: string[] | null;
-  image?: string | null;
 };
 
 type InventoryRow = {
@@ -132,6 +133,8 @@ const getProductCategory = cache(
         {
           message: error.message,
           code: error.code,
+          details: error.details,
+          hint: error.hint,
           productId: id,
         }
       );
@@ -165,7 +168,7 @@ const getProductImage = cache(
       error,
     } = await supabase
       .from('products')
-      .select('images,image')
+      .select('images')
       .eq('id', id)
       .maybeSingle();
 
@@ -175,6 +178,8 @@ const getProductImage = cache(
         {
           message: error.message,
           code: error.code,
+          details: error.details,
+          hint: error.hint,
           productId: id,
         }
       );
@@ -189,7 +194,7 @@ const getProductImage = cache(
       Array.isArray(row?.images) &&
       row.images.length > 0
         ? row.images[0]
-        : row?.image;
+        : undefined;
 
     if (
       !candidate ||
@@ -198,23 +203,30 @@ const getProductImage = cache(
       return undefined;
     }
 
-    const image =
-      candidate.trim();
+    const resolved =
+      resolveStorefrontImageSrc(
+        candidate
+      );
 
-    if (!image) {
+    if (
+      !resolved ||
+      resolved.includes(
+        'product-placeholder'
+      )
+    ) {
       return undefined;
     }
 
     if (
-      /^https?:\/\//i.test(image)
+      /^https?:\/\//i.test(resolved)
     ) {
-      return image;
+      return resolved;
     }
 
     return `${SITE_URL}${
-      image.startsWith('/')
-        ? image
-        : `/${image}`
+      resolved.startsWith('/')
+        ? resolved
+        : `/${resolved}`
     }`;
   }
 );
