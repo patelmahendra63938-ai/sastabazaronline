@@ -187,6 +187,15 @@ export default function CheckoutPage() {
   const displayDiscount = quote?.discountDeductionAmount ?? discountDeductionAmount;
   const grandTotal = quote?.totalPayable ?? displaySubtotal;
 
+  const appliedCouponCodes = Array.from(
+    new Set(
+      cart
+        .map((item) => String(item.coupon_code || '').trim().toUpperCase())
+        .filter(Boolean)
+    )
+  );
+  const activeCouponCode = appliedCouponCodes.length === 1 ? appliedCouponCodes[0] : undefined;
+
   // 2. Real-Time PIN Code Check with API Route & Fallback
   const handleCheckPincode = useCallback(async (pinToCheck?: string, paymentOverride?: 'COD' | 'ONLINE') => {
     const targetPin = (pinToCheck || formData.pincode).trim();
@@ -215,8 +224,14 @@ export default function CheckoutPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           pincode: targetPin,
-          cart: cart.map(item => ({ product_id: item.product_id || item.id, size: item.size, quantity: item.quantity, selected_campaign_id: item.selected_campaign_id })),
-          paymentMethod: paymentOverride || formData.paymentMethod
+          cart: cart.map(item => ({
+            product_id: item.product_id || item.id,
+            size: item.size,
+            quantity: item.quantity,
+            selected_campaign_id: item.selected_campaign_id
+          })),
+          paymentMethod: paymentOverride || formData.paymentMethod,
+          couponCode: activeCouponCode
         }),
         signal: AbortSignal.timeout(5000),
       });
@@ -247,7 +262,7 @@ export default function CheckoutPage() {
     } finally {
       setIsCheckingPin(false);
     }
-  }, [formData.pincode, formData.paymentMethod, cart]);
+  }, [formData.pincode, formData.paymentMethod, cart, activeCouponCode]);
 
   const handlePincodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawVal = e.target.value.replace(/\D/g, '').slice(0, 6);
@@ -340,6 +355,11 @@ export default function CheckoutPage() {
       return;
     }
 
+    if (appliedCouponCodes.length > 1) {
+      setErrorMsg('Multiple different coupon codes are present in the cart. Please keep only one coupon offer before checkout.');
+      return;
+    }
+
     setLoading(true);
     setErrorMsg(null);
 
@@ -360,6 +380,7 @@ export default function CheckoutPage() {
             address: formData.address.trim(),
             city: formData.city.trim(),
             pincode: formData.pincode.trim(),
+            coupon_code: activeCouponCode,
             cart,
           }),
         });
@@ -391,6 +412,7 @@ export default function CheckoutPage() {
         city: formData.city.trim(),
         pincode: formData.pincode.trim(),
         paymentMethod: 'COD',
+        coupon_code: activeCouponCode,
         cart,
       });
 

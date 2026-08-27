@@ -345,6 +345,7 @@ export default function ProductDetailPage({
       mrp: mrpVal,
       applied_offer_label: appliedOffer?.offerLabel || null,
       selected_campaign_id: appliedOffer?.campaignId || null,
+      coupon_code: appliedCoupon || undefined,
       image: (product.images && product.images[0]) || product.image || selectedMedia,
       size: selectedSize || 'Free Size',
       weight_kg: activeVariant?.weight_kg || 0.5,
@@ -364,6 +365,7 @@ export default function ProductDetailPage({
         existingCart[existingIndex].price = finalPrice;
         existingCart[existingIndex].applied_offer_label = cartItem.applied_offer_label;
         existingCart[existingIndex].selected_campaign_id = cartItem.selected_campaign_id;
+        existingCart[existingIndex].coupon_code = cartItem.coupon_code;
       } else {
         existingCart.push(cartItem);
       }
