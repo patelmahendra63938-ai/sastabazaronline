@@ -7,17 +7,7 @@ const SITE_URL = 'https://www.adhyeybrothers.in';
 type ProductSeoRecord = {
   id: string;
   title: string;
-  description?: string | null;
-  price?: number | string | null;
-  category?: string | null;
-  images?: string[] | null;
-  image?: string | null;
   is_active?: boolean | null;
-  stock?: number | null;
-};
-
-type InventoryRow = {
-  available_quantity?: number | null;
 };
 
 function getSupabaseClient() {
@@ -68,165 +58,41 @@ const getProduct = cache(
     } = await supabase
       .from('products')
       .select(
-        'id,title,description,price,category,images,image,is_active,stock'
+        'id,title,is_active'
       )
-      .eq('id', id)
+      .eq(
+        'id',
+        id
+      )
       .maybeSingle();
 
     if (error) {
       console.error(
         'Product SEO fetch failed:',
-        error.message
+        {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint,
+          productId: id,
+        }
       );
 
       return null;
     }
 
     if (!data) {
+      console.error(
+        'Product SEO fetch returned no row:',
+        id
+      );
+
       return null;
     }
 
     return data as ProductSeoRecord;
   }
 );
-
-async function getProductAvailability(
-  product: ProductSeoRecord
-): Promise<string> {
-  const fallbackAvailability =
-    Number(product.stock ?? 99) > 0
-      ? 'https://schema.org/InStock'
-      : 'https://schema.org/OutOfStock';
-
-  const supabase =
-    getSupabaseClient();
-
-  if (!supabase) {
-    return fallbackAvailability;
-  }
-
-  const {
-    data,
-    error,
-  } = await supabase
-    .from('inventory')
-    .select('available_quantity')
-    .eq(
-      'product_id',
-      product.id
-    );
-
-  if (error) {
-    console.error(
-      'Product inventory SEO fetch failed:',
-      error.message
-    );
-
-    return fallbackAvailability;
-  }
-
-  const rows =
-    (data ?? []) as InventoryRow[];
-
-  if (rows.length === 0) {
-    return fallbackAvailability;
-  }
-
-  const totalAvailable =
-    rows.reduce(
-      (sum, row) =>
-        sum +
-        Math.max(
-          0,
-          Number(
-            row.available_quantity ?? 0
-          )
-        ),
-      0
-    );
-
-  return totalAvailable > 0
-    ? 'https://schema.org/InStock'
-    : 'https://schema.org/OutOfStock';
-}
-
-function cleanDescription(
-  value?: string | null
-): string {
-  const text = (value || '')
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-
-  return (
-    text ||
-    'Shop this product online at ADHYEY BROTHERS with delivery across India.'
-  );
-}
-
-function seoDescription(
-  value?: string | null,
-  maxLength = 155
-): string {
-  const text =
-    cleanDescription(value);
-
-  if (text.length <= maxLength) {
-    return text;
-  }
-
-  const withinLimit =
-    text.slice(
-      0,
-      maxLength + 1
-    );
-
-  const lastSpace =
-    withinLimit.lastIndexOf(
-      ' '
-    );
-
-  const cutAt =
-    lastSpace >= 80
-      ? lastSpace
-      : maxLength;
-
-  return `${withinLimit
-    .slice(0, cutAt)
-    .replace(/[,:;\s]+$/, '')
-    .trim()}…`;
-}
-
-function productImage(
-  product: ProductSeoRecord
-): string | undefined {
-  const candidate =
-    Array.isArray(product.images) &&
-    product.images.length > 0
-      ? product.images[0]
-      : product.image;
-
-  if (
-    !candidate ||
-    typeof candidate !== 'string'
-  ) {
-    return undefined;
-  }
-
-  if (
-    /^https?:\/\//i.test(
-      candidate
-    )
-  ) {
-    return candidate;
-  }
-
-  return `${SITE_URL}${
-    candidate.startsWith('/')
-      ? candidate
-      : `/${candidate}`
-  }`;
-}
 
 function productCanonical(
   id: string
@@ -276,12 +142,7 @@ export async function generateMetadata({
     product.title.trim();
 
   const description =
-    seoDescription(
-      product.description
-    );
-
-  const image =
-    productImage(product);
+    `Shop ${title} online at ADHYEY BROTHERS with delivery across India.`;
 
   return {
     title,
@@ -309,33 +170,15 @@ export async function generateMetadata({
         `${title} | ADHYEY BROTHERS`,
 
       description,
-
-      ...(image
-        ? {
-            images: [
-              {
-                url: image,
-                alt: title,
-              },
-            ],
-          }
-        : {}),
     },
 
     twitter: {
-      card:
-        'summary_large_image',
+      card: 'summary',
 
       title:
         `${title} | ADHYEY BROTHERS`,
 
       description,
-
-      ...(image
-        ? {
-            images: [image],
-          }
-        : {}),
     },
   };
 }
@@ -365,24 +208,6 @@ export default async function ProductLayout({
       product.id
     );
 
-  const image =
-    productImage(product);
-
-  const description =
-    cleanDescription(
-      product.description
-    );
-
-  const price =
-    Number(
-      product.price ?? 0
-    );
-
-  const availability =
-    await getProductAvailability(
-      product
-    );
-
   const productJsonLd = {
     '@context':
       'https://schema.org',
@@ -393,19 +218,11 @@ export default async function ProductLayout({
     name:
       product.title,
 
-    description,
-
     sku:
       product.id,
 
     url:
       canonical,
-
-    ...(image
-      ? {
-          image: [image],
-        }
-      : {}),
 
     brand: {
       '@type':
@@ -414,53 +231,6 @@ export default async function ProductLayout({
       name:
         'ADHYEY BROTHERS',
     },
-
-    ...(product.category
-      ? {
-          category:
-            product.category,
-        }
-      : {}),
-
-    ...(price > 0
-      ? {
-          offers: {
-            '@type':
-              'Offer',
-
-            url:
-              canonical,
-
-            priceCurrency:
-              'INR',
-
-            price:
-              price.toFixed(2),
-
-            availability,
-
-            itemCondition:
-              'https://schema.org/NewCondition',
-
-            hasMerchantReturnPolicy: {
-              '@type':
-                'MerchantReturnPolicy',
-
-              applicableCountry:
-                'IN',
-
-              returnPolicyCategory:
-                'https://schema.org/MerchantReturnFiniteReturnWindow',
-
-              merchantReturnDays:
-                7,
-
-              merchantReturnLink:
-                `${SITE_URL}/return-policy`,
-            },
-          },
-        }
-      : {}),
   };
 
   const jsonLd =
