@@ -7,6 +7,7 @@ import ProductFilterPanel, {
   FilterGroupConfig
 } from '@/components/ProductFilterPanel';
 import ActiveFilterChips from '@/components/ActiveFilterChips';
+import CatalogControls from '@/components/CatalogControls';
 import CampaignBanner from '@/components/promotions/CampaignBanner';
 import HomepageSellerTrust from '@/components/trust/HomepageSellerTrust';
 import TopTrustStrip from '@/components/trust/TopTrustStrip';
@@ -60,7 +61,7 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
     ? resolvedSearchParams
     : Object.fromEntries(
         Object.entries(resolvedSearchParams).filter(([key]) => ![
-          'category', 'brand', 'color', 'fabric', 'gender', 'fit', 'occasion',
+          'category', 'brand', 'color', 'fabric', 'pattern', 'gender', 'fit', 'occasion',
           'type', 'minPrice', 'maxPrice', 'size',
         ].includes(key)),
       );
@@ -165,10 +166,10 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
     );
   }
 
-  if (resolvedSearchParams.pattern) {
+  if (effectiveSearchParams.pattern) {
     query = query.in(
       'pattern',
-      resolvedSearchParams.pattern.split(',')
+      effectiveSearchParams.pattern.split(',')
     );
   }
 
@@ -256,10 +257,10 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
     );
   }
 
-  if (resolvedSearchParams.pattern) {
+  if (effectiveSearchParams.pattern) {
     featuredQuery = featuredQuery.in(
       'pattern',
-      resolvedSearchParams.pattern.split(',')
+      effectiveSearchParams.pattern.split(',')
     );
   }
 
@@ -557,6 +558,12 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
               )}
 
               <div className="flex-1 space-y-4">
+                <CatalogControls
+                  showFilters={homepageDisplay.show_filter_panel}
+                  availableOptions={availableOptions}
+                  filterConfigs={filterConfigs}
+                />
+
                 {homepageDisplay.show_filter_panel && (
                   <ActiveFilterChips />
                 )}
@@ -578,14 +585,33 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
                 </div>
 
                 {products.length === 0 ? (
-                  <div className="bg-white rounded-3xl border border-gray-200 p-16 text-center space-y-3 shadow-xs">
-                    <h3 className="text-base font-bold text-gray-800">
-                      No Products Found
+                  <div className="rounded-3xl border border-[#ead8b8] bg-white p-8 text-center shadow-xs sm:p-12">
+                    <h3 className="text-base font-black text-stone-900">
+                      No products match these results
                     </h3>
 
-                    <p className="text-xs text-gray-500 max-w-sm mx-auto">
-                      Try clearing or adjusting your selected filters and search query.
+                    <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed text-stone-500">
+                      Try removing one or more filters, changing the price range,
+                      or browsing the full catalog.
                     </p>
+
+                    <div className="mt-5 flex flex-wrap justify-center gap-2">
+                      {effectiveSearchParams.q && (
+                        <Link
+                          href={`/?q=${encodeURIComponent(effectiveSearchParams.q)}`}
+                          className="rounded-xl border border-[#d7b06a] bg-[#fff7e8] px-4 py-2.5 text-xs font-bold text-[#741f23] transition hover:bg-[#fff2dc]"
+                        >
+                          Keep Search, Clear Filters
+                        </Link>
+                      )}
+
+                      <Link
+                        href="/"
+                        className="rounded-xl bg-[#741f23] px-4 py-2.5 text-xs font-bold text-white transition hover:bg-[#5e171b]"
+                      >
+                        Browse All Products
+                      </Link>
+                    </div>
                   </div>
                 ) : (
                   <>
