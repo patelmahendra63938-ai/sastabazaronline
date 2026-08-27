@@ -12,6 +12,15 @@ type ProductSeoRecord = {
   is_active?: boolean | null;
 };
 
+type ProductCategoryRecord = {
+  category?: string | null;
+};
+
+type ProductImageRecord = {
+  images?: string[] | null;
+  image?: string | null;
+};
+
 type InventoryRow = {
   available_quantity?: number | null;
 };
@@ -94,6 +103,119 @@ const getProduct = cache(
     }
 
     return data as ProductSeoRecord;
+  }
+);
+
+const getProductCategory = cache(
+  async (
+    id: string
+  ): Promise<string | undefined> => {
+    const supabase =
+      getSupabaseClient();
+
+    if (!supabase) {
+      return undefined;
+    }
+
+    const {
+      data,
+      error,
+    } = await supabase
+      .from('products')
+      .select('category')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (error) {
+      console.error(
+        'Product category SEO fetch failed:',
+        {
+          message: error.message,
+          code: error.code,
+          productId: id,
+        }
+      );
+
+      return undefined;
+    }
+
+    const row =
+      data as ProductCategoryRecord | null;
+
+    const category =
+      row?.category?.trim();
+
+    return category || undefined;
+  }
+);
+
+const getProductImage = cache(
+  async (
+    id: string
+  ): Promise<string | undefined> => {
+    const supabase =
+      getSupabaseClient();
+
+    if (!supabase) {
+      return undefined;
+    }
+
+    const {
+      data,
+      error,
+    } = await supabase
+      .from('products')
+      .select('images,image')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (error) {
+      console.error(
+        'Product image SEO fetch failed:',
+        {
+          message: error.message,
+          code: error.code,
+          productId: id,
+        }
+      );
+
+      return undefined;
+    }
+
+    const row =
+      data as ProductImageRecord | null;
+
+    const candidate =
+      Array.isArray(row?.images) &&
+      row.images.length > 0
+        ? row.images[0]
+        : row?.image;
+
+    if (
+      !candidate ||
+      typeof candidate !== 'string'
+    ) {
+      return undefined;
+    }
+
+    const image =
+      candidate.trim();
+
+    if (!image) {
+      return undefined;
+    }
+
+    if (
+      /^https?:\/\//i.test(image)
+    ) {
+      return image;
+    }
+
+    return `${SITE_URL}${
+      image.startsWith('/')
+        ? image
+        : `/${image}`
+    }`;
   }
 );
 
@@ -255,6 +377,9 @@ export async function generateMetadata({
       product.description
     );
 
+  const image =
+    await getProductImage(id);
+
   return {
     title,
 
@@ -281,15 +406,35 @@ export async function generateMetadata({
         `${title} | ADHYEY BROTHERS`,
 
       description,
+
+      ...(image
+        ? {
+            images: [
+              {
+                url: image,
+                alt: title,
+              },
+            ],
+          }
+        : {}),
     },
 
     twitter: {
-      card: 'summary',
+      card:
+        image
+          ? 'summary_large_image'
+          : 'summary',
 
       title:
         `${title} | ADHYEY BROTHERS`,
 
       description,
+
+      ...(image
+        ? {
+            images: [image],
+          }
+        : {}),
     },
   };
 }
@@ -329,10 +474,21 @@ export default async function ProductLayout({
       product.price ?? 0
     );
 
-  const availability =
-    await getProductAvailability(
+  const [
+    availability,
+    category,
+    image,
+  ] = await Promise.all([
+    getProductAvailability(
       product.id
-    );
+    ),
+    getProductCategory(
+      product.id
+    ),
+    getProductImage(
+      product.id
+    ),
+  ]);
 
   const productJsonLd = {
     '@context':
@@ -352,6 +508,12 @@ export default async function ProductLayout({
     url:
       canonical,
 
+    ...(image
+      ? {
+          image: [image],
+        }
+      : {}),
+
     brand: {
       '@type':
         'Brand',
@@ -359,6 +521,12 @@ export default async function ProductLayout({
       name:
         'ADHYEY BROTHERS',
     },
+
+    ...(category
+      ? {
+          category,
+        }
+      : {}),
 
     ...(price > 0
       ? {
