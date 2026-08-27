@@ -1,8 +1,9 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
+  --background: #fffaf5;
   --foreground: #171717;
+  color-scheme: light;
 }
 
 @theme inline {
@@ -12,22 +13,129 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  background: var(--background);
+  color-scheme: light;
+  top: 0 !important;
 }
 
 body {
+  width: 100%;
+  max-width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  overflow-x: hidden;
+
   background: var(--background);
   color: var(--foreground);
+
   font-family: Arial, Helvetica, sans-serif;
+
+  color-scheme: light;
+  top: 0 !important;
 }
 
-/* Temporary PhonePe onboarding state: hide the manual UPI/QR payment option.
-   Keep the underlying checkout code intact so it can be replaced by the
-   official PhonePe Payment Gateway flow after merchant approval. */
+/* =========================================================
+   MOBILE SAFETY
+========================================================= */
+
+img,
+video,
+canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+svg {
+  max-width: 100%;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* =========================================================
+   GOOGLE TRANSLATE UI CLEANUP
+========================================================= */
+
+/*
+ * Hide Google Translate top banner.
+ */
+.goog-te-banner-frame,
+.goog-te-banner-frame.skiptranslate {
+  display: none !important;
+  visibility: hidden !important;
+}
+
+/*
+ * Google Translate sometimes shifts the whole page down.
+ */
+body {
+  top: 0 !important;
+}
+
+/*
+ * Hide Google's default translation widget branding.
+ * Our custom LanguageSwitcher remains visible.
+ */
+.goog-te-gadget {
+  font-size: 0 !important;
+}
+
+.goog-te-gadget span {
+  display: none !important;
+}
+
+.goog-logo-link {
+  display: none !important;
+}
+
+/*
+ * Hide default Google Translate select/widget container
+ * if Google injects it visibly.
+ */
+.goog-te-combo {
+  display: none !important;
+}
+
+/*
+ * Prevent Google Translate helper elements from
+ * creating unwanted layout space.
+ */
+#google_translate_element {
+  position: fixed !important;
+  left: -10000px !important;
+  top: -10000px !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+  opacity: 0 !important;
+}
+
+/* =========================================================
+   PHONEPE TEMPORARY ONBOARDING RULE
+========================================================= */
+
+/*
+ * Temporary PhonePe onboarding state:
+ * hide the manual UPI/QR payment option.
+ *
+ * Keep the underlying checkout code intact so it can
+ * later be replaced by the official PhonePe Payment
+ * Gateway flow after merchant approval.
+ */
 label:has(input[name="paymentMethod"][value="ONLINE"]) {
   display: none !important;
 }
