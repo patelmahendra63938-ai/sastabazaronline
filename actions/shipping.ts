@@ -2,10 +2,10 @@
 
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { createClient } from '@supabase/supabase-js';
 import { checkPincodeShippingRate } from '@/lib/shipping/serviceability';
 
-const NIMBUSPOST_OLD_API_BASE =
-  'https://ship.nimbuspost.com/api';
+const NIMBUSPOST_V2_BASE_URL = 'https://api-v2.nimbuspost.com';
 
 export interface CheckPincodeInput {
   pincode: string;
@@ -18,18 +18,121 @@ function cleanEnv(value?: string | null) {
   return String(value || '').trim();
 }
 
-function normalizeApiUrl(value?: string | null) {
-  const raw = cleanEnv(value);
+function toPositiveNumber(value: unknown, fallback = 0) {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}
 
-  if (!raw) {
-    return `${NIMBUSPOST_OLD_API_BASE}/orders/autoship_order`;
+function toPhoneNumber(value: unknown) {
+  const digits = String(value || '').replace(/\D/g, '');
+  const normalized =
+    digits.length > 10 ? digits.slice(-10) : digits;
+
+  const n = Number(normalized);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function toPincodeNumber(value: unknown) {
+  const digits = String(value || '').replace(/\D/g, '').slice(0, 6);
+  const n = Number(digits);
+  return Number.isFinite(n) ? n : 0;
+}
+
+async function requireAdminUser() {
+  const cookieStore = await cookies();
+
+  const authClient = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll: () => cookieStore.getAll(),
+        setAll: (cookiesToSet) => {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            );
+          } catch {
+            // Cookie writes may be unavailable in some server contexts.
+          }
+        },
+      },
+    }
+  );
+
+  const {
+    data: { user },
+    error: userError,
+  } = await authClient.auth.getUser();
+
+  if (userError || !user) {
+    throw new Error('Authentication required.');
   }
 
-  return raw.replace(/\/+$/, '');
+  const { data: profile, error: profileError } = await authClient
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  if (profileError) {
+    throw new Error('Unable to verify admin access.');
+  }
+
+  const role = String(profile?.role || '').toLowerCase();
+
+  if (!['admin', 'super_admin', 'staff'].includes(role)) {
+    throw new Error('Admin access required.');
+  }
+
+  return user;
+}
+
+function getServiceSupabase() {
+  const url = cleanEnv(process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const serviceRoleKey = cleanEnv(process.env.SUPABASE_SERVICE_ROLE_KEY);
+
+  if (!url || !serviceRoleKey) {
+    throw new Error(
+      'Server configuration error: SUPABASE_SERVICE_ROLE_KEY is required for courier booking.'
+    );
+  }
+
+  return createClient(url, serviceRoleKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
+}
+
+function getNimbusCredentials() {
+  const apiKey = cleanEnv(
+    process.env.NIMBUSPOST_API_KEY || process.env.COURIER_API_KEY
+  );
+
+  const apiSecret = cleanEnv(
+    process.env.NIMBUSPOST_API_SECRET || process.env.COURIER_SECRET_KEY
+  );
+
+  if (!apiKey || !apiSecret) {
+    throw new Error(
+      'NimbusPost API credentials are missing. Both API key and API secret are required.'
+    );
+  }
+
+  if (!apiKey.startsWith('npk_')) {
+    throw new Error(
+      'NimbusPost API key is invalid for Partner API v2. The API key must start with npk_.'
+    );
+  }
+
+  return { apiKey, apiSecret };
 }
 
 /**
  * Customer-facing PIN/serviceability action.
+ * This retains the site's current shipping-rate logic.
  */
 export async function verifyPincodeAndGetShippingAction(
   input: CheckPincodeInput
@@ -58,249 +161,294 @@ export async function verifyPincodeAndGetShippingAction(
       customerShippingCharge: 0,
       displayWeight: '0.50 kg',
       error:
-        err?.message ||
-        'Failed to verify PIN code serviceability.',
+        err?.message || 'Failed to verify PIN code serviceability.',
     };
   }
 }
 
 /**
- * Admin/backend NimbusPost booking action.
+ * Books an order directly with NimbusPost Partner API v2.
  *
- * This version uses NimbusPost's V1 API-key authentication style:
- *   NP-API-KEY: <key>
+ * Correct Partner API v2:
+ *   Base URL: https://api-v2.nimbuspost.com
+ *   Endpoint: POST /v2/shipments
+ *   Headers:
+ *     x-api-key
+ *     x-api-secret
  *
- * It deliberately DOES NOT send the raw key as a Bearer token.
+ * POST /v2/orders only creates an order and does NOT book a courier.
+ * POST /v2/shipments creates + books in one call.
  */
 export async function pushOrderToNimbusPost(orderId: string) {
   try {
-    const apiKey = cleanEnv(
-      process.env.NIMBUSPOST_API_KEY ||
-        process.env.COURIER_API_KEY
-    );
+    await requireAdminUser();
 
-    const apiSecret = cleanEnv(
-      process.env.NIMBUSPOST_API_SECRET ||
-        process.env.COURIER_SECRET_KEY
-    );
+    const { apiKey, apiSecret } = getNimbusCredentials();
+    const supabase = getServiceSupabase();
 
-    const apiUrl = normalizeApiUrl(
-      process.env.COURIER_API_URL
-    );
+    const { data: order, error: orderError } = await supabase
+      .from('orders')
+      .select('*, order_items(*)')
+      .eq('id', orderId)
+      .single();
 
-    if (!apiKey) {
+    if (orderError || !order) {
       return {
         success: false,
-        error:
-          'NimbusPost API key is missing. Configure NIMBUSPOST_API_KEY or COURIER_API_KEY.',
+        error: 'Order not found for NimbusPost booking.',
       };
     }
 
-    const cookieStore = await cookies();
+    const status = String(order.order_status || '').toUpperCase();
 
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY ||
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll: () => cookieStore.getAll(),
-        },
-      }
-    );
+    if (['CANCELLED', 'CANCELED'].includes(status)) {
+      return {
+        success: false,
+        error: 'Cancelled orders cannot be booked with NimbusPost.',
+      };
+    }
 
-    const { data: order, error: orderErr } =
+    // Local duplicate guard before making any remote booking request.
+    const { data: existingShipment, error: existingShipmentError } =
       await supabase
-        .from('orders')
-        .select('*, order_items(*)')
-        .eq('id', orderId)
-        .single();
+        .from('shipments')
+        .select('id, awb_number, shipment_status')
+        .eq('order_id', order.id)
+        .limit(1)
+        .maybeSingle();
 
-    if (orderErr || !order) {
+    if (existingShipmentError) {
       return {
         success: false,
-        error:
-          'Order not found for shipping dispatch.',
+        error: `Unable to verify existing shipment: ${existingShipmentError.message}`,
       };
     }
 
-    const orderItems = Array.isArray(order.order_items)
+    if (existingShipment) {
+      return {
+        success: false,
+        error: existingShipment.awb_number
+          ? `This order already has shipment AWB ${existingShipment.awb_number}. Duplicate booking blocked.`
+          : 'This order already has a shipment record. Duplicate booking blocked.',
+      };
+    }
+
+    const items = Array.isArray(order.order_items)
       ? order.order_items
       : [];
 
-    if (orderItems.length === 0) {
+    if (items.length === 0) {
       return {
         success: false,
         error:
-          'This order has no product line items. NimbusPost booking is blocked.',
+          'This order has no product items. NimbusPost booking has been blocked.',
       };
     }
 
-    const shippingAddress =
+    const rawAddress =
       typeof order.shipping_address === 'object' &&
       order.shipping_address !== null
         ? order.shipping_address
-        : {
-            address:
-              order.shipping_address ||
-              'Address provided at checkout',
-            city: 'Surat',
-            state: 'Gujarat',
-            pincode:
-              cleanEnv(
-                process.env.NIMBUSPOST_PICKUP_PINCODE
-              ) || '395004',
-          };
+        : {};
 
-    const actualWeightKg = Number(
-      order.chargeable_weight_kg ||
-        order.actual_weight_kg ||
-        0.5
-    );
+    const shippingAddress = {
+      name:
+        cleanEnv(rawAddress.name) ||
+        cleanEnv(order.customer_name) ||
+        'Customer',
 
-    const weightInGrams = Math.max(
-      100,
-      Math.round(actualWeightKg * 1000)
-    );
-
-    const courierItems = orderItems.map((item: any) => {
-      const quantity = Math.max(
-        1,
-        Number(item.quantity) || 1
-      );
-
-      const unitPrice = Math.max(
-        0,
-        Number(item.unit_price) || 0
-      );
-
-      const gstRate = Math.max(
-        0,
-        Number(item.gst_rate) || 0
-      );
-
-      const hsnCode = String(
-        item.hsn_code || ''
-      ).trim();
-
-      return {
-        name:
-          String(item.product_title || '').trim() ||
-          'ADHYEY BROTHERS Product',
-        qty: quantity,
-        quantity,
-        price: unitPrice,
-        unit_price: unitPrice,
-        discount: 0,
-        tax_rate: gstRate,
-        gst_rate: gstRate,
-        sku:
-          String(item.sku || '').trim() ||
-          `SKU-${String(item.product_id || '').slice(
-            0,
-            8
-          )}`,
-        hsn: hsnCode,
-        hsn_code: hsnCode,
-      };
-    });
-
-    const payload = {
-      order_number:
-        order.order_number ||
-        `ORD-${String(order.id).slice(0, 8)}`,
-
-      shipping_customer_name:
-        order.customer_name || 'Customer',
-
-      shipping_phone:
-        order.customer_phone ||
-        order.phone ||
-        '9999999999',
-
-      shipping_email:
-        order.customer_email ||
+      email:
+        cleanEnv(rawAddress.email) ||
+        cleanEnv(order.customer_email) ||
         'sales@sastabazaronline.in',
 
-      shipping_address:
-        shippingAddress.address,
+      address:
+        cleanEnv(rawAddress.address) ||
+        cleanEnv(rawAddress.address_line1) ||
+        cleanEnv(order.shipping_address) ||
+        '',
 
-      shipping_city:
-        shippingAddress.city,
+      address_opt:
+        cleanEnv(rawAddress.address_opt) ||
+        cleanEnv(rawAddress.address_line2) ||
+        cleanEnv(rawAddress.landmark) ||
+        '',
 
-      shipping_state:
-        shippingAddress.state || 'Gujarat',
+      pincode: toPincodeNumber(
+        rawAddress.pincode ||
+          rawAddress.postal_code ||
+          order.shipping_pincode
+      ),
 
-      shipping_pincode:
-        shippingAddress.pincode,
+      city:
+        cleanEnv(rawAddress.city) ||
+        cleanEnv(order.shipping_city),
 
-      shipping_country: 'India',
+      state:
+        cleanEnv(rawAddress.state) ||
+        cleanEnv(order.shipping_state),
 
-      order_items: courierItems,
+      country:
+        cleanEnv(rawAddress.country) || 'India',
 
-      payment_type: String(order.payment_method || '')
-        .toUpperCase()
-        .includes('COD')
-        ? 'COD'
-        : 'Prepaid',
+      phone: toPhoneNumber(
+        rawAddress.phone ||
+          order.customer_phone ||
+          order.phone
+      ),
+    };
 
-      total_amount: Number(
+    if (
+      !shippingAddress.address ||
+      !shippingAddress.city ||
+      !shippingAddress.state ||
+      !shippingAddress.pincode ||
+      !shippingAddress.phone
+    ) {
+      return {
+        success: false,
+        error:
+          'Order shipping address is incomplete. Address, city, state, pincode and phone are required for NimbusPost.',
+      };
+    }
+
+    const warehouseId =
+      cleanEnv(order.warehouse_id) ||
+      cleanEnv(process.env.NIMBUSPOST_WAREHOUSE_ID) ||
+      cleanEnv(process.env.COURIER_WAREHOUSE_ID);
+
+    if (!warehouseId) {
+      return {
+        success: false,
+        error:
+          'NimbusPost warehouse_id is required. Add NIMBUSPOST_WAREHOUSE_ID to Local and Vercel Environment Variables using your NimbusPost pickup warehouse ID.',
+      };
+    }
+
+    const paymentMethod = String(
+      order.payment_method || ''
+    ).toLowerCase();
+
+    const isCod = paymentMethod.includes('cod');
+
+    const orderTotal = Math.max(
+      0,
+      Number(
         order.grand_total ||
           order.total_amount ||
           0
-      ),
+      ) || 0
+    );
 
-      weight: weightInGrams,
-      length: 15,
-      breadth: 12,
-      height: 5,
+    const packageWeightKg = toPositiveNumber(
+      order.chargeable_weight_kg ||
+        order.actual_weight_kg ||
+        order.package_weight,
+      0.5
+    );
 
-      pickup_pincode:
-        cleanEnv(
-          process.env.NIMBUSPOST_PICKUP_PINCODE
-        ) || undefined,
+    const packageLengthCm = toPositiveNumber(
+      order.package_length_cm ||
+        order.length_cm,
+      15
+    );
+
+    const packageWidthCm = toPositiveNumber(
+      order.package_width_cm ||
+        order.width_cm ||
+        order.breadth_cm,
+      12
+    );
+
+    const packageHeightCm = toPositiveNumber(
+      order.package_height_cm ||
+        order.height_cm,
+      5
+    );
+
+    const nimbusItems = items.map((item: any) => ({
+      name:
+        cleanEnv(item.product_title) ||
+        'ADHYEY BROTHERS Product',
+      qty: Math.max(1, Number(item.quantity) || 1),
+      price: Math.max(0, Number(item.unit_price) || 0),
+      sku:
+        cleanEnv(item.sku) ||
+        `SKU-${String(item.product_id || '').slice(0, 8)}`,
+      hsn_code: cleanEnv(item.hsn_code) || undefined,
+      tax_rate:
+        Number.isFinite(Number(item.gst_rate))
+          ? Number(item.gst_rate)
+          : undefined,
+    }));
+
+    const payload: Record<string, any> = {
+      order_number:
+        cleanEnv(order.order_number) ||
+        `ORD-${String(order.id).slice(0, 8)}`,
+
+      order_type: 'b2c',
+
+      payment_mode: isCod ? 'cod' : 'prepaid',
+
+      warehouse_id: warehouseId,
+
+      shipping_address: shippingAddress,
+
+      items: nimbusItems,
+
+      package: {
+        weight: packageWeightKg,
+        length: packageLengthCm,
+        width: packageWidthCm,
+        height: packageHeightCm,
+      },
     };
 
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      'NP-API-KEY': apiKey,
-    };
-
-    // Preserve existing secret support only as an auxiliary header.
-    // NimbusPost's published V1 SDK authenticates with NP-API-KEY.
-    if (apiSecret) {
-      headers['NP-API-SECRET'] = apiSecret;
+    if (isCod) {
+      payload.order_collectable_amount = orderTotal;
     }
 
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(payload),
-      cache: 'no-store',
-    });
+    const response = await fetch(
+      `${NIMBUSPOST_V2_BASE_URL}/v2/shipments`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          'x-api-key': apiKey,
+          'x-api-secret': apiSecret,
+        },
+        body: JSON.stringify(payload),
+        cache: 'no-store',
+      }
+    );
 
     const rawText = await response.text();
 
     let result: any = null;
 
     try {
-      result = rawText
-        ? JSON.parse(rawText)
-        : null;
+      result = rawText ? JSON.parse(rawText) : null;
     } catch {
       result = null;
     }
 
-    if (
-      !response.ok ||
-      result?.status === false ||
-      result?.success === false
-    ) {
+    if (!response.ok || result?.success === false) {
+      const validationDetails =
+        result?.errors ||
+        result?.details ||
+        result?.data?.errors;
+
+      const validationText = validationDetails
+        ? ` ${JSON.stringify(validationDetails)}`
+        : '';
+
       throw new Error(
-        result?.message ||
+        `${result?.message ||
           result?.error ||
           rawText ||
-          `NimbusPost booking failed with HTTP ${response.status}.`
+          `NimbusPost returned HTTP ${response.status}.`}${validationText}`
       );
     }
 
@@ -311,18 +459,26 @@ export async function pushOrderToNimbusPost(orderId: string) {
       {};
 
     const awbNumber =
-      data?.awb_number ||
       data?.awb ||
-      data?.awbno ||
+      data?.awb_number ||
       data?.awb_no ||
-      data?.shipment?.awb_number ||
-      data?.shipment?.awb;
+      data?.shipment?.awb ||
+      data?.shipment?.awb_number;
 
     if (!awbNumber) {
       throw new Error(
-        'NimbusPost accepted the booking request but did not return an AWB number. Nothing was saved locally.'
+        `NimbusPost responded successfully but no AWB was returned. Remote response: ${JSON.stringify(
+          data
+        ).slice(0, 1200)}`
       );
     }
+
+    const courierName =
+      data?.courier_name ||
+      data?.courier?.name ||
+      data?.courier ||
+      data?.shipment?.courier_name ||
+      'NimbusPost Assigned Courier';
 
     const labelUrl =
       data?.label_url ||
@@ -330,23 +486,16 @@ export async function pushOrderToNimbusPost(orderId: string) {
       data?.shipment?.label_url ||
       '';
 
-    const courierPartnerName =
-      data?.courier_name ||
-      data?.courier ||
-      data?.courier_partner ||
-      data?.shipment?.courier_name ||
-      'NimbusPost Assigned Courier';
-
-    const actualCourierCost = Number(
-      data?.freight_charges ||
+    const shippingCost = Number(
+      data?.shipping_charge ||
         data?.shipping_charges ||
-        data?.courier_charge ||
+        data?.freight_charge ||
+        data?.freight_charges ||
         data?.rate ||
-        order.actual_courier_cost ||
         0
-    );
+    ) || 0;
 
-    const { data: shipment, error: shipErr } =
+    const { data: savedShipment, error: saveError } =
       await supabase
         .from('shipments')
         .insert({
@@ -354,31 +503,31 @@ export async function pushOrderToNimbusPost(orderId: string) {
           awb_number: String(awbNumber),
           shipment_status: 'COURIER_ASSIGNED',
           pickup_status: 'REQUESTED',
-          package_weight: actualWeightKg,
+          package_weight: packageWeightKg,
           tracking_url: `https://nimbuspost.com/track?awb=${encodeURIComponent(
             String(awbNumber)
           )}`,
           shipping_label_url: labelUrl,
-          shipping_cost: actualCourierCost,
+          shipping_cost: shippingCost,
         })
         .select()
         .single();
 
-    if (shipErr) {
+    if (saveError) {
       throw new Error(
-        `NimbusPost AWB ${awbNumber} was created, but local shipment save failed: ${shipErr.message}`
+        `NimbusPost created AWB ${awbNumber}, but the website could not save the local shipment record: ${saveError.message}`
       );
     }
 
-    if (shipment?.id) {
+    if (savedShipment?.id) {
       const { error: trackingError } =
         await supabase
           .from('shipment_tracking_events')
           .insert({
-            shipment_id: shipment.id,
+            shipment_id: savedShipment.id,
             status: 'COURIER_ASSIGNED',
             location: 'Surat Fulfillment Hub',
-            description: `AWB ${awbNumber} generated via ${courierPartnerName}. Ready for pickup dispatch.`,
+            description: `AWB ${awbNumber} generated via ${courierName}. Ready for pickup.`,
             event_time: new Date().toISOString(),
             source: 'COURIER_API',
           });
@@ -394,7 +543,9 @@ export async function pushOrderToNimbusPost(orderId: string) {
     const { error: orderUpdateError } =
       await supabase
         .from('orders')
-        .update({ order_status: 'PACKED' })
+        .update({
+          order_status: 'PACKED',
+        })
         .eq('id', order.id);
 
     if (orderUpdateError) {
@@ -407,14 +558,15 @@ export async function pushOrderToNimbusPost(orderId: string) {
     return {
       success: true,
       awb: String(awbNumber),
-      labelUrl,
-      courier: courierPartnerName,
-      itemCount: courierItems.length,
-      shippingCost: actualCourierCost,
+      courier: String(courierName),
+      labelUrl: String(labelUrl || ''),
+      shippingCost,
+      itemCount: nimbusItems.length,
+      nimbusResponse: data,
     };
   } catch (err: any) {
     console.error(
-      'NimbusPost Execution Error:',
+      'NimbusPost v2 booking error:',
       err
     );
 
@@ -422,7 +574,7 @@ export async function pushOrderToNimbusPost(orderId: string) {
       success: false,
       error:
         err?.message ||
-        'NimbusPost API communication failed.',
+        'NimbusPost API v2 communication failed.',
     };
   }
 }
