@@ -143,13 +143,6 @@ function writeGoogleTranslateCookie(
   /*
    * Production:
    * Use ONE authoritative root-domain cookie.
-   *
-   * This works for both:
-   * adhyeybrothers.in
-   * www.adhyeybrothers.in
-   *
-   * Using multiple googtrans cookies was one of the causes
-   * of stale / stuck language state.
    */
   if (rootDomain) {
     document.cookie =
@@ -162,9 +155,7 @@ function writeGoogleTranslateCookie(
   }
 
   /*
-   * Localhost / LAN testing:
-   * Browsers cannot reliably use a domain cookie on IP
-   * addresses, so use one host-only cookie.
+   * Localhost / LAN testing.
    */
   document.cookie =
     `googtrans=${cookieValue};` +
@@ -188,10 +179,6 @@ function ensureTranslateContainer() {
   element.id =
     GOOGLE_TRANSLATE_ELEMENT_ID;
 
-  /*
-   * Keep Google Translate element in the DOM but outside
-   * the visible viewport.
-   */
   element.style.position = 'fixed';
   element.style.left = '-10000px';
   element.style.top = '-10000px';
@@ -253,9 +240,6 @@ function loadGoogleTranslate() {
   translateWindow.googleTranslateElementInit =
     initialize;
 
-  /*
-   * Script is already loaded.
-   */
   if (
     translateWindow.google?.translate
       ?.TranslateElement
@@ -265,9 +249,6 @@ function loadGoogleTranslate() {
     return;
   }
 
-  /*
-   * Script request already exists.
-   */
   if (
     document.getElementById(
       GOOGLE_TRANSLATE_SCRIPT_ID
@@ -304,10 +285,6 @@ function updateDocumentLanguage(
   document.documentElement.lang =
     langCode;
 
-  /*
-   * Urdu reads right-to-left.
-   * Other supported languages remain left-to-right.
-   */
   document.documentElement.dir =
     langCode === 'ur'
       ? 'rtl'
@@ -315,14 +292,6 @@ function updateDocumentLanguage(
 }
 
 function hardReloadCurrentPage() {
-  /*
-   * Reload the exact same page after the new googtrans cookie
-   * has been written.
-   *
-   * Google Translate then starts from a fresh DOM instead of
-   * trying to translate an already-translated Marathi/Hindi
-   * page into another language.
-   */
   window.location.reload();
 }
 
@@ -349,13 +318,6 @@ export default function LanguageSwitcher() {
           ? savedLanguage
           : 'en';
 
-      /*
-       * localStorage is our UI source of truth.
-       *
-       * We do NOT try to choose between multiple googtrans
-       * cookies because stale cookies were causing the
-       * language selector and page translation to disagree.
-       */
       setCurrentLang(
         preferredLanguage
       );
@@ -364,10 +326,6 @@ export default function LanguageSwitcher() {
         preferredLanguage
       );
 
-      /*
-       * Repair Google cookie state from saved preference.
-       * This also removes stale old cookies.
-       */
       writeGoogleTranslateCookie(
         preferredLanguage
       );
@@ -447,10 +405,6 @@ export default function LanguageSwitcher() {
         );
       }
 
-      /*
-       * Same language selected:
-       * simply close dropdown.
-       */
       if (
         currentLang === langCode
       ) {
@@ -459,18 +413,11 @@ export default function LanguageSwitcher() {
         return;
       }
 
-      /*
-       * Save selected language first.
-       */
       localStorage.setItem(
         LANGUAGE_STORAGE_KEY,
         langCode
       );
 
-      /*
-       * Remove old Marathi/Hindi/etc Google state and create
-       * one clean cookie for the newly selected language.
-       */
       writeGoogleTranslateCookie(
         langCode
       );
@@ -489,12 +436,6 @@ export default function LanguageSwitcher() {
         langCode
       );
 
-      /*
-       * Do NOT trigger .goog-te-combo manually.
-       *
-       * A fresh page reload lets Google Translate start from
-       * original English DOM with the correct target cookie.
-       */
       hardReloadCurrentPage();
     } catch (error) {
       const message =
@@ -514,11 +455,6 @@ export default function LanguageSwitcher() {
   };
 
   const toggleLanguageMenu = () => {
-    /*
-     * Loading Google here is optional for English,
-     * but preloading when menu opens helps subsequent
-     * translated-page loads.
-     */
     loadGoogleTranslate();
 
     setIsOpen(
@@ -537,14 +473,14 @@ export default function LanguageSwitcher() {
   return (
     <div
       ref={dropdownRef}
-      className="relative inline-block text-left"
+      className="relative block w-full text-left sm:inline-block sm:w-auto"
     >
       <button
         type="button"
         onClick={
           toggleLanguageMenu
         }
-        className="flex min-h-11 cursor-pointer items-center gap-1.5 rounded-xl border border-[#d7aa5b] bg-[#fff7e8] px-3 text-xs font-bold text-[#741f23] shadow-sm transition hover:bg-[#fff2dc] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d7aa5b]"
+        className="flex min-h-11 cursor-pointer touch-manipulation items-center gap-1.5 rounded-xl border border-[#d7aa5b] bg-[#fff7e8] px-3 text-xs font-bold text-[#741f23] shadow-sm transition hover:bg-[#fff2dc] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d7aa5b]"
         aria-label={`Select language. Current language: ${activeLangObj.native}`}
         aria-haspopup="menu"
         aria-expanded={
@@ -576,14 +512,36 @@ export default function LanguageSwitcher() {
         <div
           role="menu"
           aria-label="Choose language"
-          className="absolute right-0 z-[100] mt-2 max-h-[70vh] w-60 overflow-y-auto overscroll-contain rounded-2xl border border-[#ead8b8] bg-white py-2 shadow-2xl"
+          className="
+            absolute
+            left-0
+            right-auto
+            z-[100]
+            mt-2
+            max-h-[55vh]
+            w-[min(18rem,calc(100vw-3.5rem))]
+            overflow-y-auto
+            overflow-x-hidden
+            overscroll-contain
+            rounded-2xl
+            border
+            border-[#ead8b8]
+            bg-white
+            py-2
+            shadow-2xl
+
+            sm:left-auto
+            sm:right-0
+            sm:max-h-[70vh]
+            sm:w-60
+          "
           style={{
             WebkitOverflowScrolling:
               'touch',
           }}
         >
           <div className="sticky top-0 z-10 border-b border-[#ead8b8] bg-[#fffaf5] px-3 py-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-[#741f23]">
+            <span className="block truncate text-[10px] font-black uppercase tracking-widest text-[#741f23]">
               ADHYEY BROTHERS Languages
             </span>
           </div>
@@ -610,18 +568,18 @@ export default function LanguageSwitcher() {
                         lang.code
                       )
                     }
-                    className={`flex min-h-12 w-full touch-manipulation cursor-pointer items-center justify-between px-4 py-3 text-left text-xs transition hover:bg-[#fff2dc] hover:text-[#741f23] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#d7aa5b] ${
+                    className={`flex min-h-12 w-full touch-manipulation cursor-pointer items-center justify-between gap-3 px-4 py-3 text-left text-xs transition hover:bg-[#fff2dc] hover:text-[#741f23] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#d7aa5b] ${
                       active
                         ? 'bg-[#fff7e8] font-black text-[#741f23]'
                         : 'font-semibold text-stone-800'
                     }`}
                   >
-                    <div className="flex flex-col">
-                      <span className="font-bold">
+                    <div className="min-w-0 flex-1">
+                      <span className="block truncate font-bold">
                         {lang.native}
                       </span>
 
-                      <span className="text-[10px] font-normal text-stone-500">
+                      <span className="block truncate text-[10px] font-normal text-stone-500">
                         {lang.name}
                       </span>
                     </div>
