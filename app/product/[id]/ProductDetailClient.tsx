@@ -2,8 +2,18 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ShoppingCart, Zap, ShieldCheck, Truck, RotateCcw, Check } from 'lucide-react';
+import {
+  ShoppingCart,
+  Zap,
+  ShieldCheck,
+  Truck,
+  RotateCcw,
+  Check,
+  ReceiptText,
+  PhoneCall,
+} from 'lucide-react';
 import { resolveStorefrontImageSrc } from '@/lib/storefront-image';
 
 export default function ProductDetailClient({ product }: { product: any }) {
@@ -14,15 +24,25 @@ export default function ProductDetailClient({ product }: { product: any }) {
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
 
-  const images = Array.isArray(product.images) && product.images.length > 0 ? product.images : [selectedImage];
-  const discount = product.mrp && product.mrp > product.price 
-    ? Math.round(((product.mrp - product.price) / product.mrp) * 100) 
-    : 0;
+  const images =
+    Array.isArray(product.images) && product.images.length > 0
+      ? product.images
+      : [selectedImage];
+
+  const discount =
+    product.mrp && product.mrp > product.price
+      ? Math.round(((product.mrp - product.price) / product.mrp) * 100)
+      : 0;
 
   const handleAddToCart = () => {
     try {
-      const existing = JSON.parse(localStorage.getItem('sastabazar_cart') || '[]');
-      const itemIndex = existing.findIndex((item: any) => (item.id || item.product_id) === product.id);
+      const existing = JSON.parse(
+        localStorage.getItem('sastabazar_cart') || '[]'
+      );
+
+      const itemIndex = existing.findIndex(
+        (item: any) => (item.id || item.product_id) === product.id
+      );
 
       if (itemIndex > -1) {
         existing[itemIndex].quantity += quantity;
@@ -38,8 +58,13 @@ export default function ProductDetailClient({ product }: { product: any }) {
         });
       }
 
-      localStorage.setItem('sastabazar_cart', JSON.stringify(existing));
+      localStorage.setItem(
+        'sastabazar_cart',
+        JSON.stringify(existing)
+      );
+
       window.dispatchEvent(new Event('cartUpdated'));
+
       setAdded(true);
       setTimeout(() => setAdded(false), 2000);
     } catch (e) {
@@ -53,11 +78,18 @@ export default function ProductDetailClient({ product }: { product: any }) {
   };
 
   return (
-    <div className="bg-white rounded-3xl border border-gray-200 p-6 sm:p-8 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-8">
+    <div className="grid grid-cols-1 gap-8 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8 md:grid-cols-2">
       {/* Product Image Gallery */}
       <div className="space-y-4">
-        <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 border">
-          <Image src={resolveStorefrontImageSrc(selectedImage)} alt={product.title} fill sizes="(max-width: 768px) calc(100vw - 3rem), 50vw" fetchPriority="high" className="object-cover" />
+        <div className="relative aspect-square overflow-hidden rounded-2xl border bg-gray-100">
+          <Image
+            src={resolveStorefrontImageSrc(selectedImage)}
+            alt={product.title}
+            fill
+            sizes="(max-width: 768px) calc(100vw - 3rem), 50vw"
+            fetchPriority="high"
+            className="object-cover"
+          />
         </div>
 
         {images.length > 1 && (
@@ -66,9 +98,19 @@ export default function ProductDetailClient({ product }: { product: any }) {
               <button
                 key={idx}
                 onClick={() => setSelectedImage(img)}
-                className={`relative w-16 h-16 rounded-xl border-2 overflow-hidden shrink-0 ${selectedImage === img ? 'border-indigo-600' : 'border-gray-200'}`}
+                className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border-2 ${
+                  selectedImage === img
+                    ? 'border-[#741f23]'
+                    : 'border-gray-200'
+                }`}
               >
-                <Image src={resolveStorefrontImageSrc(img)} alt="" fill sizes="64px" className="object-cover" />
+                <Image
+                  src={resolveStorefrontImageSrc(img)}
+                  alt=""
+                  fill
+                  sizes="64px"
+                  className="object-cover"
+                />
               </button>
             ))}
           </div>
@@ -76,78 +118,204 @@ export default function ProductDetailClient({ product }: { product: any }) {
       </div>
 
       {/* Product Details & Actions */}
-      <div className="space-y-5 flex flex-col justify-between">
+      <div className="flex flex-col justify-between space-y-5">
         <div className="space-y-3">
           {product.category && (
-            <span className="bg-orange-100 text-orange-800 text-[11px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wider">
+            <span className="rounded-md bg-[#fff2dc] px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-[#741f23]">
               {product.category}
             </span>
           )}
-          <h1 className="text-xl sm:text-2xl font-black text-indigo-950">{product.title}</h1>
+
+          <h1 className="text-xl font-black text-[#741f23] sm:text-2xl">
+            {product.title}
+          </h1>
 
           {/* Pricing */}
           <div className="flex items-baseline gap-3 pt-2">
-            <span className="text-2xl sm:text-3xl font-black text-indigo-950">
+            <span className="text-2xl font-black text-[#741f23] sm:text-3xl">
               ₹{Number(product.price).toLocaleString()}
             </span>
+
             {product.mrp && product.mrp > product.price && (
               <>
-                <span className="text-sm text-gray-400 line-through">₹{Number(product.mrp).toLocaleString()}</span>
-                <span className="text-xs font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded">{discount}% OFF</span>
+                <span className="text-sm text-gray-400 line-through">
+                  ₹{Number(product.mrp).toLocaleString()}
+                </span>
+
+                <span className="rounded bg-green-50 px-2 py-0.5 text-xs font-bold text-green-700">
+                  {discount}% OFF
+                </span>
               </>
             )}
           </div>
 
-          <p className="text-xs text-gray-600 leading-relaxed pt-2">
-            {product.description || 'Premium quality fabric engineered for comfort and long-lasting durability.'}
+          <p className="pt-2 text-xs leading-relaxed text-gray-600">
+            {product.description ||
+              'Product details are provided for this listing. Please review the available images, price and product information before ordering.'}
           </p>
 
           {/* Quantity Selector */}
           <div className="flex items-center gap-3 pt-3">
-            <label className="text-xs font-bold text-gray-700 uppercase">Quantity:</label>
-            <div className="flex items-center border rounded-xl overflow-hidden">
-              <button 
-                onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                className="px-3 py-1.5 bg-gray-50 hover:bg-gray-100 font-bold text-xs"
-              >-</button>
-              <span className="px-4 py-1.5 font-bold text-xs font-mono">{quantity}</span>
-              <button 
+            <label className="text-xs font-bold uppercase text-gray-700">
+              Quantity:
+            </label>
+
+            <div className="flex items-center overflow-hidden rounded-xl border">
+              <button
+                onClick={() =>
+                  setQuantity(Math.max(1, quantity - 1))
+                }
+                className="bg-gray-50 px-3 py-1.5 text-xs font-bold hover:bg-gray-100"
+              >
+                -
+              </button>
+
+              <span className="px-4 py-1.5 font-mono text-xs font-bold">
+                {quantity}
+              </span>
+
+              <button
                 onClick={() => setQuantity(quantity + 1)}
-                className="px-3 py-1.5 bg-gray-50 hover:bg-gray-100 font-bold text-xs"
-              >+</button>
+                className="bg-gray-50 px-3 py-1.5 text-xs font-bold hover:bg-gray-100"
+              >
+                +
+              </button>
             </div>
           </div>
         </div>
 
-        {/* Buttons & Trust Badges */}
-        <div className="space-y-4 pt-4 border-t">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {/* Buttons & Trust */}
+        <div className="space-y-4 border-t pt-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <button
               onClick={handleAddToCart}
-              className="bg-indigo-950 hover:bg-indigo-900 text-white font-bold py-3.5 rounded-2xl transition flex items-center justify-center gap-2 text-xs shadow-sm"
+              className="flex items-center justify-center gap-2 rounded-2xl bg-[#741f23] py-3.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#5e171b]"
             >
-              {added ? <Check size={16} className="text-green-400" /> : <ShoppingCart size={16} />}
+              {added ? (
+                <Check size={16} className="text-green-300" />
+              ) : (
+                <ShoppingCart size={16} />
+              )}
               {added ? 'Added to Cart!' : 'Add to Cart'}
             </button>
 
             <button
               onClick={handleBuyNow}
-              className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3.5 rounded-2xl transition flex items-center justify-center gap-2 text-xs shadow-md"
+              className="flex items-center justify-center gap-2 rounded-2xl bg-[#b5843d] py-3.5 text-xs font-bold text-white shadow-md transition hover:bg-[#9c6f31]"
             >
-              <Zap size={16} /> Buy Now
+              <Zap size={16} />
+              Buy Now
             </button>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 pt-2 border-t text-center text-[10px] text-gray-500 font-semibold">
-            <div className="p-2 bg-gray-50 rounded-xl flex flex-col items-center gap-1">
-              <Truck size={14} className="text-indigo-600" /> Fast Delivery
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <Link
+              href="/orders"
+              className="flex items-center gap-2 rounded-xl border border-[#ead8b8] bg-[#fffdf9] p-3 text-left transition hover:border-[#d7b06a] hover:bg-[#fff7e8]"
+            >
+              <Truck
+                size={16}
+                className="shrink-0 text-[#741f23]"
+                aria-hidden="true"
+              />
+              <div>
+                <div className="text-[11px] font-black text-[#741f23]">
+                  Tracked Delivery
+                </div>
+                <div className="text-[10px] leading-relaxed text-gray-500">
+                  Check order status after purchase.
+                </div>
+              </div>
+            </Link>
+
+            <Link
+              href="/return-policy"
+              className="flex items-center gap-2 rounded-xl border border-[#ead8b8] bg-[#fffdf9] p-3 text-left transition hover:border-[#d7b06a] hover:bg-[#fff7e8]"
+            >
+              <RotateCcw
+                size={16}
+                className="shrink-0 text-[#741f23]"
+                aria-hidden="true"
+              />
+              <div>
+                <div className="text-[11px] font-black text-[#741f23]">
+                  7-Day Return Policy
+                </div>
+                <div className="text-[10px] leading-relaxed text-gray-500">
+                  Eligible items as per policy terms.
+                </div>
+              </div>
+            </Link>
+
+            <Link
+              href="/payment-information"
+              className="flex items-center gap-2 rounded-xl border border-[#ead8b8] bg-[#fffdf9] p-3 text-left transition hover:border-[#d7b06a] hover:bg-[#fff7e8]"
+            >
+              <ShieldCheck
+                size={16}
+                className="shrink-0 text-[#741f23]"
+                aria-hidden="true"
+              />
+              <div>
+                <div className="text-[11px] font-black text-[#741f23]">
+                  Secure Checkout
+                </div>
+                <div className="text-[10px] leading-relaxed text-gray-500">
+                  Online payment and COD information.
+                </div>
+              </div>
+            </Link>
+          </div>
+
+          <div className="flex flex-col gap-2 rounded-2xl border border-[#ead8b8] bg-[#fff7e8] p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-2">
+              <ReceiptText
+                size={16}
+                className="mt-0.5 shrink-0 text-[#741f23]"
+                aria-hidden="true"
+              />
+              <div>
+                <div className="text-[11px] font-black text-[#741f23]">
+                  GST Invoice Information
+                </div>
+                <div className="text-[10px] leading-relaxed text-gray-600">
+                  GST invoice details are available for eligible orders.
+                </div>
+              </div>
             </div>
-            <div className="p-2 bg-gray-50 rounded-xl flex flex-col items-center gap-1">
-              <RotateCcw size={14} className="text-orange-500" /> 7-Day Easy Return
+
+            <Link
+              href="/gst-invoice"
+              className="text-[10px] font-black text-[#741f23] underline underline-offset-2"
+            >
+              View GST Info
+            </Link>
+          </div>
+
+          <div className="flex flex-col gap-2 rounded-2xl border border-[#ead8b8] bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-2">
+              <PhoneCall
+                size={16}
+                className="mt-0.5 shrink-0 text-[#b5843d]"
+                aria-hidden="true"
+              />
+              <div>
+                <div className="text-[11px] font-black text-[#741f23]">
+                  Buying in larger quantity?
+                </div>
+                <div className="text-[10px] leading-relaxed text-gray-500">
+                  Contact us before ordering to discuss quantity, availability,
+                  applicable bulk pricing and shipping options.
+                </div>
+              </div>
             </div>
-            <div className="p-2 bg-gray-50 rounded-xl flex flex-col items-center gap-1">
-              <ShieldCheck size={14} className="text-green-600" /> 100% Genuine
-            </div>
+
+            <Link
+              href="/contact"
+              className="text-[10px] font-black text-[#741f23] underline underline-offset-2"
+            >
+              Contact Us
+            </Link>
           </div>
         </div>
       </div>
