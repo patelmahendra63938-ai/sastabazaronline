@@ -75,6 +75,195 @@ function toPincodeNumber(value: unknown) {
   return Number.isFinite(n) ? n : 0;
 }
 
+
+function findDeepValue(
+  value: unknown,
+  keys: string[],
+  maxDepth = 8
+): unknown {
+  const wanted = new Set(keys.map((k) => k.toLowerCase()));
+
+  function walk(node: unknown, depth: number): unknown {
+    if (depth > maxDepth || node == null) return undefined;
+
+    if (Array.isArray(node)) {
+      for (const item of node) {
+        const found = walk(item, depth + 1);
+        if (found !== undefined && found !== null && found !== '') {
+          return found;
+        }
+      }
+      return undefined;
+    }
+
+    if (typeof node === 'object') {
+      const obj = node as Record<string, unknown>;
+
+      for (const [key, val] of Object.entries(obj)) {
+        if (
+          wanted.has(key.toLowerCase()) &&
+          val !== undefined &&
+          val !== null &&
+          val !== ''
+        ) {
+          return val;
+        }
+      }
+
+      for (const val of Object.values(obj)) {
+        const found = walk(val, depth + 1);
+        if (found !== undefined && found !== null && found !== '') {
+          return found;
+        }
+      }
+    }
+
+    return undefined;
+  }
+
+  return walk(value, 0);
+}
+
+function findDeepObjectContaining(
+  value: unknown,
+  keys: string[],
+  maxDepth = 8
+): Record<string, unknown> | null {
+  const wanted = new Set(keys.map((k) => k.toLowerCase()));
+
+  function walk(
+    node: unknown,
+    depth: number
+  ): Record<string, unknown> | null {
+    if (depth > maxDepth || node == null) return null;
+
+    if (Array.isArray(node)) {
+      for (const item of node) {
+        const found = walk(item, depth + 1);
+        if (found) return found;
+      }
+      return null;
+    }
+
+    if (typeof node === 'object') {
+      const obj = node as Record<string, unknown>;
+      const objectKeys = Object.keys(obj).map((k) => k.toLowerCase());
+
+      if (objectKeys.some((k) => wanted.has(k))) {
+        return obj;
+      }
+
+      for (const val of Object.values(obj)) {
+        const found = walk(val, depth + 1);
+        if (found) return found;
+      }
+    }
+
+    return null;
+  }
+
+  return walk(value, 0);
+}
+
+function extractNimbusBookingInfo(payload: unknown) {
+  const awb = findDeepValue(payload, [
+    'awb',
+    'awb_number',
+    'awb_no',
+    'awbnumber',
+    'tracking_number',
+    'tracking_no',
+  ]);
+
+  const courier = findDeepValue(payload, [
+    'courier_name',
+    'courier',
+    'courier_partner',
+    'courier_partner_name',
+    'courierName',
+  ]);
+
+  const remoteOrderId = findDeepValue(payload, [
+    'order_id',
+    'orderId',
+    'id',
+  ]);
+
+  const shipmentId = findDeepValue(payload, [
+    'shipment_id',
+    'shipmentId',
+  ]);
+
+  const labelUrl = findDeepValue(payload, [
+    'label_url',
+    'shipping_label_url',
+    'label',
+  ]);
+
+  const shippingCost = findDeepValue(payload, [
+    'shipping_charge',
+    'shipping_charges',
+    'freight_charge',
+    'freight_charges',
+    'rate',
+    'courier_charge',
+  ]);
+
+  return {
+    awb: awb ? String(awb) : '',
+    courier: courier ? String(courier) : '',
+    remoteOrderId: remoteOrderId ? String(remoteOrderId) : '',
+    shipmentId: shipmentId ? String(shipmentId) : '',
+    labelUrl: labelUrl ? String(labelUrl) : '',
+    shippingCost:
+      shippingCost !== undefined && shippingCost !== null
+        ? Number(shippingCost) || 0
+        : 0,
+  };
+}
+
+async function fetchNimbusOrderById(
+  remoteOrderId: string,
+  apiKey: string,
+  apiSecret: string
+) {
+  const response = await fetch(
+    `${NIMBUSPOST_V2_BASE_URL}/v2/orders/${encodeURIComponent(
+      remoteOrderId
+    )}`,
+    {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        'x-api-key': apiKey,
+        'x-api-secret': apiSecret,
+      },
+      cache: 'no-store',
+    }
+  );
+
+  const rawText = await response.text();
+
+  let result: any = null;
+
+  try {
+    result = rawText ? JSON.parse(rawText) : null;
+  } catch {
+    result = null;
+  }
+
+  if (!response.ok || result?.success === false) {
+    throw new Error(
+      formatApiError(result?.message) ||
+        formatApiError(result?.error) ||
+        rawText ||
+        `NimbusPost order sync returned HTTP ${response.status}.`
+    );
+  }
+
+  return result;
+}
+
 async function requireAdminUser() {
   const cookieStore = await cookies();
 
@@ -505,42 +694,72 @@ export async function pushOrderToNimbusPost(orderId: string) {
       result ||
       {};
 
-    const awbNumber =
-      data?.awb ||
-      data?.awb_number ||
-      data?.awb_no ||
-      data?.shipment?.awb ||
-      data?.shipment?.awb_number;
+    let bookingInfo = extractNimbusBookingInfo(data);
+    let syncResponse: any = null;
+
+    // NimbusPost v2 may return an order object first while the booked
+    // courier/AWB is nested deeper or becomes available on the order resource.
+    // If AWB was not present in the create response but an order_id exists,
+    // perform one read-back sync before treating the booking as incomplete.
+    if (!bookingInfo.awb && bookingInfo.remoteOrderId) {
+      try {
+        syncResponse = await fetchNimbusOrderById(
+          bookingInfo.remoteOrderId,
+          apiKey,
+          apiSecret
+        );
+
+        const syncedInfo = extractNimbusBookingInfo(
+          syncResponse?.data ||
+            syncResponse?.result ||
+            syncResponse
+        );
+
+        bookingInfo = {
+          awb: syncedInfo.awb || bookingInfo.awb,
+          courier: syncedInfo.courier || bookingInfo.courier,
+          remoteOrderId:
+            syncedInfo.remoteOrderId ||
+            bookingInfo.remoteOrderId,
+          shipmentId:
+            syncedInfo.shipmentId ||
+            bookingInfo.shipmentId,
+          labelUrl:
+            syncedInfo.labelUrl ||
+            bookingInfo.labelUrl,
+          shippingCost:
+            syncedInfo.shippingCost ||
+            bookingInfo.shippingCost,
+        };
+      } catch (syncError) {
+        console.warn(
+          'NimbusPost post-booking sync warning:',
+          syncError
+        );
+      }
+    }
+
+    const awbNumber = bookingInfo.awb;
 
     if (!awbNumber) {
       throw new Error(
-        `NimbusPost responded successfully but no AWB was returned. Remote response: ${formatApiError(
-          data
-        ).slice(0, 1200)}`
+        `NimbusPost created/accepted the remote order${
+          bookingInfo.remoteOrderId
+            ? ` ${bookingInfo.remoteOrderId}`
+            : ''
+        }, but the AWB was not present in the API response yet. Do NOT book again. The remote order should be synced instead. Remote response: ${formatApiError(
+          syncResponse || data
+        ).slice(0, 1600)}`
       );
     }
 
     const courierName =
-      data?.courier_name ||
-      data?.courier?.name ||
-      data?.courier ||
-      data?.shipment?.courier_name ||
+      bookingInfo.courier ||
       'NimbusPost Assigned Courier';
 
-    const labelUrl =
-      data?.label_url ||
-      data?.label ||
-      data?.shipment?.label_url ||
-      '';
+    const labelUrl = bookingInfo.labelUrl || '';
 
-    const shippingCost = Number(
-      data?.shipping_charge ||
-        data?.shipping_charges ||
-        data?.freight_charge ||
-        data?.freight_charges ||
-        data?.rate ||
-        0
-    ) || 0;
+    const shippingCost = bookingInfo.shippingCost || 0;
 
     const { data: savedShipment, error: saveError } =
       await supabase
@@ -609,7 +828,9 @@ export async function pushOrderToNimbusPost(orderId: string) {
       labelUrl: String(labelUrl || ''),
       shippingCost,
       itemCount: nimbusItems.length,
-      nimbusResponse: data,
+      remoteOrderId: bookingInfo.remoteOrderId,
+      remoteShipmentId: bookingInfo.shipmentId,
+      nimbusResponse: syncResponse || data,
     };
   } catch (err: any) {
     console.error(
