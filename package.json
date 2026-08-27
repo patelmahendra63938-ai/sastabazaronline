@@ -7,12 +7,13 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:webhooks": "node --test tests/nimbuspost-webhook.test.mjs"
-    ,"test:pricing": "node --test --experimental-strip-types tests/pricing-engine.test.mjs"
-    ,"test:order-totals": "node --test --experimental-strip-types tests/order-totals.test.mjs"
+    "test:webhooks": "node --test tests/nimbuspost-webhook.test.mjs",
+    "test:pricing": "node --test --experimental-strip-types tests/pricing-engine.test.mjs",
+    "test:order-totals": "node --test --experimental-strip-types tests/order-totals.test.mjs"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@phonepe-pg/pg-sdk-node": "^2.0.6",
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.112.3",
     "clsx": "^2.1.1",

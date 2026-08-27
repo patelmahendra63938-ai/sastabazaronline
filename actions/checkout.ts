@@ -309,7 +309,7 @@ export async function processOrderCheckout(formData: CheckoutInput) {
         shippingAddress: fullAddress,
         paymentMethod:
           paymentMethod === 'ONLINE'
-            ? `Online UPI (UTR: ${formData.upiRefId || 'N/A'})`
+            ? 'PhonePe Online Payment'
             : paymentMethod,
         grandTotal,
         subtotal: serverSubtotal,

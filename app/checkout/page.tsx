@@ -3,19 +3,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { useRouter } from 'next/navigation';
 import { createVerifiedOrderAction } from '@/actions/checkout';
-import { 
-  ShieldCheck, Truck, CreditCard, CheckCircle2, ArrowLeft, 
-  Loader2, User, Phone, QrCode, Trash2, ShoppingBag, 
-  Navigation, FileText, Tag, AlertCircle, Check, XCircle, RefreshCw 
+import {
+  ShieldCheck, Truck, CreditCard, CheckCircle2, ArrowLeft,
+  Loader2, User, Phone, Trash2, ShoppingBag,
+  Navigation, FileText, Tag, AlertCircle, Check, XCircle, RefreshCw
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { resolveStorefrontImageSrc } from '@/lib/storefront-image';
 
 export default function CheckoutPage() {
-  const router = useRouter();
   const [cart, setCart] = useState<any[]>([]);
   const [isCartLoaded, setIsCartLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -24,6 +22,7 @@ export default function CheckoutPage() {
   const [orderId, setOrderId] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [itemToRemove, setItemToRemove] = useState<any | null>(null);
+  const [paymentReturnProcessing, setPaymentReturnProcessing] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -33,8 +32,7 @@ export default function CheckoutPage() {
     address: '',
     city: 'Surat',
     pincode: '',
-    paymentMethod: 'COD',
-    upiRefId: ''
+    paymentMethod: 'COD'
   });
 
   // Automated NimbusPost Courier Rate & Verification States
@@ -56,6 +54,111 @@ export default function CheckoutPage() {
       }
       setIsCartLoaded(true);
     }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const merchantOrderId = new URLSearchParams(window.location.search)
+      .get('phonepe_order_id')
+      ?.trim();
+
+    if (!merchantOrderId) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const wait = (ms: number) =>
+      new Promise((resolve) => setTimeout(resolve, ms));
+
+    const finalizePhonePePayment = async () => {
+      setPaymentReturnProcessing(true);
+      setErrorMsg(null);
+
+      try {
+        let lastState = 'UNKNOWN';
+
+        for (let attempt = 0; attempt < 5; attempt += 1) {
+          const response = await fetch('/api/phonepe/finalize', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ merchantOrderId }),
+          });
+
+          const data = await response.json().catch(() => ({}));
+
+          if (!response.ok) {
+            throw new Error(
+              data.error ||
+                `PhonePe verification returned ${response.status}.`
+            );
+          }
+
+          if (cancelled) {
+            return;
+          }
+
+          if (data.paymentComplete === true && data.orderNumber) {
+            localStorage.removeItem('sastabazar_cart');
+            window.dispatchEvent(new Event('cartUpdated'));
+            window.history.replaceState({}, '', '/checkout');
+
+            setOrderId(String(data.orderNumber));
+            setOrderPlaced(true);
+            return;
+          }
+
+          if (data.finalizing === true) {
+            await wait(1500);
+            continue;
+          }
+
+          if (data.paymentComplete === false) {
+            lastState = String(data.state || 'UNKNOWN').toUpperCase();
+
+            if (lastState === 'PENDING') {
+              await wait(1500);
+              continue;
+            }
+
+            throw new Error(
+              `PhonePe payment was not completed (${lastState}). No order has been placed.`
+            );
+          }
+
+          await wait(1500);
+        }
+
+        throw new Error(
+          lastState === 'PENDING'
+            ? 'Your PhonePe payment is still pending. Please wait a moment and refresh this page to verify again.'
+            : 'Payment verification is taking longer than expected. Please refresh this page to verify again.'
+        );
+      } catch (error: unknown) {
+        if (!cancelled) {
+          setErrorMsg(
+            error instanceof Error
+              ? error.message
+              : 'Unable to verify your PhonePe payment.'
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setPaymentReturnProcessing(false);
+        }
+      }
+    };
+
+    void finalizePhonePePayment();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Display-only cart subtotal until the server returns an authoritative quote.
@@ -110,7 +213,7 @@ export default function CheckoutPage() {
       const res = await fetch('/api/shipping/check-pincode', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           pincode: targetPin,
           cart: cart.map(item => ({ product_id: item.product_id || item.id, size: item.size, quantity: item.quantity, selected_campaign_id: item.selected_campaign_id })),
           paymentMethod: paymentOverride || formData.paymentMethod
@@ -149,7 +252,7 @@ export default function CheckoutPage() {
   const handlePincodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawVal = e.target.value.replace(/\D/g, '').slice(0, 6);
     setFormData(prev => ({ ...prev, pincode: rawVal }));
-    
+
     setIsPincodeVerified(false);
     setPinStatus('idle');
     setQuote(null);
@@ -237,15 +340,46 @@ export default function CheckoutPage() {
       return;
     }
 
-    if (formData.paymentMethod === 'ONLINE' && !formData.upiRefId.trim()) {
-      setErrorMsg('Please enter your 12-digit UPI Reference / UTR ID after scanning the QR code.');
-      return;
-    }
-
     setLoading(true);
     setErrorMsg(null);
 
     try {
+      if (formData.paymentMethod === 'ONLINE') {
+        const response = await fetch('/api/phonepe/create-payment', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            fullName: formData.fullName.trim(),
+            customer_name: formData.fullName.trim(),
+            phone: formData.phone.trim(),
+            customer_phone: formData.phone.trim(),
+            email: formData.email.trim(),
+            customer_email: formData.email.trim(),
+            address: formData.address.trim(),
+            city: formData.city.trim(),
+            pincode: formData.pincode.trim(),
+            cart,
+          }),
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok || !data.success) {
+          throw new Error(
+            data.error || 'Unable to start secure PhonePe payment.'
+          );
+        }
+
+        if (!data.redirectUrl) {
+          throw new Error('PhonePe did not return a secure payment URL.');
+        }
+
+        window.location.assign(String(data.redirectUrl));
+        return;
+      }
+
       const result = await createVerifiedOrderAction({
         customer_name: formData.fullName.trim(),
         fullName: formData.fullName.trim(),
@@ -256,9 +390,8 @@ export default function CheckoutPage() {
         address: formData.address.trim(),
         city: formData.city.trim(),
         pincode: formData.pincode.trim(),
-        paymentMethod: formData.paymentMethod === 'ONLINE' ? 'ONLINE' : 'COD',
-        upiRefId: formData.upiRefId.trim(),
-        cart
+        paymentMethod: 'COD',
+        cart,
       });
 
       if (!result.success) {
@@ -275,11 +408,6 @@ export default function CheckoutPage() {
       setLoading(false);
     }
   };
-
-  const storeUpiId = 'adhyeybrothers@okicici';
-  const upiPaymentUrl = `upi://pay?pa=${storeUpiId}&pn=AdhyeyBrothers&am=${grandTotal}&cu=INR`;
-  const qrCodeImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiPaymentUrl)}`;
-
   if (orderPlaced) {
     return (
       <main className="min-h-screen bg-[#fffaf5] flex flex-col justify-between font-sans">
@@ -294,19 +422,37 @@ export default function CheckoutPage() {
             <span className="font-mono font-bold text-[#741f23]">{orderId}</span>.
           </p>
           <div className="pt-6 flex flex-col sm:flex-row gap-3 justify-center">
-            <Link 
+            <Link
               href={`/orders/${orderId}`}
               className="bg-[#741f23] hover:bg-[#5e171b] text-white font-bold py-3.5 px-8 rounded-xl transition shadow-md text-xs uppercase tracking-wider"
             >
               Track My Order
             </Link>
-            <Link 
-              href="/" 
+            <Link
+              href="/"
               className="bg-[#741f23] hover:bg-[#5e171b] text-white font-bold py-3.5 px-8 rounded-xl transition shadow-md text-xs uppercase tracking-wider"
             >
               Continue Shopping
             </Link>
           </div>
+        </div>
+        <Footer />
+      </main>
+    );
+  }
+
+  if (paymentReturnProcessing) {
+    return (
+      <main className="min-h-screen bg-[#fffaf5] flex flex-col justify-between font-sans">
+        <Header />
+        <div className="flex-1 max-w-xl mx-auto px-4 py-20 text-center space-y-4">
+          <div className="w-20 h-20 bg-[#fff2dc] text-[#741f23] rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
+            <Loader2 size={38} className="animate-spin" />
+          </div>
+          <h1 className="text-2xl font-black text-[#741f23]">Verifying PhonePe Payment</h1>
+          <p className="text-sm text-gray-600">
+            Please do not close or refresh this page while we securely verify your payment and create your order.
+          </p>
         </div>
         <Footer />
       </main>
@@ -323,8 +469,8 @@ export default function CheckoutPage() {
           </div>
           <h2 className="text-xl font-bold text-gray-800">Your cart is empty</h2>
           <p className="text-xs text-gray-500">You have no items in your checkout summary.</p>
-          <Link 
-            href="/" 
+          <Link
+            href="/"
             className="inline-block bg-[#741f23] hover:bg-[#5e171b] text-white font-bold py-3 px-6 rounded-xl transition shadow text-xs uppercase tracking-wider"
           >
             Continue Shopping
@@ -341,8 +487,8 @@ export default function CheckoutPage() {
         <Header />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-          <Link 
-            href="/cart" 
+          <Link
+            href="/cart"
             className="inline-flex items-center gap-2 text-xs font-bold text-[#741f23] mb-6 bg-[#fffdf9] px-4 py-2 rounded-xl border border-[#ead8b8] shadow-2xs transition hover:bg-[#fff7e8] hover:text-[#5e171b]"
           >
             <ArrowLeft size={16} /> Back to Cart
@@ -358,7 +504,7 @@ export default function CheckoutPage() {
           )}
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            
+
             {/* Left: Customer Details & PIN Verification */}
             <div className="lg:col-span-7 space-y-6">
               <div className="bg-[#fffdf9] rounded-3xl border border-[#ead8b8] p-6 sm:p-8 shadow-xs space-y-6">
@@ -414,10 +560,11 @@ export default function CheckoutPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Email Address</label>
+                    <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Email Address *</label>
                     <input
                       type="email"
                       name="email"
+                      required
                       value={formData.email}
                       onChange={handleChange}
                       placeholder="customer@example.com"
@@ -527,17 +674,17 @@ export default function CheckoutPage() {
                       2. Payment Method
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <label 
+                      <label
                         onClick={() => handlePaymentMethodChange('COD')}
                         className={`flex items-center gap-3 p-4 rounded-2xl border-2 cursor-pointer transition ${
                           formData.paymentMethod === 'COD' ? 'border-[#d7aa5b] bg-[#fff7e8]' : 'border-[#ead8b8] hover:border-[#d7aa5b]'
                         }`}
                       >
-                        <input 
-                          type="radio" 
-                          name="paymentMethod" 
-                          value="COD" 
-                          checked={formData.paymentMethod === 'COD'} 
+                        <input
+                          type="radio"
+                          name="paymentMethod"
+                          value="COD"
+                          checked={formData.paymentMethod === 'COD'}
                           onChange={() => handlePaymentMethodChange('COD')}
                           className="text-[#b5843d]"
                         />
@@ -547,51 +694,44 @@ export default function CheckoutPage() {
                         </div>
                       </label>
 
-                      <label 
+                      <label
                         onClick={() => handlePaymentMethodChange('ONLINE')}
                         className={`flex items-center gap-3 p-4 rounded-2xl border-2 cursor-pointer transition ${
                           formData.paymentMethod === 'ONLINE' ? 'border-[#d7aa5b] bg-[#fff7e8]' : 'border-[#ead8b8] hover:border-[#d7aa5b]'
                         }`}
                       >
-                        <input 
-                          type="radio" 
-                          name="paymentMethod" 
-                          value="ONLINE" 
-                          checked={formData.paymentMethod === 'ONLINE'} 
+                        <input
+                          type="radio"
+                          name="paymentMethod"
+                          value="ONLINE"
+                          checked={formData.paymentMethod === 'ONLINE'}
                           onChange={() => handlePaymentMethodChange('ONLINE')}
                           className="text-[#b5843d]"
                         />
                         <div>
-                          <span className="block text-xs font-bold text-gray-900">Scan QR & Pay Online</span>
-                          <span className="block text-[10px] text-gray-500">GPay, PhonePe, Paytm, UPI</span>
+                          <span className="block text-xs font-bold text-gray-900">Pay Online Securely</span>
+                          <span className="block text-[10px] text-gray-500">UPI, Cards & NetBanking via PhonePe</span>
                         </div>
                       </label>
                     </div>
                   </div>
 
                   {formData.paymentMethod === 'ONLINE' && (
-                    <div className="p-6 bg-[#fff7e8] border-2 border-[#ead8b8] rounded-2xl text-center space-y-4">
-                      <div className="flex items-center justify-center gap-2 text-[#741f23] font-bold text-sm">
-                        <QrCode size={20} className="text-[#b5843d]" />
-                        <span>Scan to Pay: <b className="text-[#b5843d] font-black text-base">₹{grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</b></span>
+                    <div className="p-5 bg-[#fff7e8] border-2 border-[#ead8b8] rounded-2xl space-y-3">
+                      <div className="flex items-center gap-2 text-[#741f23] font-bold text-sm">
+                        <ShieldCheck size={20} className="text-[#b5843d] shrink-0" />
+                        <span>Secure PhonePe Checkout</span>
                       </div>
-                      <div className="w-48 h-48 bg-white p-2 rounded-xl border mx-auto flex items-center justify-center shadow-sm">
-                        {/* Generated payment QR stays direct; it is not a storefront media asset. */}
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={qrCodeImageUrl} alt="UPI QR" className="w-full h-full object-contain" />
-                      </div>
-                      <p className="text-[11px] text-gray-600">UPI ID: <span className="font-mono font-bold text-[#741f23]">{storeUpiId}</span></p>
-                      <div>
-                        <label className="block text-[11px] font-bold text-gray-700 uppercase mb-1">Enter UPI Reference / UTR ID *</label>
-                        <input
-                          type="text"
-                          name="upiRefId"
-                          required={formData.paymentMethod === 'ONLINE'}
-                          value={formData.upiRefId}
-                          onChange={handleChange}
-                          placeholder="e.g. 4235xxxxxxxx"
-                          className="w-full max-w-sm mx-auto px-4 py-2.5 bg-white rounded-xl border border-[#ead8b8] text-xs font-mono text-center outline-none focus:ring-2 focus:ring-[#d7aa5b]"
-                        />
+                      <p className="text-[11px] leading-5 text-gray-600">
+                        You will be redirected to PhonePe&apos;s secure payment page to pay{' '}
+                        <span className="font-black text-[#741f23]">
+                          ₹{grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        </span>.
+                        After payment, you will return here automatically and your order will be created only after server verification.
+                      </p>
+                      <div className="flex items-center gap-2 text-[11px] font-bold text-[#741f23] bg-white border border-[#ead8b8] rounded-xl px-3 py-2.5">
+                        <CreditCard size={15} className="text-[#b5843d]" />
+                        <span>UPI • Credit/Debit Cards • NetBanking</span>
                       </div>
                     </div>
                   )}
@@ -620,7 +760,7 @@ export default function CheckoutPage() {
                         <div className="flex items-center gap-3 overflow-hidden">
                           <Image
                             src={resolveStorefrontImageSrc(item.image || (item.images ? item.images[0] : null))}
-                            alt={item.title} 
+                            alt={item.title}
                             width={48}
                             height={48}
                             sizes="48px"
@@ -696,12 +836,14 @@ export default function CheckoutPage() {
                     </span>
                   </div>
 
-                  <div className="flex justify-between text-gray-500 font-medium">
-                    <span>COD Charge</span>
-                    <span className="font-bold text-gray-900">
-                      {quote ? `₹${quote.codCharge.toFixed(2)}` : 'Pending PIN check'}
-                    </span>
-                  </div>
+                  {formData.paymentMethod === 'COD' && (
+                    <div className="flex justify-between text-gray-500 font-medium">
+                      <span>COD Charge</span>
+                      <span className="font-bold text-gray-900">
+                        {quote ? `₹${quote.codCharge.toFixed(2)}` : 'Pending PIN check'}
+                      </span>
+                    </div>
+                  )}
 
                   <div className="border-t border-[#ead8b8] pt-3 flex justify-between items-baseline text-sm font-black text-[#741f23]">
                     <span>Total Payable Amount</span>
@@ -720,12 +862,21 @@ export default function CheckoutPage() {
                   {loading ? (
                     <>
                       <Loader2 size={16} className="animate-spin" />
-                      <span>Verifying & Placing Order...</span>
+                      <span>
+                        {formData.paymentMethod === 'ONLINE'
+                          ? 'Connecting to PhonePe...'
+                          : 'Verifying & Placing Order...'}
+                      </span>
                     </>
                   ) : !isPincodeVerified ? (
                     <>
                       <Truck size={16} />
                       <span>Verify PIN to Proceed</span>
+                    </>
+                  ) : formData.paymentMethod === 'ONLINE' ? (
+                    <>
+                      <CreditCard size={16} />
+                      <span>Proceed to Secure Payment (₹{grandTotal.toLocaleString('en-IN')})</span>
                     </>
                   ) : (
                     <>
