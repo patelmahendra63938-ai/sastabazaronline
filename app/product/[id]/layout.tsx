@@ -12,6 +12,10 @@ type ProductSeoRecord = {
   is_active?: boolean | null;
 };
 
+type InventoryRow = {
+  available_quantity?: number | null;
+};
+
 function getSupabaseClient() {
   const supabaseUrl =
     process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -92,6 +96,76 @@ const getProduct = cache(
     return data as ProductSeoRecord;
   }
 );
+
+async function getProductAvailability(
+  productId: string
+): Promise<string> {
+  const supabase =
+    getSupabaseClient();
+
+  if (!supabase) {
+    return 'https://schema.org/InStock';
+  }
+
+  const {
+    data,
+    error,
+  } = await supabase
+    .from('inventory')
+    .select('available_quantity')
+    .eq(
+      'product_id',
+      productId
+    );
+
+  if (error) {
+    console.error(
+      'Product inventory SEO fetch failed:',
+      {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        productId,
+      }
+    );
+
+    /*
+     * Do not falsely mark a valid product OutOfStock
+     * if inventory lookup itself fails.
+     */
+    return 'https://schema.org/InStock';
+  }
+
+  const rows =
+    (data ?? []) as InventoryRow[];
+
+  /*
+   * Existing storefront can still sell products
+   * without inventory variant rows, so use InStock
+   * as the safe fallback when no inventory rows exist.
+   */
+  if (rows.length === 0) {
+    return 'https://schema.org/InStock';
+  }
+
+  const totalAvailable =
+    rows.reduce(
+      (sum, row) =>
+        sum +
+        Math.max(
+          0,
+          Number(
+            row.available_quantity ?? 0
+          )
+        ),
+      0
+    );
+
+  return totalAvailable > 0
+    ? 'https://schema.org/InStock'
+    : 'https://schema.org/OutOfStock';
+}
 
 function cleanDescription(
   value?: string | null
@@ -264,6 +338,11 @@ export default async function ProductLayout({
       product.price ?? 0
     );
 
+  const availability =
+    await getProductAvailability(
+      product.id
+    );
+
   const productJsonLd = {
     '@context':
       'https://schema.org',
@@ -305,8 +384,27 @@ export default async function ProductLayout({
             price:
               price.toFixed(2),
 
+            availability,
+
             itemCondition:
               'https://schema.org/NewCondition',
+
+            hasMerchantReturnPolicy: {
+              '@type':
+                'MerchantReturnPolicy',
+
+              applicableCountry:
+                'IN',
+
+              returnPolicyCategory:
+                'https://schema.org/MerchantReturnFiniteReturnWindow',
+
+              merchantReturnDays:
+                7,
+
+              merchantReturnLink:
+                `${SITE_URL}/return-policy`,
+            },
           },
         }
       : {}),
