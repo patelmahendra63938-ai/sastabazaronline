@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import React from 'react';
+import { cache } from 'react';
 
 const SITE_URL = 'https://www.adhyeybrothers.in';
 
@@ -7,77 +7,21 @@ type ProductSeoRecord = {
   id: string;
   title: string;
   description?: string | null;
-  price?: number | null;
+  price?: number | string | null;
   category?: string | null;
   brand?: string | null;
   images?: string[] | null;
   image?: string | null;
   is_active?: boolean | null;
   stock?: number | null;
+  style_code?: string | null;
 };
 
 type InventoryRow = {
   available_quantity?: number | null;
 };
 
-async function getProduct(
-  id: string
-): Promise<ProductSeoRecord | null> {
-  const supabaseUrl =
-    process.env.NEXT_PUBLIC_SUPABASE_URL;
-
-  const anonKey =
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !anonKey || !id) {
-    return null;
-  }
-
-  const url = new URL(
-    `${supabaseUrl}/rest/v1/products`
-  );
-
-  url.searchParams.set('id', `eq.${id}`);
-  url.searchParams.set('select', '*');
-  url.searchParams.set('limit', '1');
-
-  try {
-    const response = await fetch(url.toString(), {
-      headers: {
-        apikey: anonKey,
-        Authorization: `Bearer ${anonKey}`,
-        Accept: 'application/json',
-      },
-      cache: 'no-store',
-    });
-
-    if (!response.ok) {
-      console.error(
-        'Product SEO fetch failed:',
-        response.status,
-        await response.text()
-      );
-
-      return null;
-    }
-
-    const rows =
-      (await response.json()) as ProductSeoRecord[];
-
-    return rows[0] || null;
-  } catch (error) {
-    console.error(
-      'Product SEO fetch failed:',
-      error
-    );
-
-    return null;
-  }
-}
-
-async function getProductAvailability(
-  product: ProductSeoRecord
-): Promise<string> {
+function getSupabaseConfig() {
   const supabaseUrl =
     process.env.NEXT_PUBLIC_SUPABASE_URL;
 
@@ -85,10 +29,119 @@ async function getProductAvailability(
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !anonKey) {
-    return Number(product.stock ?? 0) > 0
+    return null;
+  }
+
+  return {
+    supabaseUrl,
+    anonKey,
+  };
+}
+
+const getProduct = cache(
+  async (
+    id: string
+  ): Promise<ProductSeoRecord | null> => {
+    const config = getSupabaseConfig();
+
+    if (!config || !id) {
+      return null;
+    }
+
+    const { supabaseUrl, anonKey } = config;
+
+    const url = new URL(
+      `${supabaseUrl}/rest/v1/products`
+    );
+
+    url.searchParams.set(
+      'id',
+      `eq.${id}`
+    );
+
+    url.searchParams.set(
+      'select',
+      [
+        'id',
+        'title',
+        'description',
+        'price',
+        'category',
+        'brand',
+        'images',
+        'image',
+        'is_active',
+        'stock',
+        'style_code',
+      ].join(',')
+    );
+
+    url.searchParams.set(
+      'limit',
+      '1'
+    );
+
+    try {
+      const response = await fetch(
+        url.toString(),
+        {
+          headers: {
+            apikey: anonKey,
+            Authorization:
+              `Bearer ${anonKey}`,
+            Accept:
+              'application/json',
+          },
+
+          cache: 'no-store',
+        }
+      );
+
+      if (!response.ok) {
+        console.error(
+          'Product SEO fetch failed:',
+          response.status,
+          await response.text()
+        );
+
+        return null;
+      }
+
+      const rows =
+        (await response.json()) as ProductSeoRecord[];
+
+      return rows[0] ?? null;
+    } catch (error) {
+      console.error(
+        'Product SEO fetch failed:',
+        error
+      );
+
+      return null;
+    }
+  }
+);
+
+async function getProductAvailability(
+  product: ProductSeoRecord
+): Promise<string> {
+  const config = getSupabaseConfig();
+
+  /*
+   * Match the existing storefront fallback:
+   * when stock information is unavailable,
+   * the product page treats it as available.
+   */
+  const fallbackAvailability =
+    Number(product.stock ?? 99) > 0
       ? 'https://schema.org/InStock'
       : 'https://schema.org/OutOfStock';
+
+  if (!config) {
+    return fallbackAvailability;
   }
+
+  const { supabaseUrl, anonKey } = config;
 
   const url = new URL(
     `${supabaseUrl}/rest/v1/inventory`
@@ -105,57 +158,69 @@ async function getProductAvailability(
   );
 
   try {
-    const response = await fetch(url.toString(), {
-      headers: {
-        apikey: anonKey,
-        Authorization: `Bearer ${anonKey}`,
-        Accept: 'application/json',
-      },
-      cache: 'no-store',
-    });
+    const response = await fetch(
+      url.toString(),
+      {
+        headers: {
+          apikey: anonKey,
+          Authorization:
+            `Bearer ${anonKey}`,
+          Accept:
+            'application/json',
+        },
 
-    if (response.ok) {
-      const rows =
-        (await response.json()) as InventoryRow[];
-
-      if (rows.length > 0) {
-        const totalAvailable = rows.reduce(
-          (sum, row) =>
-            sum +
-            Math.max(
-              0,
-              Number(row.available_quantity ?? 0)
-            ),
-          0
-        );
-
-        return totalAvailable > 0
-          ? 'https://schema.org/InStock'
-          : 'https://schema.org/OutOfStock';
+        cache: 'no-store',
       }
-    } else {
+    );
+
+    if (!response.ok) {
       console.error(
         'Product inventory SEO fetch failed:',
         response.status,
         await response.text()
       );
+
+      return fallbackAvailability;
     }
+
+    const rows =
+      (await response.json()) as InventoryRow[];
+
+    if (rows.length === 0) {
+      return fallbackAvailability;
+    }
+
+    const totalAvailable =
+      rows.reduce(
+        (sum, row) =>
+          sum +
+          Math.max(
+            0,
+            Number(
+              row.available_quantity ?? 0
+            )
+          ),
+        0
+      );
+
+    return totalAvailable > 0
+      ? 'https://schema.org/InStock'
+      : 'https://schema.org/OutOfStock';
   } catch (error) {
     console.error(
       'Product inventory SEO fetch failed:',
       error
     );
-  }
 
-  return Number(product.stock ?? 0) > 0
-    ? 'https://schema.org/InStock'
-    : 'https://schema.org/OutOfStock';
+    return fallbackAvailability;
+  }
 }
 
 function cleanDescription(
   value?: string | null
-) {
+): string {
   const text = (value || '')
+    .replace(/<[^>]*>/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 
@@ -168,17 +233,16 @@ function cleanDescription(
 function seoDescription(
   value?: string | null,
   maxLength = 155
-) {
-  const text = cleanDescription(value);
+): string {
+  const text =
+    cleanDescription(value);
 
   if (text.length <= maxLength) {
     return text;
   }
 
-  const withinLimit = text.slice(
-    0,
-    maxLength + 1
-  );
+  const withinLimit =
+    text.slice(0, maxLength + 1);
 
   const lastBullet =
     withinLimit.lastIndexOf(' • ');
@@ -206,14 +270,17 @@ function seoDescription(
 
 function productImage(
   product: ProductSeoRecord
-) {
+): string | undefined {
   const candidate =
     Array.isArray(product.images) &&
     product.images.length > 0
       ? product.images[0]
       : product.image;
 
-  if (!candidate) {
+  if (
+    !candidate ||
+    typeof candidate !== 'string'
+  ) {
     return undefined;
   }
 
@@ -228,6 +295,14 @@ function productImage(
   }`;
 }
 
+function productCanonical(
+  id: string
+): string {
+  return `${SITE_URL}/product/${encodeURIComponent(
+    id
+  )}`;
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -235,14 +310,22 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params;
 
-  const product = await getProduct(id);
-
   const canonical =
-    `${SITE_URL}/product/${encodeURIComponent(id)}`;
+    productCanonical(id);
 
-  if (!product) {
+  const product =
+    await getProduct(id);
+
+  if (
+    !product ||
+    product.is_active === false
+  ) {
     return {
-      title: 'Product',
+      title:
+        'Product Not Available',
+
+      description:
+        'This product is currently unavailable on ADHYEY BROTHERS.',
 
       alternates: {
         canonical,
@@ -255,14 +338,19 @@ export async function generateMetadata({
     };
   }
 
+  const title =
+    product.title.trim();
+
   const description =
-    seoDescription(product.description);
+    seoDescription(
+      product.description
+    );
 
   const image =
     productImage(product);
 
   return {
-    title: product.title,
+    title,
 
     description,
 
@@ -271,8 +359,7 @@ export async function generateMetadata({
     },
 
     robots: {
-      index:
-        product.is_active !== false,
+      index: true,
       follow: true,
     },
 
@@ -281,18 +368,20 @@ export async function generateMetadata({
 
       url: canonical,
 
-      title: product.title,
+      siteName:
+        'ADHYEY BROTHERS',
+
+      title:
+        `${title} | ADHYEY BROTHERS`,
 
       description,
-
-      siteName: 'ADHYEY BROTHERS',
 
       ...(image
         ? {
             images: [
               {
                 url: image,
-                alt: product.title,
+                alt: title,
               },
             ],
           }
@@ -300,9 +389,11 @@ export async function generateMetadata({
     },
 
     twitter: {
-      card: 'summary_large_image',
+      card:
+        'summary_large_image',
 
-      title: product.title,
+      title:
+        `${title} | ADHYEY BROTHERS`,
 
       description,
 
@@ -324,45 +415,76 @@ export default async function ProductLayout({
 }) {
   const { id } = await params;
 
-  const product = await getProduct(id);
+  const product =
+    await getProduct(id);
 
-  if (!product) {
+  /*
+   * Do not publish Product structured data
+   * for missing or inactive products.
+   */
+  if (
+    !product ||
+    product.is_active === false
+  ) {
     return children;
   }
+
+  const canonical =
+    productCanonical(
+      product.id
+    );
 
   const image =
     productImage(product);
 
-  const canonical =
-    `${SITE_URL}/product/${encodeURIComponent(id)}`;
+  const description =
+    cleanDescription(
+      product.description
+    );
 
   const price =
-    Number(product.price || 0);
+    Number(
+      product.price ?? 0
+    );
 
   const availability =
-    await getProductAvailability(product);
+    await getProductAvailability(
+      product
+    );
 
   const productJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'Product',
+    '@context':
+      'https://schema.org',
 
-    name: product.title,
+    '@type':
+      'Product',
 
-    description:
-      cleanDescription(
-        product.description
-      ),
+    name:
+      product.title,
 
-    sku: product.id,
+    description,
 
-    ...(product.brand
+    sku:
+      product.style_code?.trim() ||
+      product.id,
+
+    url:
+      canonical,
+
+    ...(image
       ? {
-          brand: {
-            '@type': 'Brand',
-            name: product.brand,
-          },
+          image: [image],
         }
       : {}),
+
+    brand: {
+      '@type':
+        'Brand',
+
+      name:
+        product.brand?.trim() ||
+        'ADHYEY BROTHERS',
+    },
 
     ...(product.category
       ? {
@@ -371,30 +493,25 @@ export default async function ProductLayout({
         }
       : {}),
 
-    ...(image
-      ? {
-          image: [image],
-        }
-      : {}),
-
-    url: canonical,
-
     ...(price > 0
       ? {
           offers: {
-            '@type': 'Offer',
+            '@type':
+              'Offer',
 
-            url: canonical,
+            url:
+              canonical,
 
-            priceCurrency: 'INR',
+            priceCurrency:
+              'INR',
 
             price:
               price.toFixed(2),
 
+            availability,
+
             itemCondition:
               'https://schema.org/NewCondition',
-
-            availability,
 
             hasMerchantReturnPolicy: {
               '@type':
@@ -417,15 +534,20 @@ export default async function ProductLayout({
       : {}),
   };
 
+  const jsonLd =
+    JSON.stringify(
+      productJsonLd
+    ).replace(
+      /</g,
+      '\\u003c'
+    );
+
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html:
-            JSON.stringify(
-              productJsonLd
-            ),
+          __html: jsonLd,
         }}
       />
 
