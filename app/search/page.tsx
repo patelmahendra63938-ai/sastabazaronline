@@ -1,5 +1,15 @@
+import type { Metadata } from 'next';
 import Header from '@/components/Header';
+
 export const dynamic = 'force-dynamic';
+
+export const metadata: Metadata = {
+  title: 'Search Products',
+  robots: {
+    index: false,
+    follow: true,
+  },
+};
 
 import { supabase } from '@/lib/supabase';
 import ProductCard, { Product } from '@/components/ProductCard';
