@@ -18,6 +18,43 @@ function cleanEnv(value?: string | null) {
   return String(value || '').trim();
 }
 
+
+function formatApiError(value: unknown): string {
+  if (value == null) return '';
+
+  if (typeof value === 'string') return value;
+
+  if (value instanceof Error) return value.message;
+
+  if (Array.isArray(value)) {
+    return value.map(formatApiError).filter(Boolean).join('; ');
+  }
+
+  if (typeof value === 'object') {
+    const obj = value as Record<string, unknown>;
+
+    const preferred =
+      obj.message ??
+      obj.error ??
+      obj.detail ??
+      obj.details ??
+      obj.errors;
+
+    if (preferred != null && preferred !== value) {
+      const formatted = formatApiError(preferred);
+      if (formatted) return formatted;
+    }
+
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
+  }
+
+  return String(value);
+}
+
 function toPositiveNumber(value: unknown, fallback = 0) {
   const n = Number(value);
   return Number.isFinite(n) && n > 0 ? n : fallback;
@@ -444,11 +481,21 @@ export async function pushOrderToNimbusPost(orderId: string) {
         ? ` ${JSON.stringify(validationDetails)}`
         : '';
 
+      const primaryError =
+        formatApiError(result?.message) ||
+        formatApiError(result?.error) ||
+        (rawText && rawText !== '[object Object]'
+          ? rawText
+          : '') ||
+        `NimbusPost returned HTTP ${response.status}.`;
+
+      const validationError =
+        formatApiError(validationDetails);
+
       throw new Error(
-        `${result?.message ||
-          result?.error ||
-          rawText ||
-          `NimbusPost returned HTTP ${response.status}.`}${validationText}`
+        validationError
+          ? `${primaryError} | Details: ${validationError}`
+          : primaryError
       );
     }
 
@@ -467,7 +514,7 @@ export async function pushOrderToNimbusPost(orderId: string) {
 
     if (!awbNumber) {
       throw new Error(
-        `NimbusPost responded successfully but no AWB was returned. Remote response: ${JSON.stringify(
+        `NimbusPost responded successfully but no AWB was returned. Remote response: ${formatApiError(
           data
         ).slice(0, 1200)}`
       );
