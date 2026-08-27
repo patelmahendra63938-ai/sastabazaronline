@@ -7,6 +7,8 @@ const SITE_URL = 'https://www.adhyeybrothers.in';
 type ProductSeoRecord = {
   id: string;
   title: string;
+  description?: string | null;
+  price?: number | string | null;
   is_active?: boolean | null;
 };
 
@@ -58,12 +60,9 @@ const getProduct = cache(
     } = await supabase
       .from('products')
       .select(
-        'id,title,is_active'
+        'id,title,description,price,is_active'
       )
-      .eq(
-        'id',
-        id
-      )
+      .eq('id', id)
       .maybeSingle();
 
     if (error) {
@@ -93,6 +92,51 @@ const getProduct = cache(
     return data as ProductSeoRecord;
   }
 );
+
+function cleanDescription(
+  value?: string | null
+): string {
+  const text = (value || '')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return (
+    text ||
+    'Shop this product online at ADHYEY BROTHERS with delivery across India.'
+  );
+}
+
+function seoDescription(
+  value?: string | null,
+  maxLength = 155
+): string {
+  const text =
+    cleanDescription(value);
+
+  if (text.length <= maxLength) {
+    return text;
+  }
+
+  const withinLimit =
+    text.slice(
+      0,
+      maxLength + 1
+    );
+
+  const lastSpace =
+    withinLimit.lastIndexOf(' ');
+
+  const cutAt =
+    lastSpace >= 80
+      ? lastSpace
+      : maxLength;
+
+  return `${withinLimit
+    .slice(0, cutAt)
+    .replace(/[,:;\s]+$/, '')
+    .trim()}…`;
+}
 
 function productCanonical(
   id: string
@@ -142,7 +186,9 @@ export async function generateMetadata({
     product.title.trim();
 
   const description =
-    `Shop ${title} online at ADHYEY BROTHERS with delivery across India.`;
+    seoDescription(
+      product.description
+    );
 
   return {
     title,
@@ -208,6 +254,16 @@ export default async function ProductLayout({
       product.id
     );
 
+  const description =
+    cleanDescription(
+      product.description
+    );
+
+  const price =
+    Number(
+      product.price ?? 0
+    );
+
   const productJsonLd = {
     '@context':
       'https://schema.org',
@@ -217,6 +273,8 @@ export default async function ProductLayout({
 
     name:
       product.title,
+
+    description,
 
     sku:
       product.id,
@@ -231,6 +289,27 @@ export default async function ProductLayout({
       name:
         'ADHYEY BROTHERS',
     },
+
+    ...(price > 0
+      ? {
+          offers: {
+            '@type':
+              'Offer',
+
+            url:
+              canonical,
+
+            priceCurrency:
+              'INR',
+
+            price:
+              price.toFixed(2),
+
+            itemCondition:
+              'https://schema.org/NewCondition',
+          },
+        }
+      : {}),
   };
 
   const jsonLd =
