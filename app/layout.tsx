@@ -220,7 +220,7 @@ export default function RootLayout({
         <GA4EcommerceTracker />
 
         <Script
-          src="https://www.googletagmanager.com/gtag/js?id=G-KYE1SBDLCY"
+          src="https://www.googletagmanager.com/gtag/js?id=G-VSXDLN7MH5"
           strategy="afterInteractive"
         />
 
@@ -233,7 +233,7 @@ export default function RootLayout({
             function gtag(){dataLayer.push(arguments);}
             window.gtag = gtag;
             gtag('js', new Date());
-            gtag('config', 'G-KYE1SBDLCY');
+            gtag('config', 'G-VSXDLN7MH5');
           `}
         </Script>
       </body>
