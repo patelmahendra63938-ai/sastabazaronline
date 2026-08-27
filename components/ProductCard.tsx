@@ -94,9 +94,18 @@ export default function ProductCard({
 
   const hasInventoryVariants = inventoryItems.length > 0;
 
+  const hasKnownProductStock =
+    typeof product.stock === 'number' &&
+    Number.isFinite(product.stock);
+
   const isOutOfStock = hasInventoryVariants
     ? availableInventory.length === 0
-    : Number(product.stock ?? 0) <= 0;
+    : hasKnownProductStock && Number(product.stock) <= 0;
+
+  const canDirectAddToCart =
+    !hasInventoryVariants &&
+    hasKnownProductStock &&
+    Number(product.stock) > 0;
 
   const hasRealMrp = mrpValue > 0 && mrpValue > finalPrice;
 
@@ -108,7 +117,7 @@ export default function ProductCard({
     e.preventDefault();
     e.stopPropagation();
 
-    if (isOutOfStock || hasInventoryVariants) return;
+    if (!canDirectAddToCart) return;
 
     try {
       const existing = JSON.parse(
@@ -270,7 +279,7 @@ export default function ProductCard({
             <span>Select Size</span>
             <ArrowRight size={14} aria-hidden="true" />
           </Link>
-        ) : (
+        ) : canDirectAddToCart ? (
           <button
             type="button"
             onClick={handleAddToCart}
@@ -298,6 +307,14 @@ export default function ProductCard({
 
             <span>{added ? 'Added!' : 'Add to Cart'}</span>
           </button>
+        ) : (
+          <Link
+            href={`/product/${product.id}`}
+            className="flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-[#d7aa5b] bg-[#fff7e8] px-3 text-xs font-bold text-[#741f23] shadow-sm transition hover:bg-[#fff2dc] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d7aa5b] focus-visible:ring-offset-2"
+          >
+            <span>View Product</span>
+            <ArrowRight size={14} aria-hidden="true" />
+          </Link>
         )}
       </div>
     </div>
