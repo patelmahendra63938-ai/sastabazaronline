@@ -16,7 +16,7 @@ const footerLinkClass =
 export default function Footer() {
   return (
     <footer className="mt-20 border-t border-[#6a1b1f] bg-[#64191d] text-white">
-      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-10 px-4 py-12 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-10 px-4 py-12 sm:grid-cols-2 lg:grid-cols-5">
 
         {/* Brand */}
         <div className="space-y-4">
@@ -87,6 +87,36 @@ export default function Footer() {
             <li>
               <Link href="/account" className={footerLinkClass}>
                 My Account
+              </Link>
+            </li>
+          </ul>
+        </div>
+
+        {/* Categories */}
+        <div>
+          <h4 className="mb-3 text-sm font-bold uppercase tracking-wider text-[#e7c98d]">
+            Categories
+          </h4>
+
+          <ul className="text-xs">
+            <li>
+              <Link href="/category/Kitchenware" className={footerLinkClass}>
+                Kitchen Appliances
+              </Link>
+            </li>
+            <li>
+              <Link href="/category/Storage" className={footerLinkClass}>
+                Storage & Organization
+              </Link>
+            </li>
+            <li>
+              <Link href="/category/Cleaning" className={footerLinkClass}>
+                Cleaning Utilities
+              </Link>
+            </li>
+            <li>
+              <Link href="/category/Home%20Decor" className={footerLinkClass}>
+                Home Decor
               </Link>
             </li>
           </ul>

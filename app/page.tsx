@@ -9,6 +9,7 @@ import ProductFilterPanel, {
 import ActiveFilterChips from '@/components/ActiveFilterChips';
 import CampaignBanner from '@/components/promotions/CampaignBanner';
 import HomepageSellerTrust from '@/components/trust/HomepageSellerTrust';
+import TopTrustStrip from '@/components/trust/TopTrustStrip';
 import { getActiveCampaigns, Campaign } from '@/lib/promotions';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
@@ -19,11 +20,6 @@ import Pagination from '@/components/Pagination';
 import { getHomepageDisplaySettings } from '@/lib/settings/homepage-display';
 import {
   ArrowRight,
-  FileText,
-  LockKeyhole,
-  MapPinCheck,
-  PackageSearch,
-  ReceiptText,
   ShoppingBag,
 } from 'lucide-react';
 
@@ -75,7 +71,6 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
     { cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} } }
   );
 
-  // Fetch independent homepage configuration in parallel.
   const [promotionsResult, filterConfigsResult, categoriesResult, homepageCategoriesResult] = await Promise.all([
     supabase
       .from('promotions')
@@ -102,15 +97,14 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
   ]);
 
   const rawPromotions = promotionsResult.data;
-
   const activeCampaigns: Campaign[] = getActiveCampaigns((rawPromotions as Campaign[]) || []);
-  
-  // Determine top homepage banner
-  const homepageBannerCampaign = activeCampaigns.find(c => c.is_homepage_visible) || activeCampaigns[0] || null;
+
+  // Festival / campaign banner only. No active campaign = no hero banner.
+  const homepageBannerCampaign =
+    activeCampaigns.find(c => c.is_homepage_visible) || activeCampaigns[0] || null;
 
   const filterConfigs: FilterGroupConfig[] = filterConfigsResult.data || [];
   const categoriesData = categoriesResult.data;
-
   const activeCategories = (categoriesData || []).map(c => c.name);
   const homepageCategories = homepageCategoriesResult.data || [];
   const currentPage = parsePage(effectiveSearchParams.page);
@@ -120,67 +114,27 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
     ? 'id, title, price, mrp, category, images, stock, inventory!inner(size, available_quantity)'
     : 'id, title, price, mrp, category, images, stock, inventory(size, available_quantity)';
 
-  // 4. Build product query
   let query = supabase
     .from('products')
     .select(productSelect, { count: 'exact' })
     .eq('is_active', true);
 
-  if (activeCategories.length > 0) {
-    query = query.in('category', activeCategories);
-  }
-
-  // Apply URL filters safely
-  if (effectiveSearchParams.q) {
-    query = query.ilike('title', `%${effectiveSearchParams.q}%`);
-  }
-
-  if (effectiveSearchParams.category) {
-    const cats = effectiveSearchParams.category.split(',');
-    query = query.in('category', cats);
-  }
-
-  if (effectiveSearchParams.brand) {
-    const brands = effectiveSearchParams.brand.split(',');
-    query = query.in('brand', brands);
-  }
-
-  if (effectiveSearchParams.fabric) {
-    const fabrics = effectiveSearchParams.fabric.split(',');
-    query = query.in('fabric', fabrics);
-  }
-
-  if (resolvedSearchParams.pattern) {
-    const patterns = resolvedSearchParams.pattern.split(',');
-    query = query.in('pattern', patterns);
-  }
-
-  if (effectiveSearchParams.fit) {
-    const fits = effectiveSearchParams.fit.split(',');
-    query = query.in('fit', fits);
-  }
-
-  if (effectiveSearchParams.occasion) {
-    const occasions = effectiveSearchParams.occasion.split(',');
-    query = query.in('occasion', occasions);
-  }
-
-  if (effectiveSearchParams.minPrice) {
-    query = query.gte('price', parseFloat(effectiveSearchParams.minPrice));
-  }
-
-  if (effectiveSearchParams.maxPrice) {
-    query = query.lte('price', parseFloat(effectiveSearchParams.maxPrice));
-  }
-
+  if (activeCategories.length > 0) query = query.in('category', activeCategories);
+  if (effectiveSearchParams.q) query = query.ilike('title', `%${effectiveSearchParams.q}%`);
+  if (effectiveSearchParams.category) query = query.in('category', effectiveSearchParams.category.split(','));
+  if (effectiveSearchParams.brand) query = query.in('brand', effectiveSearchParams.brand.split(','));
+  if (effectiveSearchParams.fabric) query = query.in('fabric', effectiveSearchParams.fabric.split(','));
+  if (resolvedSearchParams.pattern) query = query.in('pattern', resolvedSearchParams.pattern.split(','));
+  if (effectiveSearchParams.fit) query = query.in('fit', effectiveSearchParams.fit.split(','));
+  if (effectiveSearchParams.occasion) query = query.in('occasion', effectiveSearchParams.occasion.split(','));
+  if (effectiveSearchParams.minPrice) query = query.gte('price', parseFloat(effectiveSearchParams.minPrice));
+  if (effectiveSearchParams.maxPrice) query = query.lte('price', parseFloat(effectiveSearchParams.maxPrice));
   if (effectiveSearchParams.size) {
-    const sizes = effectiveSearchParams.size.split(',');
     query = query
-      .in('inventory.size', sizes)
+      .in('inventory.size', effectiveSearchParams.size.split(','))
       .gt('inventory.available_quantity', 0);
   }
 
-  // Apply sorting
   if (effectiveSearchParams.sort === 'price_asc') {
     query = query.order('price', { ascending: true });
   } else if (effectiveSearchParams.sort === 'price_desc') {
@@ -195,10 +149,7 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
     .select(productSelect)
     .eq('is_active', true);
 
-  if (activeCategories.length > 0) {
-    featuredQuery = featuredQuery.in('category', activeCategories);
-  }
-
+  if (activeCategories.length > 0) featuredQuery = featuredQuery.in('category', activeCategories);
   if (effectiveSearchParams.q) featuredQuery = featuredQuery.ilike('title', `%${effectiveSearchParams.q}%`);
   if (effectiveSearchParams.category) featuredQuery = featuredQuery.in('category', effectiveSearchParams.category.split(','));
   if (effectiveSearchParams.brand) featuredQuery = featuredQuery.in('brand', effectiveSearchParams.brand.split(','));
@@ -274,13 +225,13 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
         <Header />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-8 sm:space-y-10">
-          
-          {/* Top Promotional Sale Banner (Redirects to /sale/[slug]) */}
+
           {homepageBannerCampaign && (
             <CampaignBanner campaign={homepageBannerCampaign} />
           )}
 
-          {/* Active categories only; names come directly from storefront configuration. */}
+          <TopTrustStrip />
+
           {homepageCategories.length > 0 && (
             <section aria-labelledby="shop-by-category-heading" className="space-y-5">
               <div className="flex items-end justify-between gap-4">
@@ -358,30 +309,6 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
             </section>
           )}
 
-          <section aria-labelledby="why-shop-heading" className="space-y-5">
-            <div className="text-center">
-              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#b5843d]">Clear buying experience</p>
-              <h2 id="why-shop-heading" className="mt-1 text-2xl font-black tracking-tight text-[#741f23] sm:text-3xl">Why Shop With Us</h2>
-            </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-              {[
-                { title: 'Secure Checkout', detail: 'Complete your purchase through the existing checkout flow.', icon: LockKeyhole },
-                { title: 'GST Invoice', detail: 'Order records support GST invoice information.', icon: ReceiptText },
-                { title: 'PIN-code Check', detail: 'Verify delivery availability for your PIN code.', icon: MapPinCheck },
-                { title: 'Clear Summary', detail: 'Review item and order totals before confirmation.', icon: FileText },
-                { title: 'Order Tracking', detail: 'View your placed orders from the orders page.', icon: PackageSearch },
-              ].map(({ title, detail, icon: Icon }) => (
-                <div key={title} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-xs">
-                  <div className="mb-4 flex size-10 items-center justify-center rounded-xl bg-[#fff2dc] text-[#a96d20]">
-                    <Icon size={20} aria-hidden="true" />
-                  </div>
-                  <h3 className="text-sm font-black text-[#741f23]">{title}</h3>
-                  <p className="mt-1 text-xs leading-relaxed text-gray-500">{detail}</p>
-                </div>
-              ))}
-            </div>
-          </section>
-
           <section aria-labelledby="customer-help-heading" className="rounded-3xl border border-[#ead8b8] bg-[#fffdf9] p-6 shadow-xs sm:p-8">
             <div className="flex flex-col justify-between gap-5 md:flex-row md:items-center">
               <div>
@@ -392,7 +319,7 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
               <div className="flex flex-wrap gap-2">
                 <Link href="/orders" className="rounded-xl bg-[#741f23] px-4 py-2.5 text-xs font-bold text-white transition hover:bg-[#5e171b]">View Orders</Link>
                 <Link href="/privacy-policy" className="rounded-xl border border-gray-200 px-4 py-2.5 text-xs font-bold text-gray-700 transition hover:border-[#d7b06a]">Privacy Policy</Link>
-                <Link href="/terms" className="rounded-xl border border-gray-200 px-4 py-2.5 text-xs font-bold text-gray-700 transition hover:border-[#d7b06a]">Terms</Link>
+                <Link href="/terms-and-conditions" className="rounded-xl border border-gray-200 px-4 py-2.5 text-xs font-bold text-gray-700 transition hover:border-[#d7b06a]">Terms</Link>
               </div>
             </div>
           </section>
@@ -403,68 +330,62 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
             showMeesho={homepageDisplay.show_meesho_link}
           />
 
-          {/* Main Layout: Left Sidebar Filters + Right Catalog Grid */}
           <section id="all-products" aria-labelledby="all-products-heading" className="scroll-mt-24">
-          <div className="flex flex-col md:flex-row gap-4 pt-2">
-            
-            {/* Desktop & Mobile Left Filter Panel */}
-            {homepageDisplay.show_filter_panel && <aside className="w-full md:w-64 shrink-0">
-              <ProductFilterPanel
-                availableOptions={availableOptions}
-                filterConfigs={filterConfigs}
-              />
-            </aside>}
+            <div className="flex flex-col md:flex-row gap-4 pt-2">
 
-            {/* Product Catalog Grid Column */}
-            <div className="flex-1 space-y-4">
-              
-              {/* Active Removable Chips */}
-              {homepageDisplay.show_filter_panel && <ActiveFilterChips />}
-
-              {/* Toolbar Bar */}
-              <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-gray-200/80 shadow-2xs">
-                <h2 id="all-products-heading" className="text-xs font-black text-[#741f23] uppercase tracking-wider">
-                  {effectiveSearchParams.category ? `${effectiveSearchParams.category} Collection` : 'All Store Products'} ({totalProducts} Items)
-                </h2>
-                <span className="text-[11px] text-gray-500 font-semibold">
-                  Direct Factory Rates
-                </span>
-              </div>
-
-              {/* Products Rendering */}
-              {products.length === 0 ? (
-                <div className="bg-white rounded-3xl border border-gray-200 p-16 text-center space-y-3 shadow-xs">
-                  <h3 className="text-base font-bold text-gray-800">No Products Found</h3>
-                  <p className="text-xs text-gray-500 max-w-sm mx-auto">
-                    Try clearing or adjusting your selected filters and search query.
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <p className="text-[11px] font-semibold text-gray-500">
-                    Showing {rangeFrom + 1}–{Math.min(rangeFrom + products.length, totalProducts)} of {totalProducts}
-                  </p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-                    {products.map((product) => (
-                      <ProductCard
-                        key={product.id}
-                        product={product}
-                        activeCampaigns={activeCampaigns}
-                      />
-                    ))}
-                  </div>
-                  <Pagination
-                    pathname="/"
-                    searchParams={effectiveSearchParams}
-                    currentPage={currentPage}
-                    pageSize={CATALOG_PAGE_SIZE}
-                    totalCount={totalProducts}
+              {homepageDisplay.show_filter_panel && (
+                <aside className="w-full md:w-64 shrink-0">
+                  <ProductFilterPanel
+                    availableOptions={availableOptions}
+                    filterConfigs={filterConfigs}
                   />
-                </>
+                </aside>
               )}
-            </div>
 
-          </div>
+              <div className="flex-1 space-y-4">
+                {homepageDisplay.show_filter_panel && <ActiveFilterChips />}
+
+                <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-gray-200/80 shadow-2xs">
+                  <h2 id="all-products-heading" className="text-xs font-black text-[#741f23] uppercase tracking-wider">
+                    {effectiveSearchParams.category ? `${effectiveSearchParams.category} Collection` : 'All Store Products'} ({totalProducts} Items)
+                  </h2>
+                  <span className="text-[11px] text-gray-500 font-semibold">
+                    Competitive Online Pricing
+                  </span>
+                </div>
+
+                {products.length === 0 ? (
+                  <div className="bg-white rounded-3xl border border-gray-200 p-16 text-center space-y-3 shadow-xs">
+                    <h3 className="text-base font-bold text-gray-800">No Products Found</h3>
+                    <p className="text-xs text-gray-500 max-w-sm mx-auto">
+                      Try clearing or adjusting your selected filters and search query.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-[11px] font-semibold text-gray-500">
+                      Showing {rangeFrom + 1}–{Math.min(rangeFrom + products.length, totalProducts)} of {totalProducts}
+                    </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+                      {products.map((product) => (
+                        <ProductCard
+                          key={product.id}
+                          product={product}
+                          activeCampaigns={activeCampaigns}
+                        />
+                      ))}
+                    </div>
+                    <Pagination
+                      pathname="/"
+                      searchParams={effectiveSearchParams}
+                      currentPage={currentPage}
+                      pageSize={CATALOG_PAGE_SIZE}
+                      totalCount={totalProducts}
+                    />
+                  </>
+                )}
+              </div>
+            </div>
           </section>
         </div>
       </div>
