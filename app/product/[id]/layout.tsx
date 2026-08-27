@@ -9,9 +9,6 @@ type ProductSeoRecord = {
   title: string;
   description?: string | null;
   price?: number | string | null;
-  category?: string | null;
-  images?: string[] | null;
-  image?: string | null;
   is_active?: boolean | null;
 };
 
@@ -67,7 +64,7 @@ const getProduct = cache(
     } = await supabase
       .from('products')
       .select(
-        'id,title,description,price,category,images,image,is_active'
+        'id,title,description,price,is_active'
       )
       .eq('id', id)
       .maybeSingle();
@@ -206,42 +203,6 @@ function seoDescription(
     .trim()}…`;
 }
 
-function productImage(
-  product: ProductSeoRecord
-): string | undefined {
-  const candidate =
-    Array.isArray(product.images) &&
-    product.images.length > 0
-      ? product.images[0]
-      : product.image;
-
-  if (
-    !candidate ||
-    typeof candidate !== 'string'
-  ) {
-    return undefined;
-  }
-
-  const image =
-    candidate.trim();
-
-  if (!image) {
-    return undefined;
-  }
-
-  if (
-    /^https?:\/\//i.test(image)
-  ) {
-    return image;
-  }
-
-  return `${SITE_URL}${
-    image.startsWith('/')
-      ? image
-      : `/${image}`
-  }`;
-}
-
 function productCanonical(
   id: string
 ): string {
@@ -294,9 +255,6 @@ export async function generateMetadata({
       product.description
     );
 
-  const image =
-    productImage(product);
-
   return {
     title,
 
@@ -323,35 +281,15 @@ export async function generateMetadata({
         `${title} | ADHYEY BROTHERS`,
 
       description,
-
-      ...(image
-        ? {
-            images: [
-              {
-                url: image,
-                alt: title,
-              },
-            ],
-          }
-        : {}),
     },
 
     twitter: {
-      card:
-        image
-          ? 'summary_large_image'
-          : 'summary',
+      card: 'summary',
 
       title:
         `${title} | ADHYEY BROTHERS`,
 
       description,
-
-      ...(image
-        ? {
-            images: [image],
-          }
-        : {}),
     },
   };
 }
@@ -391,9 +329,6 @@ export default async function ProductLayout({
       product.price ?? 0
     );
 
-  const image =
-    productImage(product);
-
   const availability =
     await getProductAvailability(
       product.id
@@ -417,12 +352,6 @@ export default async function ProductLayout({
     url:
       canonical,
 
-    ...(image
-      ? {
-          image: [image],
-        }
-      : {}),
-
     brand: {
       '@type':
         'Brand',
@@ -430,13 +359,6 @@ export default async function ProductLayout({
       name:
         'ADHYEY BROTHERS',
     },
-
-    ...(product.category
-      ? {
-          category:
-            product.category,
-        }
-      : {}),
 
     ...(price > 0
       ? {
