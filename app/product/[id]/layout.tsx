@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { createClient } from '@supabase/supabase-js';
 import { cache } from 'react';
 
 const SITE_URL = 'https://www.adhyeybrothers.in';
@@ -9,19 +10,17 @@ type ProductSeoRecord = {
   description?: string | null;
   price?: number | string | null;
   category?: string | null;
-  brand?: string | null;
   images?: string[] | null;
   image?: string | null;
   is_active?: boolean | null;
   stock?: number | null;
-  style_code?: string | null;
 };
 
 type InventoryRow = {
   available_quantity?: number | null;
 };
 
-function getSupabaseConfig() {
+function getSupabaseClient() {
   const supabaseUrl =
     process.env.NEXT_PUBLIC_SUPABASE_URL;
 
@@ -32,188 +31,123 @@ function getSupabaseConfig() {
     return null;
   }
 
-  return {
+  return createClient(
     supabaseUrl,
     anonKey,
-  };
+    {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    }
+  );
 }
 
 const getProduct = cache(
   async (
     id: string
   ): Promise<ProductSeoRecord | null> => {
-    const config = getSupabaseConfig();
-
-    if (!config || !id) {
+    if (!id) {
       return null;
     }
 
-    const { supabaseUrl, anonKey } = config;
+    const supabase =
+      getSupabaseClient();
 
-    const url = new URL(
-      `${supabaseUrl}/rest/v1/products`
-    );
-
-    url.searchParams.set(
-      'id',
-      `eq.${id}`
-    );
-
-    url.searchParams.set(
-      'select',
-      [
-        'id',
-        'title',
-        'description',
-        'price',
-        'category',
-        'brand',
-        'images',
-        'image',
-        'is_active',
-        'stock',
-        'style_code',
-      ].join(',')
-    );
-
-    url.searchParams.set(
-      'limit',
-      '1'
-    );
-
-    try {
-      const response = await fetch(
-        url.toString(),
-        {
-          headers: {
-            apikey: anonKey,
-            Authorization:
-              `Bearer ${anonKey}`,
-            Accept:
-              'application/json',
-          },
-
-          cache: 'no-store',
-        }
+    if (!supabase) {
+      console.error(
+        'Product SEO: Supabase environment variables missing'
       );
 
-      if (!response.ok) {
-        console.error(
-          'Product SEO fetch failed:',
-          response.status,
-          await response.text()
-        );
+      return null;
+    }
 
-        return null;
-      }
+    const {
+      data,
+      error,
+    } = await supabase
+      .from('products')
+      .select(
+        'id,title,description,price,category,images,image,is_active,stock'
+      )
+      .eq('id', id)
+      .maybeSingle();
 
-      const rows =
-        (await response.json()) as ProductSeoRecord[];
-
-      return rows[0] ?? null;
-    } catch (error) {
+    if (error) {
       console.error(
         'Product SEO fetch failed:',
-        error
+        error.message
       );
 
       return null;
     }
+
+    if (!data) {
+      return null;
+    }
+
+    return data as ProductSeoRecord;
   }
 );
 
 async function getProductAvailability(
   product: ProductSeoRecord
 ): Promise<string> {
-  const config = getSupabaseConfig();
-
-  /*
-   * Match the existing storefront fallback:
-   * when stock information is unavailable,
-   * the product page treats it as available.
-   */
   const fallbackAvailability =
     Number(product.stock ?? 99) > 0
       ? 'https://schema.org/InStock'
       : 'https://schema.org/OutOfStock';
 
-  if (!config) {
+  const supabase =
+    getSupabaseClient();
+
+  if (!supabase) {
     return fallbackAvailability;
   }
 
-  const { supabaseUrl, anonKey } = config;
-
-  const url = new URL(
-    `${supabaseUrl}/rest/v1/inventory`
-  );
-
-  url.searchParams.set(
-    'product_id',
-    `eq.${product.id}`
-  );
-
-  url.searchParams.set(
-    'select',
-    'available_quantity'
-  );
-
-  try {
-    const response = await fetch(
-      url.toString(),
-      {
-        headers: {
-          apikey: anonKey,
-          Authorization:
-            `Bearer ${anonKey}`,
-          Accept:
-            'application/json',
-        },
-
-        cache: 'no-store',
-      }
+  const {
+    data,
+    error,
+  } = await supabase
+    .from('inventory')
+    .select('available_quantity')
+    .eq(
+      'product_id',
+      product.id
     );
 
-    if (!response.ok) {
-      console.error(
-        'Product inventory SEO fetch failed:',
-        response.status,
-        await response.text()
-      );
-
-      return fallbackAvailability;
-    }
-
-    const rows =
-      (await response.json()) as InventoryRow[];
-
-    if (rows.length === 0) {
-      return fallbackAvailability;
-    }
-
-    const totalAvailable =
-      rows.reduce(
-        (sum, row) =>
-          sum +
-          Math.max(
-            0,
-            Number(
-              row.available_quantity ?? 0
-            )
-          ),
-        0
-      );
-
-    return totalAvailable > 0
-      ? 'https://schema.org/InStock'
-      : 'https://schema.org/OutOfStock';
-  } catch (error) {
+  if (error) {
     console.error(
       'Product inventory SEO fetch failed:',
-      error
+      error.message
     );
 
     return fallbackAvailability;
   }
+
+  const rows =
+    (data ?? []) as InventoryRow[];
+
+  if (rows.length === 0) {
+    return fallbackAvailability;
+  }
+
+  const totalAvailable =
+    rows.reduce(
+      (sum, row) =>
+        sum +
+        Math.max(
+          0,
+          Number(
+            row.available_quantity ?? 0
+          )
+        ),
+      0
+    );
+
+  return totalAvailable > 0
+    ? 'https://schema.org/InStock'
+    : 'https://schema.org/OutOfStock';
 }
 
 function cleanDescription(
@@ -242,20 +176,15 @@ function seoDescription(
   }
 
   const withinLimit =
-    text.slice(0, maxLength + 1);
-
-  const lastBullet =
-    withinLimit.lastIndexOf(' • ');
-
-  if (lastBullet >= 80) {
-    return withinLimit
-      .slice(0, lastBullet)
-      .replace(/[,:;\s]+$/, '')
-      .trim();
-  }
+    text.slice(
+      0,
+      maxLength + 1
+    );
 
   const lastSpace =
-    withinLimit.lastIndexOf(' ');
+    withinLimit.lastIndexOf(
+      ' '
+    );
 
   const cutAt =
     lastSpace >= 80
@@ -284,7 +213,11 @@ function productImage(
     return undefined;
   }
 
-  if (/^https?:\/\//i.test(candidate)) {
+  if (
+    /^https?:\/\//i.test(
+      candidate
+    )
+  ) {
     return candidate;
   }
 
@@ -308,7 +241,8 @@ export async function generateMetadata({
 }: {
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
-  const { id } = await params;
+  const { id } =
+    await params;
 
   const canonical =
     productCanonical(id);
@@ -413,15 +347,12 @@ export default async function ProductLayout({
   children: React.ReactNode;
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
+  const { id } =
+    await params;
 
   const product =
     await getProduct(id);
 
-  /*
-   * Do not publish Product structured data
-   * for missing or inactive products.
-   */
   if (
     !product ||
     product.is_active === false
@@ -465,7 +396,6 @@ export default async function ProductLayout({
     description,
 
     sku:
-      product.style_code?.trim() ||
       product.id,
 
     url:
@@ -482,7 +412,6 @@ export default async function ProductLayout({
         'Brand',
 
       name:
-        product.brand?.trim() ||
         'ADHYEY BROTHERS',
     },
 
