@@ -9,18 +9,16 @@ export default function robots(): MetadataRoute.Robots {
         disallow: [
           '/admin',
           '/api',
-          '/checkout',
-          '/account',
-          '/orders',
-          '/login',
-          '/cart',
-          '/wishlist',
           '/uploader',
           '/vision',
         ],
       },
     ],
-    sitemap: 'https://www.adhyeybrothers.in/sitemap.xml',
-    host: 'https://www.adhyeybrothers.in',
+
+    sitemap:
+      'https://www.adhyeybrothers.in/sitemap.xml',
+
+    host:
+      'https://www.adhyeybrothers.in',
   };
 }
