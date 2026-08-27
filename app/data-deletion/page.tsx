@@ -1,7 +1,15 @@
-export const metadata = {
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
   title: 'Data Deletion Instructions | ADHYEY BROTHERS',
+
   description:
     'Instructions for requesting deletion of personal data associated with ADHYEY BROTHERS.',
+
+  robots: {
+    index: false,
+    follow: true,
+  },
 };
 
 export default function DataDeletionPage() {
