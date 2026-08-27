@@ -11,31 +11,59 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 1,
     },
     {
+      url: `${BASE_URL}/privacy-policy`,
+      changeFrequency: 'monthly',
+      priority: 0.3,
+    },
+    {
+      url: `${BASE_URL}/shipping-policy`,
+      changeFrequency: 'monthly',
+      priority: 0.4,
+    },
+    {
+      url: `${BASE_URL}/return-policy`,
+      changeFrequency: 'monthly',
+      priority: 0.4,
+    },
+    {
       url: `${BASE_URL}/refund-policy`,
       changeFrequency: 'monthly',
       priority: 0.4,
     },
+    {
+      url: `${BASE_URL}/terms-and-conditions`,
+      changeFrequency: 'monthly',
+      priority: 0.3,
+    },
   ];
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseUrl =
+    process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+  const supabaseAnonKey =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
     return staticRoutes;
   }
 
-  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  });
+  const supabase = createClient(
+    supabaseUrl,
+    supabaseAnonKey,
+    {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    }
+  );
 
-  const { data: products, error } = await supabase
-    .from('products')
-    .select('id')
-    .eq('is_active', true)
-    .order('id', { ascending: true });
+  const { data: products, error } =
+    await supabase
+      .from('products')
+      .select('id')
+      .eq('is_active', true)
+      .order('id', { ascending: true });
 
   if (error || !products) {
     console.error(
@@ -46,11 +74,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     return staticRoutes;
   }
 
-  const productRoutes: MetadataRoute.Sitemap = products.map((product) => ({
-    url: `${BASE_URL}/product/${encodeURIComponent(String(product.id))}`,
-    changeFrequency: 'weekly',
-    priority: 0.8,
-  }));
+  const productRoutes: MetadataRoute.Sitemap =
+    products.map((product) => ({
+      url: `${BASE_URL}/product/${encodeURIComponent(
+        String(product.id)
+      )}`,
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    }));
 
-  return [...staticRoutes, ...productRoutes];
+  return [
+    ...staticRoutes,
+    ...productRoutes,
+  ];
 }
