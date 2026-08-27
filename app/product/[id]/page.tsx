@@ -11,16 +11,16 @@ import { SellerMarketplaceTrust } from '@/components/SellerMarketplaceTrust';
 import { supabase } from '@/lib/supabase';
 import { sanitizeMarketplaceUrl, sanitizeMarketplaceName } from '@/lib/utils';
 import { resolveStorefrontImageSrc } from '@/lib/storefront-image';
-import { 
-  getActiveCampaigns, 
-  calculateDiscountedPrice, 
-  Campaign, 
-  OfferOption 
+import {
+  getActiveCampaigns,
+  calculateDiscountedPrice,
+  Campaign,
+  OfferOption
 } from '@/lib/promotions';
-import { 
-  ShoppingCart, Zap, Truck, ShieldCheck, RotateCcw, Star, Check, 
-  Heart, ExternalLink, ChevronRight, ChevronLeft, X, Plus, Minus, 
-  AlertCircle, Eye, MapPin, FileText, PlayCircle, Globe, Tag, 
+import {
+  ShoppingCart, Zap, Truck, ShieldCheck, RotateCcw, Check,
+  Heart, ExternalLink, ChevronRight, ChevronLeft, X, Plus, Minus,
+  AlertCircle, Eye, MapPin, FileText, PlayCircle, Globe, Tag,
   Share2, Sparkles, History, CheckCircle2, Copy, CheckCheck, PackageCheck
 } from 'lucide-react';
 
@@ -68,14 +68,32 @@ const DEFAULT_MARKETPLACE_VISIBILITY: MarketplaceVisibility = {
   show_flipkart_link: true,
 };
 
-export default function ProductDetailPage({ 
-  params 
-}: { 
-  params: Promise<{ id: string }> | { id: string } 
+const SIZE_ORDER = [
+  'XS',
+  'S',
+  'M',
+  'L',
+  'XL',
+  'XXL',
+  'XXXL',
+  'FREE SIZE',
+  'STANDARD',
+];
+
+function getSizeSortIndex(size: string) {
+  const normalized = String(size || '').trim().toUpperCase();
+  const index = SIZE_ORDER.indexOf(normalized);
+  return index === -1 ? SIZE_ORDER.length : index;
+}
+
+export default function ProductDetailPage({
+  params
+}: {
+  params: Promise<{ id: string }> | { id: string }
 }) {
   const router = useRouter();
-  const resolvedParams = typeof (params as any)?.then === 'function' 
-    ? use(params as Promise<{ id: string }>) 
+  const resolvedParams = typeof (params as any)?.then === 'function'
+    ? use(params as Promise<{ id: string }>)
     : (params as { id: string });
   const productId = resolvedParams?.id;
 
@@ -245,8 +263,14 @@ export default function ProductDetailPage({
   const videoSource = product?.video || product?.video_url || null;
 
   // Active Variant & Stock Analysis
+  const sortedVariants = [...variants].sort((a, b) => {
+    const orderDifference = getSizeSortIndex(a.size) - getSizeSortIndex(b.size);
+    if (orderDifference !== 0) return orderDifference;
+    return String(a.size).localeCompare(String(b.size));
+  });
+
   const activeVariant = variants.find(v => v.size === selectedSize);
-  const maxAvailableStock = variants.length > 0 
+  const maxAvailableStock = variants.length > 0
     ? (activeVariant ? activeVariant.available_quantity : 0)
     : (product?.stock ?? 99);
   const isOutOfStock = maxAvailableStock <= 0;
@@ -265,8 +289,8 @@ export default function ProductDetailPage({
   );
 
   const totalDiscountAmount = Math.max(0, originalPrice - finalPrice);
-  const totalMrpDiscountPct = mrpVal > finalPrice && mrpVal > 0 
-    ? Math.round(((mrpVal - finalPrice) / mrpVal) * 100) 
+  const totalMrpDiscountPct = mrpVal > finalPrice && mrpVal > 0
+    ? Math.round(((mrpVal - finalPrice) / mrpVal) * 100)
     : 0;
 
   // Lightbox Handlers
@@ -424,14 +448,13 @@ export default function ProductDetailPage({
 
   const checkDeliveryPincode = () => {
     const trimmed = pincode.trim();
-    if (trimmed.length === 6 && /^\d+$/.test(trimmed)) {
-      setPincodeStatus('checking');
-      setTimeout(() => {
-        setPincodeStatus('valid');
-      }, 400);
-    } else {
-      setPincodeStatus('invalid');
+
+    if (/^\d{6}$/.test(trimmed)) {
+      setPincodeStatus('valid');
+      return;
     }
+
+    setPincodeStatus('invalid');
   };
 
   // Loading Screen
@@ -500,12 +523,12 @@ export default function ProductDetailPage({
         <Header />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-          
+
           {/* Breadcrumb Navigation */}
           <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs text-gray-500 mb-6 flex-wrap">
             <Link href="/" className="hover:text-[#741f23] font-medium transition">Home</Link>
             <ChevronRight size={12} className="text-gray-400" />
-            <Link 
+            <Link
               href={`/category/${encodeURIComponent(product.category)}`}
               className="hover:text-[#741f23] font-medium transition capitalize"
             >
@@ -517,10 +540,10 @@ export default function ProductDetailPage({
 
           {/* Product Showcase Master Card */}
           <div className="bg-white rounded-3xl border border-[#ead8b8] p-5 sm:p-8 lg:p-10 shadow-xs grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
-            
+
             {/* LEFT COLUMN: Gallery Viewport & Thumbnails */}
             <div className="lg:col-span-6 flex flex-col-reverse sm:flex-row gap-4">
-              
+
               {/* Thumbnail Strip */}
               {(imagesList.length > 1 || videoSource) && (
                 <div className="flex sm:flex-col gap-2.5 overflow-x-auto sm:overflow-y-auto max-h-[520px] scrollbar-none py-1">
@@ -544,8 +567,8 @@ export default function ProductDetailPage({
                     <button
                       onClick={() => { setSelectedMedia(videoSource); setMediaType('video'); }}
                       className={`w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden border-2 shrink-0 relative bg-gray-900 flex items-center justify-center transition-all cursor-pointer ${
-                        mediaType === 'video' 
-                          ? 'border-[#d7aa5b] ring-2 ring-[#f6e0bb] shadow-xs' 
+                        mediaType === 'video'
+                          ? 'border-[#d7aa5b] ring-2 ring-[#f6e0bb] shadow-xs'
                           : 'border-[#ead8b8] opacity-80 hover:opacity-100'
                       }`}
                       aria-label="View product demonstration video"
@@ -557,7 +580,7 @@ export default function ProductDetailPage({
               )}
 
               {/* Main Viewport Container */}
-              <div 
+              <div
                 className="flex-1 bg-[#fffaf5] rounded-2xl overflow-hidden border border-[#ead8b8] relative aspect-square sm:aspect-[4/5] flex items-center justify-center group cursor-zoom-in select-none"
                 onClick={() => {
                   if (mediaType === 'image') {
@@ -568,8 +591,8 @@ export default function ProductDetailPage({
                 {mediaType === 'image' ? (
                   <>
                     <Image
-                      src={selectedMedia || imagesList[0]} 
-                      alt={product.title} 
+                      src={selectedMedia || imagesList[0]}
+                      alt={product.title}
                       fill
                       sizes="(max-width: 1024px) calc(100vw - 2rem), 42vw"
                       fetchPriority="high"
@@ -580,10 +603,10 @@ export default function ProductDetailPage({
                     </div>
                   </>
                 ) : (
-                  <video 
-                    src={selectedMedia} 
-                    controls 
-                    autoPlay 
+                  <video
+                    src={selectedMedia}
+                    controls
+                    autoPlay
                     muted
                     playsInline
                     className="w-full h-full object-contain bg-black"
@@ -613,9 +636,9 @@ export default function ProductDetailPage({
                     className="w-9 h-9 bg-white/90 hover:bg-white text-gray-700 rounded-full flex items-center justify-center shadow-md transition-transform active:scale-90 cursor-pointer"
                     aria-label="Add to wishlist"
                   >
-                    <Heart 
-                      size={18} 
-                      className={isWishlisted ? 'fill-red-500 text-red-500 transition-colors' : 'text-gray-600 transition-colors'} 
+                    <Heart
+                      size={18}
+                      className={isWishlisted ? 'fill-red-500 text-red-500 transition-colors' : 'text-gray-600 transition-colors'}
                     />
                   </button>
 
@@ -637,9 +660,9 @@ export default function ProductDetailPage({
 
             {/* RIGHT COLUMN: Details, Pricing, Offers & Actions */}
             <div className="lg:col-span-6 flex flex-col justify-between space-y-6">
-              
+
               <div className="space-y-4">
-                
+
                 {/* Brand & Title Header */}
                 <div>
                   {product.brand && (
@@ -651,15 +674,24 @@ export default function ProductDetailPage({
                     {product.title}
                   </h1>
 
-                  <div className="flex items-center gap-2.5 mt-2.5">
-                    <div className="flex items-center bg-green-700 text-white text-xs px-2.5 py-0.5 rounded-lg font-bold gap-1 shadow-2xs">
-                      <span>4.5</span> <Star size={11} fill="white" />
-                    </div>
-                    <span className="text-xs text-gray-500 font-medium">Verified Customer Feedback</span>
-                    <span className="text-xs text-gray-300">•</span>
-                    <span className="text-xs font-semibold text-[#741f23]">
+                  <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 mt-2.5 text-xs">
+                    <span className="font-semibold text-[#741f23]">
                       GSTIN: 24AKBPD1704F1Z1
                     </span>
+                    <span className="text-gray-300">•</span>
+                    <Link
+                      href="/payment-information"
+                      className="font-semibold text-gray-600 hover:text-[#741f23] transition"
+                    >
+                      Secure Payment Information
+                    </Link>
+                    <span className="text-gray-300">•</span>
+                    <Link
+                      href="/gst-invoice"
+                      className="font-semibold text-gray-600 hover:text-[#741f23] transition"
+                    >
+                      GST Invoice Information
+                    </Link>
                   </div>
                 </div>
 
@@ -677,7 +709,7 @@ export default function ProductDetailPage({
                           </span>
                         )}
                       </div>
-                      
+
                       {/* Prominent Offer Name & Percentage */}
                       <div className="text-sm font-black text-green-700 flex items-center gap-1.5">
                         <Tag size={15} />
@@ -731,8 +763,8 @@ export default function ProductDetailPage({
                             key={offer.campaignId}
                             onClick={() => setSelectedCampaignId(offer.campaignId)}
                             className={`flex items-center justify-between p-3 rounded-xl border text-xs font-bold cursor-pointer transition ${
-                              isSelected 
-                                ? 'bg-white border-[#741f23] shadow-xs text-[#741f23]' 
+                              isSelected
+                                ? 'bg-white border-[#741f23] shadow-xs text-[#741f23]'
                                 : 'bg-transparent border-[#ead8b8] text-gray-600 hover:bg-white/50'
                             }`}
                           >
@@ -767,8 +799,8 @@ export default function ProductDetailPage({
                       placeholder="e.g. FESTIVE15"
                       className="flex-1 px-3.5 py-2 text-xs border border-[#ead8b8] rounded-xl font-mono uppercase bg-[#fffaf5] focus:bg-white outline-none focus:border-[#d7aa5b] focus:ring-2 focus:ring-[#f6e0bb]"
                     />
-                    <button 
-                      type="submit" 
+                    <button
+                      type="submit"
                       className="bg-[#741f23] hover:bg-[#5e171b] text-white font-bold px-4 py-2 rounded-xl text-xs transition cursor-pointer"
                     >
                       Apply
@@ -778,9 +810,9 @@ export default function ProductDetailPage({
                   {appliedCoupon && (
                     <div className="flex items-center justify-between text-xs text-green-700 pt-1">
                       <span>Applied: <b className="font-mono">{appliedCoupon}</b></span>
-                      <button 
-                        type="button" 
-                        onClick={() => { setAppliedCoupon(''); setSelectedCampaignId(''); }} 
+                      <button
+                        type="button"
+                        onClick={() => { setAppliedCoupon(''); setSelectedCampaignId(''); }}
                         className="text-red-500 hover:underline font-bold"
                       >
                         Remove
@@ -798,15 +830,15 @@ export default function ProductDetailPage({
                       </label>
                       {activeVariant && (
                         <span className={`text-xs font-bold ${activeVariant.available_quantity > 0 ? 'text-green-600' : 'text-red-500'}`}>
-                          {activeVariant.available_quantity > 0 
-                            ? `${activeVariant.available_quantity} Units In Stock` 
+                          {activeVariant.available_quantity > 0
+                            ? `${activeVariant.available_quantity} Units In Stock`
                             : 'Out of Stock'}
                         </span>
                       )}
                     </div>
 
-                    <div className="flex flex-wrap gap-2">
-                      {variants.map(v => {
+                    <div className="flex flex-nowrap gap-2 overflow-x-auto pb-1 scrollbar-none">
+                      {sortedVariants.map(v => {
                         const isSelected = selectedSize === v.size;
                         const isStocked = v.available_quantity > 0;
                         return (
@@ -815,7 +847,7 @@ export default function ProductDetailPage({
                             type="button"
                             disabled={!isStocked}
                             onClick={() => setSelectedSize(v.size)}
-                            className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
+                            className={`min-w-[52px] shrink-0 px-3 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
                               isSelected
                                 ? 'bg-[#741f23] text-white border-[#741f23] shadow-xs ring-2 ring-[#741f23]/15'
                                 : isStocked
@@ -893,7 +925,10 @@ export default function ProductDetailPage({
                         type="text"
                         maxLength={6}
                         value={pincode}
-                        onChange={e => setPincode(e.target.value)}
+                        onChange={e => {
+                          setPincode(e.target.value.replace(/\D/g, ''));
+                          setPincodeStatus('idle');
+                        }}
                         placeholder="Enter 6-digit Pincode"
                         className="w-full pl-8 pr-3 py-2 text-xs border rounded-xl bg-white focus:outline-hidden focus:ring-2 focus:ring-[#d7aa5b] font-mono"
                       />
@@ -908,11 +943,17 @@ export default function ProductDetailPage({
                   </div>
 
                   {pincodeStatus === 'checking' && (
-                    <p className="text-[11px] font-bold text-gray-500 animate-pulse">Checking pincode serviceability...</p>
+                    <p className="text-[11px] font-bold text-gray-500 animate-pulse">
+                      Validating pincode...
+                    </p>
                   )}
                   {pincodeStatus === 'valid' && (
-                    <p className="text-[11px] font-bold text-green-700 flex items-center gap-1">
-                      <Check size={13} /> Serviceable! Fast doorstep delivery with GST invoice.
+                    <p className="text-[11px] font-bold text-green-700 flex items-start gap-1">
+                      <Check size={13} className="mt-0.5 shrink-0" />
+                      <span>
+                        Pincode format accepted. Final serviceability, shipping charge and
+                        delivery availability are confirmed at checkout.
+                      </span>
                     </p>
                   )}
                   {pincodeStatus === 'invalid' && (
@@ -924,18 +965,29 @@ export default function ProductDetailPage({
 
                 {/* TRUST BADGES */}
                 <div className="grid grid-cols-3 gap-2.5 pt-2 text-center text-xs text-gray-600">
-                  <div className="flex flex-col items-center gap-1 p-2.5 bg-white rounded-xl border border-[#ead8b8]">
+                  <Link
+                    href="/orders"
+                    className="flex flex-col items-center gap-1 p-2.5 bg-white rounded-xl border border-[#ead8b8] hover:bg-[#fff7e8] hover:border-[#d7aa5b] transition"
+                  >
                     <Truck size={18} className="text-[#741f23]" />
-                    <span className="text-[10px] font-bold">Fast Dispatch</span>
-                  </div>
-                  <div className="flex flex-col items-center gap-1 p-2.5 bg-white rounded-xl border border-[#ead8b8]">
+                    <span className="text-[10px] font-bold">Tracked Delivery</span>
+                  </Link>
+
+                  <Link
+                    href="/payment-information"
+                    className="flex flex-col items-center gap-1 p-2.5 bg-white rounded-xl border border-[#ead8b8] hover:bg-[#fff7e8] hover:border-[#d7aa5b] transition"
+                  >
                     <ShieldCheck size={18} className="text-green-600" />
-                    <span className="text-[10px] font-bold">100% Genuine</span>
-                  </div>
-                  <div className="flex flex-col items-center gap-1 p-2.5 bg-white rounded-xl border border-[#ead8b8]">
+                    <span className="text-[10px] font-bold">Secure Checkout</span>
+                  </Link>
+
+                  <Link
+                    href="/return-policy"
+                    className="flex flex-col items-center gap-1 p-2.5 bg-white rounded-xl border border-[#ead8b8] hover:bg-[#fff7e8] hover:border-[#d7aa5b] transition"
+                  >
                     <RotateCcw size={18} className="text-[#b5843d]" />
                     <span className="text-[10px] font-bold">7-Day Return</span>
-                  </div>
+                  </Link>
                 </div>
 
               </div>
@@ -956,7 +1008,7 @@ export default function ProductDetailPage({
               <div className="text-xs sm:text-sm text-gray-600 whitespace-pre-line leading-relaxed">
                 {product.description}
               </div>
-              
+
               <div className="pt-3 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs text-gray-500 border-t border-[#f0e3cf]">
                 {product.hsn_code && <div><span className="font-bold text-gray-700">HSN Code:</span> {product.hsn_code}</div>}
                 <div><span className="font-bold text-gray-700">GST Rate:</span> {product.gst_rate ?? 5}%</div>
@@ -967,7 +1019,7 @@ export default function ProductDetailPage({
           )}
 
           {/* Marketplace Trust Component Added Here on Product Page */}
-          <SellerMarketplaceTrust 
+          <SellerMarketplaceTrust
             amazonUrl={marketplaceVisibility.show_amazon_link ? "https://www.amazon.in/l/27943762031?me=AXKNNYVWLT32Y&tag=ShopReferral_d451e877-492b-4a44-8989-d4151cfc4c54&ref=sf_seller_app_share_new_ls_srb" : undefined}
             flipkartUrl={marketplaceVisibility.show_flipkart_link ? "https://www.flipkart.com/adhyey-brothers-women-crop-top-skirt-ethnic-jacket-set/p/itm2881ff260ebcc?pid=ETHHJNJYHKNYXZPM" : undefined}
             meeshoUrl={marketplaceVisibility.show_meesho_link ? "https://www.meesho.com/Adhyey?ms=2" : undefined}
@@ -981,7 +1033,7 @@ export default function ProductDetailPage({
                   <h3 className="text-xl font-black text-[#741f23]">You May Also Like</h3>
                   <p className="text-xs text-gray-500">Popular items from the {product.category || 'same'} collection</p>
                 </div>
-                <Link 
+                <Link
                   href={`/category/${encodeURIComponent(product.category)}`}
                   className="text-xs font-bold text-[#b5843d] hover:text-[#9a6a2b] flex items-center gap-1"
                 >
@@ -1020,7 +1072,7 @@ export default function ProductDetailPage({
 
       {/* LIGHTBOX FULLSCREEN MODAL */}
       {lightbox.isOpen && (
-        <div 
+        <div
           className="fixed inset-0 z-[100] bg-black/95 flex flex-col items-center justify-center backdrop-blur-sm transition-opacity"
           onClick={closeLightbox}
           role="dialog"
@@ -1030,9 +1082,9 @@ export default function ProductDetailPage({
             <span className="text-white font-bold tracking-widest text-xs sm:text-sm bg-white/10 px-4 py-2 rounded-full backdrop-blur-md">
               {lightbox.index + 1} / {imagesList.length}
             </span>
-            <button 
+            <button
               type="button"
-              onClick={closeLightbox} 
+              onClick={closeLightbox}
               className="text-white bg-white/10 hover:bg-white/20 p-2.5 sm:p-3 rounded-full transition backdrop-blur-md cursor-pointer shadow-lg"
               aria-label="Close fullscreen viewer"
             >
@@ -1042,17 +1094,17 @@ export default function ProductDetailPage({
 
           {imagesList.length > 1 && (
             <>
-              <button 
+              <button
                 type="button"
-                onClick={prevLightboxImage} 
+                onClick={prevLightboxImage}
                 className="absolute left-3 sm:left-6 top-1/2 -translate-y-1/2 text-white bg-white/10 hover:bg-white/20 p-3 sm:p-4 rounded-full transition backdrop-blur-md z-50 cursor-pointer shadow-lg"
                 aria-label="Previous product image"
               >
                 <ChevronLeft size={30} />
               </button>
-              <button 
+              <button
                 type="button"
-                onClick={nextLightboxImage} 
+                onClick={nextLightboxImage}
                 className="absolute right-3 sm:right-6 top-1/2 -translate-y-1/2 text-white bg-white/10 hover:bg-white/20 p-3 sm:p-4 rounded-full transition backdrop-blur-md z-50 cursor-pointer shadow-lg"
                 aria-label="Next product image"
               >
@@ -1085,14 +1137,14 @@ export default function ProductDetailPage({
           <p className="text-[10px] text-gray-500 font-bold uppercase">Total Price</p>
           <p className="text-base font-black text-[#741f23]">₹{finalPrice.toLocaleString()}</p>
         </div>
-        <button 
+        <button
           onClick={handleAddToCart}
           disabled={isOutOfStock}
           className="flex-1 bg-[#741f23] hover:bg-[#5e171b] text-white font-bold py-3 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-sm active:scale-95 disabled:opacity-50"
         >
           <ShoppingCart size={15} /> Add to Cart
         </button>
-        <button 
+        <button
           onClick={handleBuyNow}
           disabled={isOutOfStock}
           className="flex-1 bg-[#d7aa5b] hover:bg-[#b5843d] text-[#4a2400] font-black py-3 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-sm active:scale-95 disabled:opacity-50"
