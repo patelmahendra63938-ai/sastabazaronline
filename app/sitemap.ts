@@ -61,7 +61,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const { data: products, error } =
     await supabase
       .from('products')
-      .select('id')
+      .select('id, category')
       .eq('is_active', true)
       .order('id', { ascending: true });
 
@@ -83,8 +83,32 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.8,
     }));
 
+  const categoryNames = Array.from(
+    new Set(
+      products
+        .map((product) =>
+          typeof product.category === 'string'
+            ? product.category.trim()
+            : ''
+        )
+        .filter((category) => category.length > 0)
+    )
+  ).sort((a, b) =>
+    a.localeCompare(b)
+  );
+
+  const categoryRoutes: MetadataRoute.Sitemap =
+    categoryNames.map((category) => ({
+      url: `${BASE_URL}/category/${encodeURIComponent(
+        category
+      )}`,
+      changeFrequency: 'weekly',
+      priority: 0.7,
+    }));
+
   return [
     ...staticRoutes,
+    ...categoryRoutes,
     ...productRoutes,
   ];
 }
