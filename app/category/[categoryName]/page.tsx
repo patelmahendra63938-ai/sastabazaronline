@@ -21,12 +21,31 @@ function parsePage(value?: string) {
     : 1;
 }
 
+function safeCategorySearchTerm(value: string) {
+  return value
+    .replace(/[(),]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 async function getProductsByCategory(
   categoryName: string,
   page: number
 ): Promise<{ products: Product[]; count: number }> {
   const decodedCategory = decodeURIComponent(categoryName);
+  const searchTerm = safeCategorySearchTerm(decodedCategory);
   const from = (page - 1) * PAGE_SIZE;
+
+  // Some existing catalog records were saved only with their parent category
+  // (for example "Fashion & Apparel") while the storefront link points to a
+  // subcategory such as "GIRLS". Match the requested storefront category
+  // against category, title and description so those already-published items
+  // remain discoverable without changing their database records.
+  const categoryFilter = [
+    `category.ilike.%${searchTerm}%`,
+    `title.ilike.%${searchTerm}%`,
+    `description.ilike.%${searchTerm}%`,
+  ].join(',');
 
   const { data, error, count } = await supabase
     .from('products')
@@ -35,7 +54,7 @@ async function getProductsByCategory(
       { count: 'exact' }
     )
     .eq('is_active', true)
-    .ilike('category', `%${decodedCategory}%`)
+    .or(categoryFilter)
     .order('created_at', { ascending: false })
     .range(from, from + PAGE_SIZE - 1);
 
