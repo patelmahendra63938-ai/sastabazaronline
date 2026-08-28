@@ -26,10 +26,14 @@ export interface PincodeShippingResult {
 
 type NimbusRateResult = {
   chargeableGrams?: number;
+  chargedGrams?: number;
   shippingChargesPaise?: number;
   codChargesPaise?: number;
+  surchargesPaise?: number;
+  insurancePaise?: number;
   rtoChargesPaise?: number;
   totalPaise?: number;
+  taxableBasePaise?: number;
 };
 
 type NimbusCourier = {
@@ -45,6 +49,7 @@ type NimbusServiceabilityResponse = {
   data?: {
     totalChargeableGrams?: number;
     available?: NimbusCourier[];
+    excluded?: unknown[];
   };
   error?: {
     code?: string;
@@ -56,16 +61,37 @@ function cleanEnv(value?: string | null) {
   return String(value || '').trim();
 }
 
+function positiveNumber(value: unknown): number {
+  const n = Number(value || 0);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
 function getCourierCostPaise(courier: NimbusCourier): number {
   const result = courier.result || {};
-  const totalPaise = Number(result.totalPaise || 0);
-  const codPaise = Number(result.codChargesPaise || 0);
-  const rtoPaise = Number(result.rtoChargesPaise || 0);
 
-  // Website COD fee remains a separate business charge. For forward shipping,
-  // use NimbusPost's quoted total less Nimbus COD/RTO components.
-  const courierPaise = totalPaise - codPaise - rtoPaise;
-  return Number.isFinite(courierPaise) && courierPaise > 0 ? courierPaise : 0;
+  // NimbusPost V2 exposes the forward freight separately. This is the correct
+  // source for the website's courier charge because COD remains a separate
+  // customer charge in our checkout logic.
+  const shipping = positiveNumber(result.shippingChargesPaise);
+  const surcharges = positiveNumber(result.surchargesPaise);
+  const insurance = positiveNumber(result.insurancePaise);
+  const directForwardCost = shipping + surcharges + insurance;
+
+  if (directForwardCost > 0) {
+    return directForwardCost;
+  }
+
+  // Defensive fallback for valid provider responses where only an aggregate
+  // total is populated. Remove COD and RTO components so we keep forward
+  // courier cost only.
+  const total = positiveNumber(result.totalPaise);
+  const cod = positiveNumber(result.codChargesPaise);
+  const rto = positiveNumber(result.rtoChargesPaise);
+  const aggregateForwardCost = total - cod - rto;
+
+  return Number.isFinite(aggregateForwardCost) && aggregateForwardCost > 0
+    ? aggregateForwardCost
+    : 0;
 }
 
 /**
@@ -202,6 +228,17 @@ export async function checkPincodeShippingRate(
     }
 
     const available = data.data?.available || [];
+
+    console.info('[NIMBUSPOST_V2_SERVICEABILITY_SUMMARY]', {
+      availableCount: available.length,
+      excludedCount: Array.isArray(data.data?.excluded) ? data.data?.excluded.length : 0,
+      quotedCouriers: available.map((courier) => ({
+        courierIdPresent: courier.courierId !== undefined,
+        hasShippingCharge: positiveNumber(courier.result?.shippingChargesPaise) > 0,
+        hasTotal: positiveNumber(courier.result?.totalPaise) > 0,
+      })),
+    });
+
     const pricedCouriers = available
       .map((courier) => ({ courier, courierPaise: getCourierCostPaise(courier) }))
       .filter((entry) => entry.courierPaise > 0)
@@ -216,7 +253,9 @@ export async function checkPincodeShippingRate(
         displayWeight,
         actualWeightKg: actualWeight,
         chargeableWeightKg: Number(data.data?.totalChargeableGrams || 0) / 1000 || actualWeight,
-        message: 'No NimbusPost courier is currently serviceable for this PIN code.'
+        message: available.length === 0
+          ? 'No NimbusPost courier is currently serviceable for this PIN code.'
+          : 'NimbusPost returned courier options but no valid forward shipping rate. Please retry.'
       };
     }
 
