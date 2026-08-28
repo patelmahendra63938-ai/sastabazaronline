@@ -233,7 +233,7 @@ export default function CheckoutPage() {
           paymentMethod: paymentOverride || formData.paymentMethod,
           couponCode: activeCouponCode
         }),
-        signal: AbortSignal.timeout(5000),
+        signal: AbortSignal.timeout(15000),
       });
 
       if (!res.ok) {
@@ -258,7 +258,11 @@ export default function CheckoutPage() {
       setPinStatus('error');
       setIsPincodeVerified(false);
       setQuote(null);
-      setStatusMessage(err.message || 'Authoritative pricing could not be verified.');
+      setStatusMessage(
+        err?.name === 'TimeoutError'
+          ? 'Courier rate check is taking longer than expected. Please tap Check Delivery again.'
+          : err.message || 'Authoritative pricing could not be verified.'
+      );
     } finally {
       setIsCheckingPin(false);
     }
