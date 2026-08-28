@@ -1,8 +1,12 @@
 'use server';
 
 import { createClient } from '@supabase/supabase-js';
+import { requireAdminUser } from '@/lib/auth';
 
 export async function createCampaignAction(formDataObject: any) {
+  // Enforce server-side authorization before using the privileged Supabase client.
+  await requireAdminUser();
+
   // Use service role key on the server to securely bypass RLS restrictions for store admins
   const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL || '',
