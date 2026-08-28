@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getCurrentUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,6 +22,15 @@ function getSupabaseClient() {
 
 export async function POST(request: Request) {
   try {
+    const { user, role } = await getCurrentUser();
+
+    if (!user || !role || !['admin', 'super_admin', 'staff'].includes(role)) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Admin access required.' },
+        { status: 403 }
+      );
+    }
+
     const supabase = getSupabaseClient();
     const body = await request.json();
     const { barcode, qr_data, sku } = body;
@@ -34,7 +44,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Lookup product by SKU or variant
+    // Lookup product by SKU or variant after admin authorization succeeds.
     const { data: invItem, error: invError } = await supabase
       .from('inventory')
       .select('*, products(*)')
