@@ -51,6 +51,15 @@ export const CATEGORY_ENGINE: Record<string, CategoryConfig> = {
         ]
       },
       {
+        name: 'Girls',
+        productTypes: ['Girls Nightwear'],
+        attributes: [
+          { key: 'Age Group', label: 'Age Group', type: 'select', options: ['2-4 Years', '4-6 Years', '6-8 Years', '8-10 Years', '10-12 Years', '12-14 Years', '14-16 Years'], level: 'required', productTypes: ['Girls Nightwear'] },
+          { key: 'Nightwear Type', label: 'Nightwear Type', type: 'select', options: ['Night Suit Set', 'Pyjama Set', 'Night Dress', 'Top & Pyjama Set'], level: 'recommended', productTypes: ['Girls Nightwear'] },
+          { key: 'Sleeve Length', label: 'Sleeve Length', type: 'select', options: ['Sleeveless', 'Half Sleeve', 'Full Sleeve'], level: 'recommended', productTypes: ['Girls Nightwear'] }
+        ]
+      },
+      {
         name: 'Men Ethnic & Western',
         productTypes: ['Shirts', 'Kurta Pajama Sets', 'T-Shirts', 'Trousers & Jeans'],
         attributes: [
