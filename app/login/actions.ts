@@ -9,9 +9,9 @@ export type AdminLoginResult =
   | { success: true; redirectPath: string }
   | { success: false; error: string };
 
-function withTimeout<T>(promise: Promise<T>, ms = 12000): Promise<T> {
+function withTimeout<T>(promise: PromiseLike<T>, ms = 12000): Promise<T> {
   return Promise.race([
-    promise,
+    Promise.resolve(promise),
     new Promise<T>((_, reject) =>
       setTimeout(() => reject(new Error('Authentication service timed out. Please try again.')), ms)
     ),
