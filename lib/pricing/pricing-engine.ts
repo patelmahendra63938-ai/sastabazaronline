@@ -1,7 +1,6 @@
 import 'server-only';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Campaign, calculateDiscountedPrice, getActiveCampaigns } from '@/lib/promotions';
-import { parseShippingRules } from '@/lib/settings/shipping-rules';
 import { checkPincodeShippingRate, type ShippingPackageInput } from '@/lib/shipping/serviceability';
 
 export type PricingPaymentMethod = 'COD' | 'ONLINE' | 'UPI_QR';
@@ -17,19 +16,16 @@ export async function calculateAuthoritativeOrderPricing(input: { db: SupabaseCl
   const productIds = [...new Set(input.cart.map((item) => item.product_id || item.id).filter((id): id is string => Boolean(id)))];
   if (!productIds.length) throw new Error('No valid product references were found in the cart.');
 
-  const [productsResult, inventoryResult, promotionsResult, settingsResult] = await Promise.all([
+  const [productsResult, inventoryResult, promotionsResult] = await Promise.all([
     input.db.from('products').select('id, title, price, mrp, category, hsn_code, gst_rate, net_weight_grams, package_length_cm, package_width_cm, package_height_cm').in('id', productIds),
     input.db.from('inventory').select('product_id, size, sku, available_quantity').in('product_id', productIds),
     input.db.from('promotions').select('*').eq('is_enabled', true),
-    input.db.from('store_settings').select('value, version').eq('key', 'shipping_rules').maybeSingle(),
   ]);
 
   if (productsResult.error || !productsResult.data) throw new Error('Catalog verification failed.');
   if (inventoryResult.error || !inventoryResult.data) throw new Error('Inventory verification failed.');
   if (promotionsResult.error) throw new Error('Promotion pricing could not be verified.');
-  if (settingsResult.error) throw new Error('Shipping settings could not be verified.');
 
-  const rules = parseShippingRules(settingsResult.data?.value);
   const campaigns = getActiveCampaigns((promotionsResult.data as Campaign[]) || []);
 
   let originalProductPriceTotal = 0;
@@ -130,15 +126,7 @@ export async function calculateAuthoritativeOrderPricing(input: { db: SupabaseCl
   }
 
   const shippingCharge = shipping.customerShippingCharge;
-  const codCharge =
-    input.paymentMethod !== 'COD'
-      ? 0
-      : rules.cod_fee_type === 'flat'
-        ? rules.cod_fee_flat
-        : discountedSubtotal < rules.cod_fee_threshold
-          ? rules.cod_fee_flat
-          : rules.cod_fee_above_threshold;
-
+  const codCharge = input.paymentMethod === 'COD' ? shipping.providerCodCharge : 0;
   const totalPayable = discountedSubtotal + shippingCharge + codCharge;
 
   return {
@@ -155,8 +143,8 @@ export async function calculateAuthoritativeOrderPricing(input: { db: SupabaseCl
     totalPayable,
     freeShippingApplied: false,
     serviceable: true,
-    message: 'Delivery pricing is calculated from the live NimbusPost courier rate x 1.30.',
+    message: 'Delivery is available for this PIN code.',
     verifiedItems,
-    ruleVersion: Number(settingsResult.data?.version || 0),
+    ruleVersion: 0,
   };
 }
