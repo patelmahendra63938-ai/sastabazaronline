@@ -2,8 +2,8 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createBrowserClient } from '@supabase/ssr';
 import { ShieldCheck, Lock, Mail, AlertCircle, Loader2 } from 'lucide-react';
+import { adminLoginAction } from './actions';
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -12,58 +12,27 @@ export default function AdminLoginPage() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setErrorMsg('');
 
     try {
-      const { data: authData, error: authError } =
-        await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password: password,
-        });
+      const requestedPath = new URLSearchParams(window.location.search).get('redirect');
+      const result = await adminLoginAction({
+        email,
+        password,
+        redirectPath: requestedPath,
+      });
 
-      if (authError || !authData.user) {
-        throw new Error(authError?.message || 'Invalid credentials.');
+      if (!result.success) {
+        throw new Error(result.error);
       }
 
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', authData.user.id)
-        .single();
-
-      if (
-        profileError ||
-        !profile ||
-        !['admin', 'super_admin', 'staff'].includes(profile.role)
-      ) {
-        await supabase.auth.signOut();
-        throw new Error(
-          'Access Denied: You do not possess staff or administrative authorization.'
-        );
-      }
-
-      const requestedPath = new URLSearchParams(
-        window.location.search
-      ).get('redirect');
-
-      const redirectPath =
-        requestedPath &&
-        (requestedPath === '/admin' || requestedPath.startsWith('/admin/'))
-          ? requestedPath
-          : '/admin/dashboard';
-
-      router.replace(redirectPath);
+      router.replace(result.redirectPath);
       router.refresh();
     } catch (err: any) {
-      setErrorMsg(err.message || 'Authentication failed.');
+      setErrorMsg(err?.message || 'Authentication failed.');
     } finally {
       setLoading(false);
     }
@@ -95,14 +64,17 @@ export default function AdminLoginPage() {
 
         <form onSubmit={handleAdminLogin} className="space-y-4">
           <div>
-            <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-stone-600">
+            <label htmlFor="staff-email" className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-stone-600">
               Staff Email
             </label>
 
             <div className="relative">
               <input
+                id="staff-email"
+                name="email"
                 type="email"
                 required
+                autoComplete="username"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="adhyeybrothers@gmail.com"
@@ -117,14 +89,17 @@ export default function AdminLoginPage() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-stone-600">
+            <label htmlFor="staff-password" className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-stone-600">
               Password
             </label>
 
             <div className="relative">
               <input
+                id="staff-password"
+                name="password"
                 type="password"
                 required
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••••••"
