@@ -9,18 +9,17 @@ export interface PincodeShippingResult {
   isServiceable: boolean;
   courierPartnerName?: string;
   estimatedDeliveryDays?: string;
-  baseCourierCost: number;       // INTERNAL: Actual courier rate from NimbusPost
-  customerShippingCharge: number; // CUSTOMER-FACING: After markup or free shipping waiver
-  displayWeight: string;         // CUSTOMER-FACING: e.g. "1.15 kg"
-  actualWeightKg: number;        // INTERNAL
-  chargeableWeightKg: number;    // INTERNAL
+  baseCourierCost: number;         // INTERNAL: Actual courier rate from NimbusPost
+  customerShippingCharge: number; // CUSTOMER-FACING: NimbusPost rate x 1.30
+  displayWeight: string;
+  actualWeightKg: number;
+  chargeableWeightKg: number;
   message?: string;
 }
 
 /**
- * @deprecated Not a pricing authority. Phase B checkout uses the temporary-slabs
- * pricing engine and local six-digit PIN validation. Retained only for legacy
- * non-checkout callers until the verified NimbusPost v2 contract is implemented.
+ * Customer shipping price authority.
+ * Rule: customer courier charge = live NimbusPost courier rate x 1.30.
  */
 export async function checkPincodeShippingRate(
   destinationPincode: string,
@@ -41,29 +40,21 @@ export async function checkPincodeShippingRate(
     };
   }
 
-  // 1. Fetch Shipping Business Rules from store_settings
+  // Read weight-buffer setting only. Courier markup is intentionally fixed at 1.30.
   const { data: settingsData } = await supabase
     .from('store_settings')
     .select('value')
     .eq('key', 'shipping_rules')
     .maybeSingle();
 
-  const rules = settingsData?.value || {
-    weight_buffer_pct: 15,
-    cost_buffer_pct: 30,
-    apply_courier_charge: true,
-    free_shipping_threshold: 499,
-    free_shipping_enabled: true
-  };
+  const rules = settingsData?.value || { weight_buffer_pct: 0 };
 
-  // 2. Internal Weight Buffer Calculation (15% packaging buffer)
-  const weightBufferMultiplier = 1 + ((rules.weight_buffer_pct ?? 15) / 100);
+  const weightBufferMultiplier = 1 + ((rules.weight_buffer_pct ?? 0) / 100);
   const actualWeight = Math.max(0.1, totalActualWeightKg);
   const chargeableWeightKg = Math.round(actualWeight * weightBufferMultiplier * 1000) / 1000;
   const weightInGrams = Math.max(100, Math.round(chargeableWeightKg * 1000));
   const displayWeight = `${chargeableWeightKg.toFixed(2)} kg`;
 
-  // 3. Query Courier Partner API (NimbusPost)
   const apiKey = process.env.COURIER_API_KEY || process.env.NIMBUSPOST_API_KEY;
   let baseCourierRate = 0;
   let isServiceable = false;
@@ -81,7 +72,7 @@ export async function checkPincodeShippingRate(
           'api-secret': process.env.COURIER_SECRET_KEY || process.env.NIMBUSPOST_API_SECRET || ''
         },
         body: JSON.stringify({
-          origin: '395006', // Surat Fulfillment Center
+          origin: '395006',
           destination: cleanPin,
           payment_type: paymentType.toLowerCase(),
           weight: weightInGrams,
@@ -97,7 +88,6 @@ export async function checkPincodeShippingRate(
 
       if (response.ok && data.status && Array.isArray(data.data) && data.data.length > 0) {
         isServiceable = true;
-        // Select lowest-cost serviceable courier partner
         const sortedCouriers = [...data.data].sort((a, b) => {
           const rateA = Number(a.rate || a.total_charges || 999);
           const rateB = Number(b.rate || b.total_charges || 999);
@@ -105,22 +95,18 @@ export async function checkPincodeShippingRate(
         });
 
         const bestCourier = sortedCouriers[0];
-        baseCourierRate = Number(bestCourier.rate || bestCourier.total_charges || 45);
+        baseCourierRate = Number(bestCourier.rate || bestCourier.total_charges || 0);
         courierName = bestCourier.name || bestCourier.courier_name || 'Standard Courier';
         estimatedDays = String(bestCourier.estimated_delivery_days || '3-4');
-      } else {
-        isServiceable = false;
+
+        if (!Number.isFinite(baseCourierRate) || baseCourierRate <= 0) {
+          isServiceable = false;
+        }
       }
     } catch (err) {
-      console.warn('Live courier partner check fallback:', err);
-      // Fallback rate estimation for testing if API is unreachable
-      isServiceable = true;
-      baseCourierRate = 45 + Math.max(0, Math.ceil(chargeableWeightKg - 0.5) * 35);
+      console.warn('NimbusPost live courier-rate check failed:', err);
+      isServiceable = false;
     }
-  } else {
-    // Standard baseline fallback if courier credentials are not yet configured
-    isServiceable = true;
-    baseCourierRate = 45 + Math.max(0, Math.ceil(chargeableWeightKg - 0.5) * 35);
   }
 
   if (!isServiceable) {
@@ -131,21 +117,14 @@ export async function checkPincodeShippingRate(
       displayWeight,
       actualWeightKg: actualWeight,
       chargeableWeightKg,
-      message: 'Delivery is currently unavailable for this PIN code.'
+      message: apiKey
+        ? 'Live NimbusPost courier pricing is temporarily unavailable for this PIN code.'
+        : 'NimbusPost courier pricing is not configured.'
     };
   }
 
-  // 4. Apply Business Markup (30% default)
-  const markupMultiplier = 1 + ((rules.cost_buffer_pct ?? 30) / 100);
-  let finalCustomerShipping = Math.ceil(baseCourierRate * markupMultiplier);
-
-  // 5. Apply Free Shipping Threshold or Admin Toggle
-  const applyCourierCharge = rules.apply_courier_charge !== false;
-  const meetsFreeShipping = rules.free_shipping_enabled && subtotal >= (rules.free_shipping_threshold ?? 499);
-
-  if (!applyCourierCharge || meetsFreeShipping) {
-    finalCustomerShipping = 0;
-  }
+  // Exact business rule requested: NimbusPost courier rate x 1.30.
+  const finalCustomerShipping = Math.ceil(baseCourierRate * 1.30);
 
   return {
     isServiceable: true,
