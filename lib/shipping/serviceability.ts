@@ -157,7 +157,7 @@ export async function checkPincodeShippingRate(
   }
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8000);
+  const timeout = setTimeout(() => controller.abort(), 12000);
 
   try {
     const response = await fetch('https://api-v2.nimbuspost.com/v2/serviceability', {
