@@ -32,9 +32,11 @@ export async function calculateAuthoritativeOrderPricing(input: { db: SupabaseCl
   let discountedSubtotal = 0;
   let totalTaxAmount = 0;
   let actualWeightGrams = 0;
+  let combinedPackageLength = 0;
+  let combinedPackageWidth = 0;
+  let combinedPackageHeight = 0;
   let primaryOfferName: string | null = null;
   const verifiedItems: VerifiedPricingItem[] = [];
-  const shippingPackages: ShippingPackageInput[] = [];
 
   for (const item of input.cart) {
     const productId = item.product_id || item.id;
@@ -85,14 +87,11 @@ export async function calculateAuthoritativeOrderPricing(input: { db: SupabaseCl
     totalTaxAmount += lineTotal - lineTotal / (1 + gstRate / 100);
     actualWeightGrams += exactWeight * quantity;
 
-    for (let i = 0; i < quantity; i += 1) {
-      shippingPackages.push({
-        weight: exactWeight,
-        length: packageLength,
-        width: packageWidth,
-        height: packageHeight,
-      });
-    }
+    // One customer order is shipped as one combined parcel.
+    // Keep the largest footprint and stack each item's packed height.
+    combinedPackageLength = Math.max(combinedPackageLength, packageLength);
+    combinedPackageWidth = Math.max(combinedPackageWidth, packageWidth);
+    combinedPackageHeight += packageHeight * quantity;
 
     if (appliedOffer && !primaryOfferName) primaryOfferName = appliedOffer.offerLabel;
 
@@ -113,12 +112,19 @@ export async function calculateAuthoritativeOrderPricing(input: { db: SupabaseCl
     });
   }
 
+  const combinedShipment: ShippingPackageInput[] = [{
+    weight: actualWeightGrams,
+    length: combinedPackageLength,
+    width: combinedPackageWidth,
+    height: combinedPackageHeight,
+  }];
+
   const shipping = await checkPincodeShippingRate(
     cleanPin,
     actualWeightGrams / 1000,
     discountedSubtotal,
     input.paymentMethod === 'COD' ? 'COD' : 'PREPAID',
-    shippingPackages
+    combinedShipment
   );
 
   if (!shipping.isServiceable) {
