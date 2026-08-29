@@ -101,7 +101,7 @@ function extractVerifiedShipmentFields(payload: Record<string, unknown>) {
 }
 
 async function processAwbAssignment(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   payload: Record<string, unknown>,
   deliveryId: string
 ) {
