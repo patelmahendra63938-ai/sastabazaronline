@@ -73,7 +73,7 @@ export default function RetailQuantityGuard() {
   if (!showLimitNotice) return null;
 
   return (
-    <div className="fixed bottom-24 left-1/2 z-[90] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 rounded-2xl border border-[#ead8b8] bg-white px-4 py-3 text-xs shadow-xl lg:bottom-6">
+    <div className="fixed bottom-24 left-1/2 z-[90] w-[calc(100%_-_2rem)] max-w-md -translate-x-1/2 rounded-2xl border border-[#ead8b8] bg-white px-4 py-3 text-xs shadow-xl lg:bottom-6">
       <p className="font-black text-[#741f23]">Retail limit: max 5 pcs per Product + Size.</p>
       <p className="mt-1 text-[11px] leading-relaxed text-stone-600">
         Your cart was adjusted to 5 pcs for this size. Need a larger quantity?{' '}
