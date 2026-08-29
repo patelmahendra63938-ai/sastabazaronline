@@ -133,8 +133,38 @@ export async function calculateAuthoritativeOrderPricing(input: { db: SupabaseCl
 
   if (canApplyWelcome50) {
     const subtotalBeforeCoupon = discountedSubtotal;
-    const orderCouponDiscount = Math.min(WELCOME50_DISCOUNT, subtotalBeforeCoupon);
-    discountedSubtotal = Math.max(0, subtotalBeforeCoupon - orderCouponDiscount);
+    const subtotalBeforeCouponCents = Math.round(subtotalBeforeCoupon * 100);
+    const couponCents = Math.min(
+      Math.round(WELCOME50_DISCOUNT * 100),
+      subtotalBeforeCouponCents
+    );
+    let remainingCouponCents = couponCents;
+
+    // Allocate the single order-level discount across item lines. This keeps
+    // order_items, subtotal, GST and invoice accounting internally consistent.
+    verifiedItems.forEach((item, index) => {
+      const lineCents = Math.round(item.line_total * 100);
+      const isLastItem = index === verifiedItems.length - 1;
+      const proportionalCents = subtotalBeforeCouponCents > 0
+        ? Math.round((couponCents * lineCents) / subtotalBeforeCouponCents)
+        : 0;
+      const allocatedCents = isLastItem
+        ? remainingCouponCents
+        : Math.min(lineCents, remainingCouponCents, proportionalCents);
+      const discountedLineCents = Math.max(0, lineCents - allocatedCents);
+
+      item.line_total = discountedLineCents / 100;
+      item.unit_price = item.quantity > 0
+        ? item.line_total / item.quantity
+        : item.unit_price;
+      item.discount_reduction = Math.round((item.discount_reduction + allocatedCents / 100) * 100) / 100;
+      item.applied_offer_label = 'Website Launch Offer — ₹50 OFF (WELCOME50)';
+
+      remainingCouponCents -= allocatedCents;
+    });
+
+    discountedSubtotal = verifiedItems.reduce((sum, item) => sum + item.line_total, 0);
+    discountedSubtotal = Math.round(discountedSubtotal * 100) / 100;
 
     // Prices are GST-inclusive. Treat the order-level coupon as a proportional
     // reduction across the basket so the included tax reduces consistently.
