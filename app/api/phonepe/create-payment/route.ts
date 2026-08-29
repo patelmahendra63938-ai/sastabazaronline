@@ -87,7 +87,7 @@ export async function POST(request: Request) {
       String(body.city || '').trim();
 
     const state =
-      String(body.state || 'Gujarat').trim();
+      String(body.state || '').trim();
 
     const pincode =
       String(body.pincode || '').trim();
@@ -129,12 +129,12 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!address || !city) {
+    if (!address || !city || !state) {
       return NextResponse.json(
         {
           success: false,
           error:
-            'Complete delivery address and city are required.',
+            'Complete delivery address, city and state are required.',
         },
         { status: 400 }
       );

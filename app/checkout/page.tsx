@@ -30,7 +30,8 @@ export default function CheckoutPage() {
     phone: '',
     email: '',
     address: '',
-    city: 'Surat',
+    city: '',
+    state: '',
     pincode: '',
     paymentMethod: 'COD'
   });
@@ -283,6 +284,11 @@ export default function CheckoutPage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const phone = e.target.value.replace(/\D/g, '').slice(0, 10);
+    setFormData(prev => ({ ...prev, phone }));
+  };
+
   const handlePaymentMethodChange = (method: 'COD' | 'ONLINE') => {
     setFormData(prev => ({ ...prev, paymentMethod: method }));
     if (isPincodeVerified && formData.pincode.length === 6) {
@@ -326,7 +332,16 @@ export default function CheckoutPage() {
               ...prev,
               address: data.display_name,
               pincode: detectedPin,
-              city: data.address?.city || data.address?.town || 'Surat'
+              city:
+                data.address?.city ||
+                data.address?.town ||
+                data.address?.village ||
+                data.address?.county ||
+                '',
+              state:
+                data.address?.state ||
+                data.address?.region ||
+                ''
             }));
 
             if (detectedPin.length === 6) {
@@ -351,6 +366,16 @@ export default function CheckoutPage() {
 
     if (cart.length === 0) {
       setErrorMsg('Your cart is empty.');
+      return;
+    }
+
+    if (!/^\d{10}$/.test(formData.phone.trim())) {
+      setErrorMsg('Please enter a valid 10-digit mobile number.');
+      return;
+    }
+
+    if (!formData.city.trim() || !formData.state.trim()) {
+      setErrorMsg('Please enter both delivery city and state.');
       return;
     }
 
@@ -383,6 +408,7 @@ export default function CheckoutPage() {
             customer_email: formData.email.trim(),
             address: formData.address.trim(),
             city: formData.city.trim(),
+            state: formData.state.trim(),
             pincode: formData.pincode.trim(),
             coupon_code: activeCouponCode,
             cart,
@@ -414,6 +440,7 @@ export default function CheckoutPage() {
         customer_email: formData.email.trim(),
         address: formData.address.trim(),
         city: formData.city.trim(),
+        state: formData.state.trim(),
         pincode: formData.pincode.trim(),
         paymentMethod: 'COD',
         coupon_code: activeCouponCode,
@@ -575,9 +602,11 @@ export default function CheckoutPage() {
                           type="tel"
                           name="phone"
                           required
+                          inputMode="numeric"
+                          pattern="[0-9]{10}"
                           maxLength={10}
                           value={formData.phone}
-                          onChange={handleChange}
+                          onChange={handlePhoneChange}
                           placeholder="10-digit mobile number"
                           className="w-full pl-9 pr-3 py-2.5 rounded-xl border text-xs font-mono font-medium focus:ring-2 focus:ring-[#d7aa5b] focus:outline-hidden bg-white border-[#ead8b8]"
                         />
@@ -620,77 +649,93 @@ export default function CheckoutPage() {
                         required
                         value={formData.city}
                         onChange={handleChange}
+                        placeholder="Delivery city"
                         className="w-full px-3 py-2.5 rounded-xl border text-xs font-medium focus:ring-2 focus:ring-[#d7aa5b] focus:outline-hidden bg-white border-[#ead8b8]"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
-                        Delivery PIN Code *
-                      </label>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          name="pincode"
-                          maxLength={6}
-                          required
-                          value={formData.pincode}
-                          onChange={handlePincodeChange}
-                          placeholder="e.g. 395007"
-                          className="flex-1 px-3 py-2.5 rounded-xl border text-xs font-mono font-bold focus:ring-2 focus:ring-[#d7aa5b] focus:outline-hidden bg-white border-[#ead8b8]"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleCheckPincode()}
-                          disabled={isCheckingPin || formData.pincode.length !== 6}
-                          className="px-4 py-2.5 bg-[#741f23] hover:bg-[#5e171b] text-white font-bold text-xs rounded-xl transition disabled:opacity-40 cursor-pointer shrink-0 flex items-center gap-1.5"
-                        >
-                          {isCheckingPin ? (
-                            <>
-                              <Loader2 size={13} className="animate-spin" />
-                              <span>Checking...</span>
-                            </>
-                          ) : isPincodeVerified ? (
-                            <>
-                              <RefreshCw size={13} />
-                              <span>Recheck</span>
-                            </>
-                          ) : (
-                            <span>Check Delivery</span>
-                          )}
-                        </button>
-                      </div>
+                      <label className="block text-xs font-bold text-gray-700 uppercase mb-1">State *</label>
+                      <input
+                        type="text"
+                        name="state"
+                        required
+                        value={formData.state}
+                        onChange={handleChange}
+                        placeholder="Delivery state"
+                        className="w-full px-3 py-2.5 rounded-xl border text-xs font-medium focus:ring-2 focus:ring-[#d7aa5b] focus:outline-hidden bg-white border-[#ead8b8]"
+                      />
+                    </div>
+                  </div>
 
-                      <div className="mt-2">
-                        {pinStatus === 'checking' && (
-                          <p className="text-[11px] font-semibold text-gray-500 animate-pulse">
-                            Checking delivery availability with courier partner...
-                          </p>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
+                      Delivery PIN Code *
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        name="pincode"
+                        maxLength={6}
+                        required
+                        inputMode="numeric"
+                        pattern="[0-9]{6}"
+                        value={formData.pincode}
+                        onChange={handlePincodeChange}
+                        placeholder="e.g. 395007"
+                        className="flex-1 px-3 py-2.5 rounded-xl border text-xs font-mono font-bold focus:ring-2 focus:ring-[#d7aa5b] focus:outline-hidden bg-white border-[#ead8b8]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleCheckPincode()}
+                        disabled={isCheckingPin || formData.pincode.length !== 6}
+                        className="px-4 py-2.5 bg-[#741f23] hover:bg-[#5e171b] text-white font-bold text-xs rounded-xl transition disabled:opacity-40 cursor-pointer shrink-0 flex items-center gap-1.5"
+                      >
+                        {isCheckingPin ? (
+                          <>
+                            <Loader2 size={13} className="animate-spin" />
+                            <span>Checking...</span>
+                          </>
+                        ) : isPincodeVerified ? (
+                          <>
+                            <RefreshCw size={13} />
+                            <span>Recheck</span>
+                          </>
+                        ) : (
+                          <span>Check Delivery</span>
                         )}
-                        {pinStatus === 'available' && (
-                          <div className="p-2.5 bg-green-50 border border-green-200 rounded-xl text-green-800 text-xs font-bold flex items-center gap-2">
-                            <Check size={15} className="text-green-600 shrink-0" />
-                            <span>{statusMessage}</span>
-                          </div>
-                        )}
-                        {pinStatus === 'unavailable' && (
-                          <div className="p-2.5 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs font-bold flex items-center gap-2">
-                            <XCircle size={15} className="text-red-600 shrink-0" />
-                            <span>{statusMessage}</span>
-                          </div>
-                        )}
-                        {pinStatus === 'error' && (
-                          <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs font-bold flex items-center gap-2">
-                            <AlertCircle size={15} className="text-amber-600 shrink-0" />
-                            <span>{statusMessage}</span>
-                          </div>
-                        )}
-                        {pinStatus === 'idle' && formData.pincode.length === 6 && !isPincodeVerified && (
-                          <p className="text-[11px] font-bold text-[#b5843d]">
-                            Click &quot;Check Delivery&quot; to calculate shipping and enable order placement.
-                          </p>
-                        )}
-                      </div>
+                      </button>
+                    </div>
+
+                    <div className="mt-2">
+                      {pinStatus === 'checking' && (
+                        <p className="text-[11px] font-semibold text-gray-500 animate-pulse">
+                          Checking delivery availability with courier partner...
+                        </p>
+                      )}
+                      {pinStatus === 'available' && (
+                        <div className="p-2.5 bg-green-50 border border-green-200 rounded-xl text-green-800 text-xs font-bold flex items-center gap-2">
+                          <Check size={15} className="text-green-600 shrink-0" />
+                          <span>{statusMessage}</span>
+                        </div>
+                      )}
+                      {pinStatus === 'unavailable' && (
+                        <div className="p-2.5 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs font-bold flex items-center gap-2">
+                          <XCircle size={15} className="text-red-600 shrink-0" />
+                          <span>{statusMessage}</span>
+                        </div>
+                      )}
+                      {pinStatus === 'error' && (
+                        <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs font-bold flex items-center gap-2">
+                          <AlertCircle size={15} className="text-amber-600 shrink-0" />
+                          <span>{statusMessage}</span>
+                        </div>
+                      )}
+                      {pinStatus === 'idle' && formData.pincode.length === 6 && !isPincodeVerified && (
+                        <p className="text-[11px] font-bold text-[#b5843d]">
+                          Click &quot;Check Delivery&quot; to calculate shipping and enable order placement.
+                        </p>
+                      )}
                     </div>
                   </div>
 
