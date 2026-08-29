@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { resolveStorefrontImageSrc } from '@/lib/storefront-image';
-import { verifyPincodeAndGetShippingAction } from '@/actions/shipping';
+import { getSmartCartShippingQuoteAction } from '@/actions/smartCartShipping';
 
 type ExampleProduct = {
   id: string;
@@ -22,6 +22,9 @@ type ExampleProduct = {
   image: string;
   weightGrams: number;
   price: number;
+  lengthCm: number;
+  widthCm: number;
+  heightCm: number;
 };
 
 type InventoryRow = {
@@ -37,6 +40,9 @@ type ProductRow = {
   price?: number | null;
   stock?: number | null;
   net_weight_grams?: number | null;
+  package_length_cm?: number | null;
+  package_width_cm?: number | null;
+  package_height_cm?: number | null;
   inventory?: InventoryRow[] | null;
 };
 
@@ -75,6 +81,14 @@ function resolveWeightGrams(row: ProductRow) {
     : 0;
 }
 
+function hasValidDimensions(row: ProductRow) {
+  return [
+    row.package_length_cm,
+    row.package_width_cm,
+    row.package_height_cm,
+  ].every((value) => Number.isFinite(Number(value)) && Number(value) > 0);
+}
+
 function selectMixedProducts(rows: ProductRow[]) {
   const eligible = shuffled(
     rows.filter((row) => {
@@ -87,6 +101,7 @@ function selectMixedProducts(rows: ProductRow[]) {
       return (
         weight > 0 &&
         weight <= LIGHTWEIGHT_MAX_GRAMS &&
+        hasValidDimensions(row) &&
         (inventoryStock || productStock)
       );
     })
@@ -119,6 +134,9 @@ function selectMixedProducts(rows: ProductRow[]) {
     image: resolveStorefrontImageSrc(row.images?.[0]),
     weightGrams: resolveWeightGrams(row),
     price: Math.max(1, Number(row.price || 0)),
+    lengthCm: Number(row.package_length_cm),
+    widthCm: Number(row.package_width_cm),
+    heightCm: Number(row.package_height_cm),
   }));
 }
 
@@ -137,7 +155,7 @@ export default function BulkWholesaleAdvantage() {
       const { data, error } = await supabase
         .from('products')
         .select(
-          'id, title, category, images, price, stock, net_weight_grams, inventory(available_quantity, weight_kg)'
+          'id, title, category, images, price, stock, net_weight_grams, package_length_cm, package_width_cm, package_height_cm, inventory(available_quantity, weight_kg)'
         )
         .eq('is_active', true)
         .limit(80);
@@ -171,6 +189,16 @@ export default function BulkWholesaleAdvantage() {
     [exampleProducts]
   );
 
+  const combinedPackage = useMemo(() => {
+    if (!exampleProducts.length) return null;
+    return {
+      weight: totalWeightGrams,
+      length: Math.max(...exampleProducts.map((item) => item.lengthCm)),
+      width: Math.max(...exampleProducts.map((item) => item.widthCm)),
+      height: exampleProducts.reduce((sum, item) => sum + item.heightCm, 0),
+    };
+  }, [exampleProducts, totalWeightGrams]);
+
   const totalWeightLabel =
     totalWeightGrams >= 1000
       ? `${(totalWeightGrams / 1000).toFixed(2)} kg`
@@ -185,8 +213,8 @@ export default function BulkWholesaleAdvantage() {
       return;
     }
 
-    if (exampleProducts.length < 5 || totalWeightGrams <= 0) {
-      setSavingError('Five lightweight products with valid weights are required for this example.');
+    if (exampleProducts.length < 5 || totalWeightGrams <= 0 || !combinedPackage) {
+      setSavingError('Five lightweight products with valid package details are required for this example.');
       return;
     }
 
@@ -194,18 +222,25 @@ export default function BulkWholesaleAdvantage() {
 
     try {
       const [combined, ...individual] = await Promise.all([
-        verifyPincodeAndGetShippingAction({
+        getSmartCartShippingQuoteAction({
           pincode,
           totalWeightKg: totalWeightGrams / 1000,
           subtotal: totalSubtotal,
-          paymentType: 'PREPAID',
+          packages: [combinedPackage],
         }),
         ...exampleProducts.map((item) =>
-          verifyPincodeAndGetShippingAction({
+          getSmartCartShippingQuoteAction({
             pincode,
             totalWeightKg: item.weightGrams / 1000,
             subtotal: item.price,
-            paymentType: 'PREPAID',
+            packages: [
+              {
+                weight: item.weightGrams,
+                length: item.lengthCm,
+                width: item.widthCm,
+                height: item.heightCm,
+              },
+            ],
           })
         ),
       ]);
@@ -322,7 +357,7 @@ export default function BulkWholesaleAdvantage() {
 
           {!loading && exampleProducts.length < 5 && (
             <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[10px] leading-relaxed text-amber-800">
-              Add valid weight to at least 5 active lightweight products (500g or less) to enable the full live saving example.
+              Add valid weight and package dimensions to at least 5 active lightweight products (500g or less) to enable the live saving example.
             </div>
           )}
 
@@ -400,7 +435,7 @@ export default function BulkWholesaleAdvantage() {
       </div>
 
       <div className="border-t border-[#ead8b8] bg-white px-4 py-3 text-center text-[10px] leading-relaxed text-gray-500 sm:text-[11px]">
-        Saving is an estimate using the current delivery PIN and product weights. Final shipping is calculated again at checkout.
+        Saving is an estimate using the current delivery PIN, actual product weights and package dimensions. Final shipping is calculated again at checkout.
       </div>
     </section>
   );
