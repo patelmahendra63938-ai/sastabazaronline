@@ -27,6 +27,7 @@ const LABEL_SIZES: Record<
 const SELLER_NAME = 'ADHYEY BROTHERS';
 const SELLER_ADDRESS = 'SY NO 9/10, PLOT 353-354-355, PANDOL INDUSTRIES, SURAT - 395004';
 const SELLER_GSTIN = '24AKBPD1704F1Z1';
+const PRINT_SAFE_MM = 3;
 
 export default function OrderShippingLabelPage() {
   const router = useRouter();
@@ -210,11 +211,12 @@ export default function OrderShippingLabelPage() {
           }
           .print-label-page {
             box-sizing: border-box !important;
-            width: ${selectedLabel.widthMm}mm !important;
-            height: ${selectedLabel.heightMm}mm !important;
-            min-height: ${selectedLabel.heightMm}mm !important;
-            max-height: ${selectedLabel.heightMm}mm !important;
-            margin: 0 !important;
+            width: calc(${selectedLabel.widthMm}mm - ${PRINT_SAFE_MM * 2}mm) !important;
+            height: calc(${selectedLabel.heightMm}mm - ${PRINT_SAFE_MM * 2}mm) !important;
+            min-height: calc(${selectedLabel.heightMm}mm - ${PRINT_SAFE_MM * 2}mm) !important;
+            max-height: calc(${selectedLabel.heightMm}mm - ${PRINT_SAFE_MM * 2}mm) !important;
+            margin: ${PRINT_SAFE_MM}mm !important;
+            border: 1.5px solid #000 !important;
             box-shadow: none !important;
             overflow: hidden !important;
           }
@@ -277,12 +279,12 @@ export default function OrderShippingLabelPage() {
         )}
 
         <p className="px-1 text-[10px] leading-relaxed text-gray-500">
-          Default is 4 × 6 inch for thermal courier printers. In the browser print dialog use 100% / Actual Size and disable browser headers & footers.
+          Default is 4 × 6 inch for thermal courier printers. A 3 mm print safe zone keeps the full border, QR and important text away from paper edges. Use 100% / Actual Size and disable browser headers & footers.
         </p>
       </div>
 
       <div
-        className={`print-label-page flex flex-col justify-between border-2 border-black bg-white font-sans text-black shadow-xl print:border-0 ${
+        className={`print-label-page flex flex-col justify-between border-2 border-black bg-white font-sans text-black shadow-xl ${
           isCompact ? 'p-2 text-[9px] print:p-1.5' : 'p-4 text-xs print:p-2'
         }`}
         style={{
@@ -303,7 +305,7 @@ export default function OrderShippingLabelPage() {
               GSTIN: {SELLER_GSTIN}
             </p>
           </div>
-          <div className="shrink-0 text-right">
+          <div className="shrink-0 pr-1 text-right">
             <span className={`rounded border-2 border-black px-2 py-0.5 font-black uppercase ${isCompact ? 'text-[9px]' : 'text-xs'}`}>
               {isCod ? `COD: ₹${order.grand_total || order.total_amount}` : 'PREPAID'}
             </span>
@@ -325,8 +327,8 @@ export default function OrderShippingLabelPage() {
               Date: {new Date(order.created_at).toLocaleDateString('en-IN')}
             </p>
           </div>
-          <div className="shrink-0 rounded-lg border border-black bg-white p-1">
-            <QRCodeSVG value={displayOrderNum} size={isCompact ? 58 : 80} level="M" />
+          <div className="mr-2 shrink-0 rounded-lg border border-black bg-white p-1">
+            <QRCodeSVG value={displayOrderNum} size={isCompact ? 54 : 76} level="M" />
           </div>
         </div>
 
@@ -352,10 +354,10 @@ export default function OrderShippingLabelPage() {
           <div className={`${isCompact ? 'text-[7.5px]' : 'text-[10px]'} space-y-0.5`}>
             {(order.order_items || []).map((item: any, idx: number) => (
               <div key={idx} className="flex justify-between gap-2 font-semibold">
-                <span className={`${isCompact ? 'max-w-[230px]' : 'max-w-[250px]'} truncate`}>
+                <span className={`${isCompact ? 'max-w-[220px]' : 'max-w-[240px]'} truncate`}>
                   {item.product_title} ({item.size || 'Free Size'})
                 </span>
-                <span className="shrink-0">Qty: {item.quantity}</span>
+                <span className="shrink-0 pr-1">Qty: {item.quantity}</span>
               </div>
             ))}
           </div>
