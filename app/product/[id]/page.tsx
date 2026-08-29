@@ -62,6 +62,12 @@ interface MarketplaceVisibility {
   show_flipkart_link: boolean;
 }
 
+interface DeliveryQuotePreview {
+  shippingCharge: number;
+  totalPayable: number;
+  primaryOfferName: string | null;
+}
+
 const DEFAULT_MARKETPLACE_VISIBILITY: MarketplaceVisibility = {
   show_meesho_link: true,
   show_amazon_link: true,
@@ -125,6 +131,8 @@ export default function ProductDetailPage({
   // --- Pincode Checker State ---
   const [pincode, setPincode] = useState<string>('');
   const [pincodeStatus, setPincodeStatus] = useState<'idle' | 'checking' | 'valid' | 'invalid'>('idle');
+  const [deliveryMessage, setDeliveryMessage] = useState<string>('');
+  const [deliveryQuote, setDeliveryQuote] = useState<DeliveryQuotePreview | null>(null);
 
   // --- Full-Screen Lightbox Modal State ---
   const [lightbox, setLightbox] = useState<{ isOpen: boolean; index: number }>({
@@ -293,6 +301,12 @@ export default function ProductDetailPage({
     ? Math.round(((mrpVal - finalPrice) / mrpVal) * 100)
     : 0;
 
+  useEffect(() => {
+    setPincodeStatus('idle');
+    setDeliveryMessage('');
+    setDeliveryQuote(null);
+  }, [selectedSize, quantity, appliedCoupon, selectedCampaignId]);
+
   // Lightbox Handlers
   const openLightbox = (url: string) => {
     const foundIdx = imagesList.indexOf(url);
@@ -446,15 +460,76 @@ export default function ProductDetailPage({
     }
   };
 
-  const checkDeliveryPincode = () => {
+  const checkDeliveryPincode = async () => {
     const trimmed = pincode.trim();
 
-    if (/^\d{6}$/.test(trimmed)) {
-      setPincodeStatus('valid');
+    if (!/^\d{6}$/.test(trimmed)) {
+      setPincodeStatus('invalid');
+      setDeliveryMessage('Please enter a valid 6-digit postal pincode.');
+      setDeliveryQuote(null);
       return;
     }
 
-    setPincodeStatus('invalid');
+    if (!product || isOutOfStock) {
+      setPincodeStatus('invalid');
+      setDeliveryMessage('Select an in-stock variant before checking delivery.');
+      setDeliveryQuote(null);
+      return;
+    }
+
+    setPincodeStatus('checking');
+    setDeliveryMessage('');
+    setDeliveryQuote(null);
+
+    try {
+      const response = await fetch('/api/shipping/check-pincode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pincode: trimmed,
+          paymentMethod: 'ONLINE',
+          cart: [
+            {
+              id: product.id,
+              product_id: product.id,
+              size: selectedSize || 'Free Size',
+              quantity,
+              selected_campaign_id: appliedOffer?.campaignId || selectedCampaignId || undefined,
+            },
+          ],
+          couponCode: appliedCoupon || undefined,
+        }),
+      });
+
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok || !data?.serviceable) {
+        setPincodeStatus('invalid');
+        setDeliveryMessage(
+          typeof data?.message === 'string' && data.message.trim()
+            ? data.message
+            : 'Delivery is not currently available for this PIN code.'
+        );
+        return;
+      }
+
+      setPincodeStatus('valid');
+      setDeliveryMessage(
+        typeof data.message === 'string' && data.message.trim()
+          ? data.message
+          : `Delivery is available for PIN ${trimmed}.`
+      );
+      setDeliveryQuote({
+        shippingCharge: Number(data.shippingCharge || 0),
+        totalPayable: Number(data.totalPayable || 0),
+        primaryOfferName: data.primaryOfferName || null,
+      });
+    } catch (error) {
+      console.error('Delivery pincode check failed:', error);
+      setPincodeStatus('invalid');
+      setDeliveryMessage('Delivery availability could not be verified right now. Please try again or verify at checkout.');
+      setDeliveryQuote(null);
+    }
   };
 
   // Loading Screen
@@ -518,7 +593,7 @@ export default function ProductDetailPage({
   const hasExternalLinks = Boolean(amazonUrl || flipkartUrl || meeshoUrl || otherUrl);
 
   return (
-    <main className="min-h-screen bg-[#fffaf5] flex flex-col justify-between">
+    <main className="min-h-screen bg-[#fffaf5] flex flex-col justify-between pb-24 lg:pb-0">
       <div>
         <Header />
 
@@ -912,6 +987,12 @@ export default function ProductDetailPage({
                   </button>
                 </div>
 
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl bg-[#fffaf5] px-3 py-2 text-[10px] font-semibold text-gray-600">
+                  <span className="inline-flex items-center gap-1"><ShieldCheck size={13} className="text-green-600" /> Secure payment</span>
+                  <span className="inline-flex items-center gap-1"><Truck size={13} className="text-[#741f23]" /> COD where available</span>
+                  <span className="inline-flex items-center gap-1"><FileText size={13} className="text-[#b5843d]" /> GST included</span>
+                </div>
+
                 {/* PINCODE & DELIVERY ESTIMATE CHECKER */}
                 <div className="bg-[#fffdf9] p-4 rounded-2xl border border-[#ead8b8] space-y-2.5">
                   <div className="flex items-center gap-2">
@@ -923,11 +1004,14 @@ export default function ProductDetailPage({
                       <MapPin size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                       <input
                         type="text"
+                        inputMode="numeric"
                         maxLength={6}
                         value={pincode}
                         onChange={e => {
                           setPincode(e.target.value.replace(/\D/g, ''));
                           setPincodeStatus('idle');
+                          setDeliveryMessage('');
+                          setDeliveryQuote(null);
                         }}
                         placeholder="Enter 6-digit Pincode"
                         className="w-full pl-8 pr-3 py-2 text-xs border rounded-xl bg-white focus:outline-hidden focus:ring-2 focus:ring-[#d7aa5b] font-mono"
@@ -936,29 +1020,35 @@ export default function ProductDetailPage({
                     <button
                       type="button"
                       onClick={checkDeliveryPincode}
-                      className="px-4 py-2 bg-[#741f23] hover:bg-[#5e171b] text-white text-xs font-bold rounded-xl transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d7aa5b]"
+                      disabled={pincodeStatus === 'checking'}
+                      className="px-4 py-2 bg-[#741f23] hover:bg-[#5e171b] text-white text-xs font-bold rounded-xl transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d7aa5b] disabled:cursor-wait disabled:opacity-70"
                     >
-                      Check
+                      {pincodeStatus === 'checking' ? 'Checking...' : 'Check'}
                     </button>
                   </div>
 
                   {pincodeStatus === 'checking' && (
                     <p className="text-[11px] font-bold text-gray-500 animate-pulse">
-                      Validating pincode...
+                      Checking live delivery availability and current shipping rate...
                     </p>
                   )}
                   {pincodeStatus === 'valid' && (
-                    <p className="text-[11px] font-bold text-green-700 flex items-start gap-1">
-                      <Check size={13} className="mt-0.5 shrink-0" />
-                      <span>
-                        Pincode format accepted. Final serviceability, shipping charge and
-                        delivery availability are confirmed at checkout.
-                      </span>
-                    </p>
+                    <div className="space-y-1.5">
+                      <p className="text-[11px] font-bold text-green-700 flex items-start gap-1">
+                        <Check size={13} className="mt-0.5 shrink-0" />
+                        <span>{deliveryMessage || `Delivery is available for PIN ${pincode}.`}</span>
+                      </p>
+                      {deliveryQuote && (
+                        <p className="text-[10px] leading-relaxed text-gray-600">
+                          Current delivery charge: <strong>₹{deliveryQuote.shippingCharge.toLocaleString('en-IN')}</strong>.
+                          {' '}The final payable amount and serviceability are reverified at checkout before the order is placed.
+                        </p>
+                      )}
+                    </div>
                   )}
                   {pincodeStatus === 'invalid' && (
                     <p className="text-[11px] font-bold text-red-500">
-                      Please enter a valid 6-digit postal pincode.
+                      {deliveryMessage || 'Please enter a valid 6-digit postal pincode.'}
                     </p>
                   )}
                 </div>
@@ -1132,26 +1222,30 @@ export default function ProductDetailPage({
       )}
 
       {/* MOBILE STICKY BOTTOM ACTION BAR */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-[#ead8b8] p-3 z-40 shadow-[0_-4px_12px_rgba(0,0,0,0.08)] flex items-center gap-3">
-        <div className="flex-1">
-          <p className="text-[10px] text-gray-500 font-bold uppercase">Total Price</p>
-          <p className="text-base font-black text-[#741f23]">₹{finalPrice.toLocaleString()}</p>
+      {!lightbox.isOpen && (
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-[#ead8b8] px-3 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] z-40 shadow-[0_-4px_12px_rgba(0,0,0,0.08)] flex items-center gap-2">
+          <div className="min-w-[82px]">
+            <p className="text-[9px] text-gray-500 font-bold uppercase">Product Price</p>
+            <p className="text-base font-black text-[#741f23]">₹{finalPrice.toLocaleString('en-IN')}</p>
+          </div>
+          <button
+            type="button"
+            onClick={handleAddToCart}
+            disabled={isOutOfStock}
+            className="flex-1 bg-[#741f23] hover:bg-[#5e171b] text-white font-bold py-3 rounded-xl text-[11px] flex items-center justify-center gap-1.5 shadow-sm active:scale-95 disabled:opacity-50"
+          >
+            <ShoppingCart size={15} /> {addedToCart ? 'Added' : 'Cart'}
+          </button>
+          <button
+            type="button"
+            onClick={handleBuyNow}
+            disabled={isOutOfStock}
+            className="flex-[1.25] bg-[#d7aa5b] hover:bg-[#b5843d] text-[#4a2400] font-black py-3 rounded-xl text-[11px] flex items-center justify-center gap-1.5 shadow-sm active:scale-95 disabled:opacity-50"
+          >
+            <Zap size={15} /> Buy Now
+          </button>
         </div>
-        <button
-          onClick={handleAddToCart}
-          disabled={isOutOfStock}
-          className="flex-1 bg-[#741f23] hover:bg-[#5e171b] text-white font-bold py-3 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-sm active:scale-95 disabled:opacity-50"
-        >
-          <ShoppingCart size={15} /> Add to Cart
-        </button>
-        <button
-          onClick={handleBuyNow}
-          disabled={isOutOfStock}
-          className="flex-1 bg-[#d7aa5b] hover:bg-[#b5843d] text-[#4a2400] font-black py-3 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-sm active:scale-95 disabled:opacity-50"
-        >
-          <Zap size={15} /> Buy Now
-        </button>
-      </div>
+      )}
     </main>
   );
 }
