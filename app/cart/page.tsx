@@ -18,6 +18,8 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { resolveStorefrontImageSrc } from '@/lib/storefront-image';
 
+const MAX_RETAIL_QTY_PER_PRODUCT_SIZE = 5;
+
 export default function CartPage() {
   const router = useRouter();
   const [cart, setCart] = useState<any[]>([]);
@@ -29,7 +31,19 @@ export default function CartPage() {
 
         if (saved) {
           try {
-            setCart(JSON.parse(saved));
+            const parsed = JSON.parse(saved);
+            const normalized = Array.isArray(parsed)
+              ? parsed.map((item: any) => ({
+                  ...item,
+                  quantity: Math.min(
+                    MAX_RETAIL_QTY_PER_PRODUCT_SIZE,
+                    Math.max(1, Math.floor(Number(item?.quantity || 1)))
+                  ),
+                }))
+              : [];
+
+            setCart(normalized);
+            localStorage.setItem('sastabazar_cart', JSON.stringify(normalized));
           } catch {
             setCart([]);
           }
@@ -42,9 +56,13 @@ export default function CartPage() {
 
   const updateQuantity = (index: number, delta: number) => {
     const updated = [...cart];
-    const newQty = (updated[index].quantity || 1) + delta;
+    const currentQty = Number(updated[index].quantity || 1);
+    const newQty = Math.min(
+      MAX_RETAIL_QTY_PER_PRODUCT_SIZE,
+      currentQty + delta
+    );
 
-    if (newQty > 0) {
+    if (newQty > 0 && newQty !== currentQty) {
       updated[index].quantity = newQty;
       setCart(updated);
 
@@ -156,13 +174,23 @@ export default function CartPage() {
                         <p className="mt-1 text-base font-black text-[#741f23]">
                           ₹{price.toLocaleString('en-IN')}
                         </p>
+
+                        <p className="mt-1 text-[10px] font-semibold text-green-700">
+                          Max 5 pcs per Product + Size
+                        </p>
+                        {qty >= MAX_RETAIL_QTY_PER_PRODUCT_SIZE && (
+                          <Link href="/contact" className="mt-1 inline-block text-[10px] font-bold text-[#741f23] underline underline-offset-2">
+                            Need more than 5? Contact us for bulk pricing & availability.
+                          </Link>
+                        )}
                       </div>
 
                       <div className="flex items-center overflow-hidden rounded-xl border border-[#ead8b8] bg-white shadow-inner">
                         <button
                           onClick={() => updateQuantity(idx, -1)}
-                          className="px-3 py-1.5 font-bold text-stone-600 transition hover:bg-[#fff2dc] hover:text-[#741f23]"
+                          className="px-3 py-1.5 font-bold text-stone-600 transition hover:bg-[#fff2dc] hover:text-[#741f23] disabled:cursor-not-allowed disabled:opacity-40"
                           aria-label="Decrease quantity"
+                          disabled={qty <= 1}
                         >
                           <Minus size={14} />
                         </button>
@@ -173,8 +201,9 @@ export default function CartPage() {
 
                         <button
                           onClick={() => updateQuantity(idx, 1)}
-                          className="px-3 py-1.5 font-bold text-stone-600 transition hover:bg-[#fff2dc] hover:text-[#741f23]"
+                          className="px-3 py-1.5 font-bold text-stone-600 transition hover:bg-[#fff2dc] hover:text-[#741f23] disabled:cursor-not-allowed disabled:opacity-40"
                           aria-label="Increase quantity"
+                          disabled={qty >= MAX_RETAIL_QTY_PER_PRODUCT_SIZE}
                         >
                           <Plus size={14} />
                         </button>
@@ -234,6 +263,10 @@ export default function CartPage() {
                     </div>
                   </div>
 
+                  <div className="rounded-2xl border border-green-200 bg-green-50 p-3 text-[11px] leading-relaxed text-green-800">
+                    <strong>Smart delivery tip:</strong> adding multiple lightweight products to one order can reduce the delivery cost per item because eligible items are shipped as one combined parcel.
+                  </div>
+
                   <div className="flex items-center justify-between border-t border-[#ead8b8] py-4 text-base font-black text-[#741f23]">
                     <span>Cart Subtotal</span>
 
@@ -275,6 +308,11 @@ export default function CartPage() {
                       <ReceiptText size={15} className="mt-0.5 shrink-0 text-[#741f23]" />
                       <span><strong className="text-stone-800">GST included</strong>; tax invoice is generated after order placement.</span>
                     </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-[#ead8b8] bg-white p-3 text-[10px] leading-relaxed text-stone-600">
+                    Retail checkout allows up to <strong>5 pcs of the same Product + Size</strong>. Different sizes may each have up to 5 pcs.
+                    {' '}<Link href="/contact" className="font-black text-[#741f23] underline underline-offset-2">Bulk Order / Contact Us</Link>
                   </div>
 
                   <button
