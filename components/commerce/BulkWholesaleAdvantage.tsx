@@ -3,9 +3,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { PackageCheck, ShoppingBag, Truck, Scale, Boxes } from 'lucide-react';
+import {
+  PackageCheck,
+  ShoppingBag,
+  Truck,
+  Scale,
+  Boxes,
+  Loader2,
+} from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { resolveStorefrontImageSrc } from '@/lib/storefront-image';
+import { verifyPincodeAndGetShippingAction } from '@/actions/shipping';
 
 type ExampleProduct = {
   id: string;
@@ -13,6 +21,12 @@ type ExampleProduct = {
   category: string | null;
   image: string;
   weightGrams: number;
+  price: number;
+};
+
+type InventoryRow = {
+  available_quantity?: number | null;
+  weight_kg?: number | null;
 };
 
 type ProductRow = {
@@ -21,10 +35,19 @@ type ProductRow = {
   category: string | null;
   images?: string[] | null;
   image?: string | null;
+  price?: number | null;
   stock?: number | null;
   net_weight_grams?: number | null;
-  inventory?: Array<{ available_quantity?: number | null }> | null;
+  inventory?: InventoryRow[] | null;
 };
+
+type SavingResult = {
+  separateCharge: number;
+  combinedCharge: number;
+  saving: number;
+};
+
+const LIGHTWEIGHT_MAX_GRAMS = 500;
 
 function shuffled<T>(items: T[]) {
   const copy = [...items];
@@ -35,15 +58,38 @@ function shuffled<T>(items: T[]) {
   return copy;
 }
 
+function resolveWeightGrams(row: ProductRow) {
+  const productWeight = Number(row.net_weight_grams || 0);
+  if (Number.isFinite(productWeight) && productWeight > 0) {
+    return Math.round(productWeight);
+  }
+
+  const inStockVariant = (row.inventory || []).find(
+    (variant) =>
+      Number(variant.available_quantity || 0) > 0 &&
+      Number(variant.weight_kg || 0) > 0
+  );
+
+  const variantWeightKg = Number(inStockVariant?.weight_kg || 0);
+  return Number.isFinite(variantWeightKg) && variantWeightKg > 0
+    ? Math.round(variantWeightKg * 1000)
+    : 0;
+}
+
 function selectMixedProducts(rows: ProductRow[]) {
   const eligible = shuffled(
     rows.filter((row) => {
-      const weight = Number(row.net_weight_grams || 0);
+      const weight = resolveWeightGrams(row);
       const inventoryStock = (row.inventory || []).some(
         (variant) => Number(variant.available_quantity || 0) > 0
       );
       const productStock = Number(row.stock || 0) > 0;
-      return Number.isFinite(weight) && weight > 0 && (inventoryStock || productStock);
+
+      return (
+        weight > 0 &&
+        weight <= LIGHTWEIGHT_MAX_GRAMS &&
+        (inventoryStock || productStock)
+      );
     })
   );
 
@@ -72,31 +118,45 @@ function selectMixedProducts(rows: ProductRow[]) {
     title: row.title,
     category: row.category,
     image: resolveStorefrontImageSrc(row.images?.[0] || row.image),
-    weightGrams: Number(row.net_weight_grams || 0),
+    weightGrams: resolveWeightGrams(row),
+    price: Math.max(1, Number(row.price || 0)),
   }));
 }
 
 export default function BulkWholesaleAdvantage() {
   const [exampleProducts, setExampleProducts] = useState<ExampleProduct[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pincode, setPincode] = useState('');
+  const [calculating, setCalculating] = useState(false);
+  const [savingResult, setSavingResult] = useState<SavingResult | null>(null);
+  const [savingError, setSavingError] = useState('');
 
   useEffect(() => {
     let active = true;
 
     async function loadExampleProducts() {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('products')
-        .select('id, title, category, images, image, stock, net_weight_grams, inventory(available_quantity)')
+        .select(
+          'id, title, category, images, image, price, stock, net_weight_grams, inventory(available_quantity, weight_kg)'
+        )
         .eq('is_active', true)
-        .gt('net_weight_grams', 0)
-        .limit(40);
+        .limit(80);
 
       if (!active) return;
-      setExampleProducts(selectMixedProducts((data || []) as ProductRow[]));
+
+      if (error) {
+        console.error('Smart cart example query failed:', error);
+        setExampleProducts([]);
+      } else {
+        setExampleProducts(selectMixedProducts((data || []) as ProductRow[]));
+      }
+
       setLoading(false);
     }
 
-    loadExampleProducts();
+    void loadExampleProducts();
+
     return () => {
       active = false;
     };
@@ -107,9 +167,81 @@ export default function BulkWholesaleAdvantage() {
     [exampleProducts]
   );
 
-  const totalWeightLabel = totalWeightGrams >= 1000
-    ? `${(totalWeightGrams / 1000).toFixed(2)} kg`
-    : `${Math.round(totalWeightGrams)} g`;
+  const totalSubtotal = useMemo(
+    () => exampleProducts.reduce((sum, item) => sum + item.price, 0),
+    [exampleProducts]
+  );
+
+  const totalWeightLabel =
+    totalWeightGrams >= 1000
+      ? `${(totalWeightGrams / 1000).toFixed(2)} kg`
+      : `${Math.round(totalWeightGrams)} g`;
+
+  const calculateSaving = async () => {
+    setSavingResult(null);
+    setSavingError('');
+
+    if (!/^\d{6}$/.test(pincode)) {
+      setSavingError('Enter a valid 6-digit PIN code.');
+      return;
+    }
+
+    if (exampleProducts.length < 5 || totalWeightGrams <= 0) {
+      setSavingError('Five lightweight products with valid weights are required for this example.');
+      return;
+    }
+
+    setCalculating(true);
+
+    try {
+      const [combined, ...individual] = await Promise.all([
+        verifyPincodeAndGetShippingAction({
+          pincode,
+          totalWeightKg: totalWeightGrams / 1000,
+          subtotal: totalSubtotal,
+          paymentType: 'PREPAID',
+        }),
+        ...exampleProducts.map((item) =>
+          verifyPincodeAndGetShippingAction({
+            pincode,
+            totalWeightKg: item.weightGrams / 1000,
+            subtotal: item.price,
+            paymentType: 'PREPAID',
+          })
+        ),
+      ]);
+
+      const allRates = [combined, ...individual];
+      const unavailable = allRates.find(
+        (rate) => !rate.success || !rate.isServiceable
+      );
+
+      if (unavailable) {
+        setSavingError(
+          unavailable.error ||
+            unavailable.message ||
+            'Delivery is not serviceable for this PIN code.'
+        );
+        return;
+      }
+
+      const combinedCharge = Number(combined.customerShippingCharge || 0);
+      const separateCharge = individual.reduce(
+        (sum, rate) => sum + Number(rate.customerShippingCharge || 0),
+        0
+      );
+
+      setSavingResult({
+        separateCharge,
+        combinedCharge,
+        saving: Math.max(0, separateCharge - combinedCharge),
+      });
+    } catch (error: any) {
+      setSavingError(error?.message || 'Unable to calculate delivery saving right now.');
+    } finally {
+      setCalculating(false);
+    }
+  };
 
   return (
     <section
@@ -189,6 +321,12 @@ export default function BulkWholesaleAdvantage() {
             ))}
           </div>
 
+          {!loading && exampleProducts.length < 5 && (
+            <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[10px] leading-relaxed text-amber-800">
+              Add valid weight to at least 5 active lightweight products (500g or less) to enable the full live saving example.
+            </div>
+          )}
+
           <div className="mt-4 grid grid-cols-3 divide-x divide-[#ead8b8] rounded-2xl border border-[#ead8b8] bg-white py-4 text-center">
             <div className="px-2">
               <p className="text-[10px] font-bold text-gray-500">Total Items</p>
@@ -201,10 +339,50 @@ export default function BulkWholesaleAdvantage() {
               <p className="text-[9px] text-gray-400">Actual product weights</p>
             </div>
             <div className="px-2">
-              <p className="text-[10px] font-bold text-gray-500">Delivery Charge</p>
-              <p className="mt-1 text-sm font-black text-[#741f23]">Check PIN</p>
-              <p className="text-[9px] text-gray-400">Live rate at product/checkout</p>
+              <p className="text-[10px] font-bold text-gray-500">Delivery Saving</p>
+              <p className="mt-1 text-lg font-black text-green-700">
+                {savingResult ? `₹${savingResult.saving.toLocaleString('en-IN')}` : 'Enter PIN'}
+              </p>
+              <p className="text-[9px] text-gray-400">Estimated live comparison</p>
             </div>
+          </div>
+
+          <div className="mt-3 rounded-xl border border-[#ead8b8] bg-white p-3">
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <input
+                value={pincode}
+                onChange={(event) => {
+                  setPincode(event.target.value.replace(/\D/g, '').slice(0, 6));
+                  setSavingResult(null);
+                  setSavingError('');
+                }}
+                inputMode="numeric"
+                maxLength={6}
+                placeholder="Enter delivery PIN"
+                className="min-h-10 flex-1 rounded-lg border border-[#ead8b8] px-3 text-xs font-bold text-gray-800 outline-none focus:border-[#741f23]"
+              />
+              <button
+                type="button"
+                onClick={() => void calculateSaving()}
+                disabled={calculating || exampleProducts.length < 5}
+                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-[#741f23] px-4 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {calculating && <Loader2 size={14} className="animate-spin" />}
+                {calculating ? 'Checking...' : 'See Delivery Saving'}
+              </button>
+            </div>
+
+            {savingResult && (
+              <div className="mt-3 rounded-lg bg-green-50 px-3 py-2 text-center text-[10px] font-bold leading-relaxed text-green-800">
+                Separate shipping estimate: ₹{savingResult.separateCharge.toLocaleString('en-IN')}
+                {' '}→ Combined shipping estimate: ₹{savingResult.combinedCharge.toLocaleString('en-IN')}
+                {' '}• You could save ₹{savingResult.saving.toLocaleString('en-IN')} on delivery.
+              </div>
+            )}
+
+            {savingError && (
+              <p className="mt-2 text-center text-[10px] font-bold text-red-600">{savingError}</p>
+            )}
           </div>
 
           <div className="mt-3 rounded-xl bg-green-50 px-3 py-2 text-center text-[10px] font-bold leading-relaxed text-green-800">
@@ -223,7 +401,7 @@ export default function BulkWholesaleAdvantage() {
       </div>
 
       <div className="border-t border-[#ead8b8] bg-white px-4 py-3 text-center text-[10px] leading-relaxed text-gray-500 sm:text-[11px]">
-        Shipping is calculated from the combined shipment weight and delivery PIN. Any discount shown at checkout must meet the active offer conditions.
+        Saving is an estimate using the current delivery PIN and product weights. Final shipping is calculated again at checkout.
       </div>
     </section>
   );
