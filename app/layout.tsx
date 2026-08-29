@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import Script from 'next/script';
 import GA4EcommerceTracker from '@/components/GA4EcommerceTracker';
+import Welcome50Promotion from '@/components/promotions/Welcome50Promotion';
 
 const SITE_URL = 'https://www.adhyeybrothers.in';
 
@@ -215,6 +216,7 @@ export default function RootLayout({
           }}
         />
 
+        <Welcome50Promotion />
         {children}
 
         <GA4EcommerceTracker />
