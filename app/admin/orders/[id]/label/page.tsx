@@ -24,6 +24,10 @@ const LABEL_SIZES: Record<
   '4x4': { label: '4 × 4 inch (100 × 100 mm)', widthMm: 101.6, heightMm: 101.6 },
 };
 
+const SELLER_NAME = 'ADHYEY BROTHERS';
+const SELLER_ADDRESS = 'SY NO 9/10, PLOT 353-354-355, PANDOL INDUSTRIES, SURAT - 395004';
+const SELLER_GSTIN = '24AKBPD1704F1Z1';
+
 export default function OrderShippingLabelPage() {
   const router = useRouter();
   const routeParams = useParams();
@@ -288,15 +292,18 @@ export default function OrderShippingLabelPage() {
         }}
       >
         <div className={`flex items-start justify-between border-b-2 border-black ${isCompact ? 'pb-1' : 'pb-2'}`}>
-          <div>
+          <div className="min-w-0 pr-2">
             <h2 className={`${isCompact ? 'text-sm' : 'text-base'} font-black uppercase tracking-tight`}>
-              ADHYEY BROTHERS
+              {SELLER_NAME}
             </h2>
-            <p className={`${isCompact ? 'text-[7px]' : 'text-[9px]'} font-bold text-gray-700`}>
-              Surat, Gujarat • GSTIN: 24AKBPD1704F1Z1
+            <p className={`${isCompact ? 'text-[6.5px]' : 'text-[8px]'} max-w-[255px] font-bold leading-tight text-gray-700`}>
+              {SELLER_ADDRESS}
+            </p>
+            <p className={`${isCompact ? 'text-[6.5px]' : 'text-[8px]'} font-bold text-gray-700`}>
+              GSTIN: {SELLER_GSTIN}
             </p>
           </div>
-          <div className="text-right">
+          <div className="shrink-0 text-right">
             <span className={`rounded border-2 border-black px-2 py-0.5 font-black uppercase ${isCompact ? 'text-[9px]' : 'text-xs'}`}>
               {isCod ? `COD: ₹${order.grand_total || order.total_amount}` : 'PREPAID'}
             </span>
@@ -336,9 +343,6 @@ export default function OrderShippingLabelPage() {
           <p className={`${isCompact ? 'text-sm' : 'text-base'} pt-0.5 font-mono font-black tracking-wider`}>
             PIN: {shippingAddr.pincode || '395007'}
           </p>
-          <p className={`${isCompact ? 'text-[8px]' : 'text-[11px]'} font-bold`}>
-            Phone: {order.customer_phone || order.phone || 'N/A'}
-          </p>
         </div>
 
         <div className={`flex-1 space-y-1 border-b-2 border-black ${isCompact ? 'py-1' : 'py-2'}`}>
@@ -360,7 +364,7 @@ export default function OrderShippingLabelPage() {
         <div className={`${isCompact ? 'pt-1 text-[6.5px]' : 'pt-2 text-[8.5px]'} leading-tight text-gray-700`}>
           <p className="font-bold">If undelivered, return to:</p>
           <p>
-            ADHYEY BROTHERS, 3rd Floor, 33 Shaktinagar Society, Peoples Char Rasta, Katargam, Surat, Gujarat - 395004, India
+            {SELLER_NAME}, {SELLER_ADDRESS}, India • GSTIN: {SELLER_GSTIN}
           </p>
         </div>
       </div>
