@@ -209,13 +209,23 @@ export default function OrderShippingLabelPage() {
             overflow: hidden !important;
             background: #fff !important;
           }
+          body * {
+            visibility: hidden !important;
+          }
+          .print-label-page,
+          .print-label-page * {
+            visibility: visible !important;
+          }
           .print-label-page {
+            position: fixed !important;
+            left: ${PRINT_SAFE_MM}mm !important;
+            top: ${PRINT_SAFE_MM}mm !important;
             box-sizing: border-box !important;
             width: calc(${selectedLabel.widthMm}mm - ${PRINT_SAFE_MM * 2}mm) !important;
             height: calc(${selectedLabel.heightMm}mm - ${PRINT_SAFE_MM * 2}mm) !important;
             min-height: calc(${selectedLabel.heightMm}mm - ${PRINT_SAFE_MM * 2}mm) !important;
             max-height: calc(${selectedLabel.heightMm}mm - ${PRINT_SAFE_MM * 2}mm) !important;
-            margin: ${PRINT_SAFE_MM}mm !important;
+            margin: 0 !important;
             border: 1.5px solid #000 !important;
             box-shadow: none !important;
             overflow: hidden !important;
