@@ -123,8 +123,6 @@ function classifySubcategory(product: ClassificationProduct) {
     `${product.title || ''} ${product.description || ''}`
   );
 
-  // Existing Fashion & Apparel records pre-date persisted subcategory fields.
-  // These targeted aliases recover their intended catalog branch safely.
   if (normalize(config.name) === normalize('Fashion & Apparel')) {
     if (
       /\bgirls?\b/.test(text) &&
@@ -156,8 +154,6 @@ function classifySubcategory(product: ClassificationProduct) {
     }
   }
 
-  // If a main category has only one branch, an active product necessarily
-  // belongs to that branch even when an older record lacks classification text.
   if (config.subcategories.length === 1) {
     return config.subcategories[0].name;
   }
@@ -203,7 +199,9 @@ function buildCollections(
     })
     .filter((collection) => collection.product_count > 0)
     .sort((a, b) => {
-      const featured = Number(Boolean(b.homepage_featured)) - Number(Boolean(a.homepage_featured));
+      const featured =
+        Number(Boolean(b.homepage_featured)) -
+        Number(Boolean(a.homepage_featured));
       if (featured !== 0) return featured;
       return (
         Number(a.homepage_display_order || 0) -
@@ -380,14 +378,14 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
     return result;
   };
 
-  let query = applyFilters(
+  const query = applyFilters(
     supabase
       .from('products')
       .select(productSelect, { count: 'exact' })
       .eq('is_active', true)
   ).range(rangeFrom, rangeTo);
 
-  let featuredQuery = applyFilters(
+  const featuredQuery = applyFilters(
     supabase
       .from('products')
       .select(productSelect)
@@ -404,8 +402,8 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
     facetQuery,
   ]);
 
-  const products = productResult.data || [];
-  const featuredProducts = featuredResult.data || [];
+  const products = (productResult.data || []) as any[];
+  const featuredProducts = (featuredResult.data || []) as any[];
   const totalProducts = productResult.count || 0;
   const facets = (facetResult.data || {}) as StorefrontFacets;
 
@@ -553,7 +551,7 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
                 </a>
               </div>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                {featuredProducts.map((product) => (
+                {featuredProducts.map((product: any) => (
                   <ProductCard
                     key={`featured-${product.id}`}
                     product={product}
@@ -639,7 +637,7 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
                       {totalProducts}
                     </p>
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-                      {products.map((product) => (
+                      {products.map((product: any) => (
                         <ProductCard
                           key={product.id}
                           product={product}
