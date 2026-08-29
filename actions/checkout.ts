@@ -141,12 +141,18 @@ export async function processOrderCheckout(formData: CheckoutInput) {
       ''
     ).trim();
 
-    const customerPhone = (
+    const customerPhone = String(
       formData.customer_phone ||
       formData.customerPhone ||
       formData.phone ||
       ''
-    ).trim();
+    )
+      .replace(/\D/g, '')
+      .slice(-10);
+
+    const deliveryAddress = String(formData.address || '').trim();
+    const deliveryCity = String(formData.city || '').trim();
+    const deliveryState = String(formData.state || '').trim();
 
     if (!customerName) {
       return {
@@ -162,17 +168,17 @@ export async function processOrderCheckout(formData: CheckoutInput) {
       };
     }
 
-    if (!customerPhone) {
+    if (!/^\d{10}$/.test(customerPhone)) {
       return {
         success: false,
-        error: 'Customer phone number is required.',
+        error: 'A valid 10-digit mobile number is required.',
       };
     }
 
-    if (!formData.address?.trim() || !formData.city?.trim()) {
+    if (!deliveryAddress || !deliveryCity || !deliveryState) {
       return {
         success: false,
-        error: 'Complete delivery address and city are required.',
+        error: 'Complete delivery address, city and state are required.',
       };
     }
 
@@ -208,12 +214,12 @@ export async function processOrderCheckout(formData: CheckoutInput) {
       )}`;
 
     const fullAddress =
-      `${formData.address.trim()}, ${formData.city.trim()} - ${cleanPincode}`;
+      `${deliveryAddress}, ${deliveryCity}, ${deliveryState} - ${cleanPincode}`;
 
     const shippingAddressJson = {
-      address: formData.address.trim(),
-      city: formData.city.trim(),
-      state: formData.state?.trim() || 'Gujarat',
+      address: deliveryAddress,
+      city: deliveryCity,
+      state: deliveryState,
       pincode: cleanPincode,
       country: 'India',
     };
