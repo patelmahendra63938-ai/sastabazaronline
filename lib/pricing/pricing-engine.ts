@@ -12,11 +12,30 @@ const WELCOME50_CODE = 'WELCOME50';
 const WELCOME50_MINIMUM_ORDER = 499;
 const WELCOME50_DISCOUNT = 50;
 const WELCOME50_END_AT_UTC = Date.parse('2026-09-07T18:29:59.999Z'); // 07 Sep 2026, 23:59:59 IST
+const MAX_RETAIL_QTY_PER_PRODUCT_SIZE = 5;
 
 export async function calculateAuthoritativeOrderPricing(input: { db: SupabaseClient; pincode: string; paymentMethod: PricingPaymentMethod; cart: PricingCartItem[]; couponCode?: string; }): Promise<PricingBreakdown> {
   const cleanPin = String(input.pincode || '').trim();
   if (!/^\d{6}$/.test(cleanPin)) throw new Error('Please enter a valid 6-digit delivery PIN code.');
   if (!Array.isArray(input.cart) || !input.cart.length) throw new Error('Cart cannot be empty.');
+
+  const retailQuantityByProductSize = new Map<string, number>();
+  for (const item of input.cart) {
+    const productId = item.product_id || item.id;
+    const size = String(item.size || 'Free Size').trim().toLowerCase();
+    const quantity = Number(item.quantity);
+
+    if (!productId || !Number.isInteger(quantity) || quantity <= 0) {
+      throw new Error('Invalid retail cart quantity.');
+    }
+
+    const key = `${productId}::${size}`;
+    const totalForProductSize = (retailQuantityByProductSize.get(key) || 0) + quantity;
+    if (totalForProductSize > MAX_RETAIL_QTY_PER_PRODUCT_SIZE) {
+      throw new Error('Retail orders allow a maximum of 5 pcs of the same Product + Size. Please use Bulk Order / Contact Us for larger quantities.');
+    }
+    retailQuantityByProductSize.set(key, totalForProductSize);
+  }
 
   const productIds = [...new Set(input.cart.map((item) => item.product_id || item.id).filter((id): id is string => Boolean(id)))];
   if (!productIds.length) throw new Error('No valid product references were found in the cart.');
@@ -216,6 +235,6 @@ export async function calculateAuthoritativeOrderPricing(input: { db: SupabaseCl
       ? 'Delivery is available. WELCOME50 launch offer applied.'
       : 'Delivery is available for this PIN code.',
     verifiedItems,
-    ruleVersion: 1,
+    ruleVersion: 2,
   };
 }
