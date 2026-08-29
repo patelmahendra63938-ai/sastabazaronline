@@ -9,6 +9,9 @@ import {
   Plus,
   Minus,
   ArrowLeft,
+  ShieldCheck,
+  RotateCcw,
+  ReceiptText,
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -259,11 +262,27 @@ export default function CartPage() {
                     </p>
                   </div>
 
+                  <div className="space-y-2 rounded-2xl border border-[#ead8b8] bg-white p-3 text-[11px] text-stone-600">
+                    <div className="flex items-start gap-2">
+                      <ShieldCheck size={15} className="mt-0.5 shrink-0 text-green-600" />
+                      <span><strong className="text-stone-800">Secure checkout</strong> with online payment and COD where available.</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <RotateCcw size={15} className="mt-0.5 shrink-0 text-[#b5843d]" />
+                      <span><strong className="text-stone-800">7-day return policy</strong> applies to eligible items as per policy terms.</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <ReceiptText size={15} className="mt-0.5 shrink-0 text-[#741f23]" />
+                      <span><strong className="text-stone-800">GST included</strong>; tax invoice is generated after order placement.</span>
+                    </div>
+                  </div>
+
                   <button
                     onClick={() => router.push('/checkout')}
-                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#741f23] px-6 py-4 text-sm font-bold text-white shadow-lg transition hover:bg-[#5e171b]"
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#741f23] px-6 py-4 text-sm font-black text-white shadow-lg transition hover:bg-[#5e171b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d7aa5b] focus-visible:ring-offset-2"
                   >
-                    Proceed to Checkout
+                    <ShieldCheck size={17} />
+                    Proceed to Secure Checkout
                   </button>
                 </div>
               </div>
