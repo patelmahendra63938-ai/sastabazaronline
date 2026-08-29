@@ -117,14 +117,16 @@ export async function calculateAuthoritativeOrderPricing(input: { db: SupabaseCl
     });
   }
 
-  // WELCOME50 is intentionally an ORDER-LEVEL launch coupon. The generic
-  // campaign engine above discounts per product, which would multiply a fixed
-  // ₹50 discount in a multi-item cart. Apply this coupon once, server-side.
+  // WELCOME50 is an ORDER-LEVEL launch offer. It is auto-applied when the
+  // customer has no other coupon, or honored when WELCOME50 is explicitly set.
+  // The generic campaign engine discounts per product, so keeping this here
+  // prevents a fixed ₹50 discount from multiplying across a multi-item cart.
   const normalizedCouponCode = String(input.couponCode || '').trim().toUpperCase();
   const productCampaignDiscount = Math.max(0, originalProductPriceTotal - discountedSubtotal);
   const isWelcome50Active = Date.now() <= WELCOME50_END_AT_UTC;
+  const hasNoCompetingCoupon = normalizedCouponCode === '' || normalizedCouponCode === WELCOME50_CODE;
   const canApplyWelcome50 =
-    normalizedCouponCode === WELCOME50_CODE &&
+    hasNoCompetingCoupon &&
     isWelcome50Active &&
     discountedSubtotal >= WELCOME50_MINIMUM_ORDER &&
     productCampaignDiscount === 0;
