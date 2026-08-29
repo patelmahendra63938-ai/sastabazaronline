@@ -29,8 +29,8 @@ export default function Footer() {
             </div>
           </Link>
           <p className="text-xs leading-relaxed text-stone-300">
-            Your trusted online shopping destination for fashion, lifestyle,
-            home and everyday products across India.
+            Shop women’s ethnic wear, Dhoti Choli, Lehenga Choli, festive styles
+            and girls fashion with Pan India delivery from Surat, Gujarat.
           </p>
           <div className="flex items-center gap-2 text-xs font-bold text-[#e7c98d]">
             <ShieldCheck size={16} aria-hidden="true" />

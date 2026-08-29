@@ -24,9 +24,35 @@ import { getHomepageDisplaySettings } from '@/lib/settings/homepage-display';
 import { ArrowRight, ShoppingBag } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'ADHYEY BROTHERS – Fashion, Lifestyle & Online Shopping',
+  title: 'Women’s Ethnic Wear, Dhoti Choli & Girls Fashion Online',
   description:
-    'Shop curated fashion, lifestyle and everyday collections at ADHYEY BROTHERS.',
+    'Shop women’s ethnic wear, Dhoti Choli, Lehenga Choli, festive styles and girls fashion online at ADHYEY BROTHERS with Pan India delivery.',
+  alternates: {
+    canonical: 'https://www.adhyeybrothers.in/',
+  },
+  openGraph: {
+    type: 'website',
+    url: 'https://www.adhyeybrothers.in/',
+    siteName: 'ADHYEY BROTHERS',
+    title: 'Women’s Ethnic Wear, Dhoti Choli & Girls Fashion Online | ADHYEY BROTHERS',
+    description:
+      'Shop women’s ethnic wear, Dhoti Choli, Lehenga Choli, festive styles and girls fashion online at ADHYEY BROTHERS with Pan India delivery.',
+    images: [
+      {
+        url: '/opengraph-image',
+        width: 1200,
+        height: 630,
+        alt: 'ADHYEY BROTHERS online fashion store',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Women’s Ethnic Wear, Dhoti Choli & Girls Fashion Online | ADHYEY BROTHERS',
+    description:
+      'Shop women’s ethnic wear, Dhoti Choli, Lehenga Choli, festive styles and girls fashion online at ADHYEY BROTHERS with Pan India delivery.',
+    images: ['/opengraph-image'],
+  },
 };
 
 interface PageProps {
@@ -435,6 +461,18 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
         <Header />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-8 sm:space-y-10">
+          <section className="rounded-3xl border border-[#ead8b8] bg-[#fffdf9] px-5 py-5 shadow-xs sm:px-7">
+            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#b5843d]">
+              ADHYEY BROTHERS
+            </p>
+            <h1 className="mt-1 text-2xl font-black tracking-tight text-[#741f23] sm:text-3xl">
+              Women’s Ethnic Wear, Dhoti Choli & Girls Fashion Online
+            </h1>
+            <p className="mt-2 max-w-3xl text-xs leading-relaxed text-stone-600 sm:text-sm">
+              Explore women’s ethnic wear, Dhoti Choli, Lehenga Choli, festive styles and girls fashion with Pan India delivery.
+            </p>
+          </section>
+
           {homepageBannerCampaign && (
             <CampaignBanner campaign={homepageBannerCampaign} />
           )}

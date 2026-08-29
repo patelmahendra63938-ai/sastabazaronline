@@ -1,5 +1,6 @@
 export const revalidate = 60;
 
+import type { Metadata } from 'next';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { supabase } from '@/lib/supabase';
@@ -9,12 +10,98 @@ import Pagination from '@/components/Pagination';
 import { ArrowLeft, ShoppingBag } from 'lucide-react';
 import { getActiveStorefrontCategoryByName } from '@/lib/catalog/storefront-categories';
 
+const SITE_URL = 'https://www.adhyeybrothers.in';
 const PAGE_SIZE = 16;
 
 function parsePage(value?: string) {
   if (!value || !/^\d+$/.test(value)) return 1;
   const parsed = Number(value);
   return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : 1;
+}
+
+function categorySeo(name: string) {
+  const normalized = name.toLowerCase();
+
+  if (normalized === 'women ethnic wear') {
+    return {
+      title: 'Women’s Ethnic Wear, Dhoti Choli & Lehenga Choli',
+      description:
+        'Shop women’s ethnic wear including Dhoti Choli, Lehenga Choli and festive styles at ADHYEY BROTHERS. Pan India delivery from Surat, Gujarat.',
+    };
+  }
+
+  if (normalized === 'girls') {
+    return {
+      title: 'Girls Nightwear & Fashion Online',
+      description:
+        'Shop girls nightwear and fashion online at ADHYEY BROTHERS. Explore comfortable styles with Pan India delivery from Surat, Gujarat.',
+    };
+  }
+
+  if (normalized === 'men ethnic & western') {
+    return {
+      title: 'Men’s Ethnic & Western Wear Online',
+      description:
+        'Shop men’s ethnic and western wear online at ADHYEY BROTHERS with quality styles and Pan India delivery.',
+    };
+  }
+
+  return {
+    title: `${name} Online Shopping`,
+    description: `Shop active ${name} products online at ADHYEY BROTHERS with Pan India delivery.`,
+  };
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ categoryName: string }> | { categoryName: string };
+}): Promise<Metadata> {
+  const resolvedParams = await params;
+  const requestedName = decodeURIComponent(resolvedParams.categoryName);
+  const activeCategory = await getActiveStorefrontCategoryByName(requestedName);
+  const canonicalName = activeCategory?.name || requestedName;
+  const canonical = `${SITE_URL}/category/${encodeURIComponent(canonicalName)}`;
+  const seo = categorySeo(canonicalName);
+  const isIndexable = Boolean(activeCategory && activeCategory.product_count > 0);
+
+  return {
+    title: seo.title,
+    description: seo.description,
+    alternates: {
+      canonical,
+    },
+    robots: {
+      index: isIndexable,
+      follow: true,
+      googleBot: {
+        index: isIndexable,
+        follow: true,
+        'max-image-preview': 'large',
+      },
+    },
+    openGraph: {
+      type: 'website',
+      url: canonical,
+      siteName: 'ADHYEY BROTHERS',
+      title: `${seo.title} | ADHYEY BROTHERS`,
+      description: seo.description,
+      images: [
+        {
+          url: '/opengraph-image',
+          width: 1200,
+          height: 630,
+          alt: `${canonicalName} at ADHYEY BROTHERS`,
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${seo.title} | ADHYEY BROTHERS`,
+      description: seo.description,
+      images: ['/opengraph-image'],
+    },
+  };
 }
 
 async function getProductsByCategory(
@@ -75,9 +162,33 @@ export default async function CategoryPage({
   const rangeTo = count > 0
     ? Math.min((currentPage - 1) * PAGE_SIZE + products.length, count)
     : 0;
+  const canonical = `${SITE_URL}/category/${encodeURIComponent(canonicalName)}`;
+
+  const breadcrumbJsonLd = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: SITE_URL,
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: canonicalName,
+        item: canonical,
+      },
+    ],
+  }).replace(/</g, '\\u003c');
 
   return (
     <main className="min-h-screen bg-[#fffaf5] flex flex-col justify-between">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: breadcrumbJsonLd }}
+      />
       <div>
         <Header />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
