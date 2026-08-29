@@ -34,7 +34,6 @@ type ProductRow = {
   title: string;
   category: string | null;
   images?: string[] | null;
-  image?: string | null;
   price?: number | null;
   stock?: number | null;
   net_weight_grams?: number | null;
@@ -117,7 +116,7 @@ function selectMixedProducts(rows: ProductRow[]) {
     id: row.id,
     title: row.title,
     category: row.category,
-    image: resolveStorefrontImageSrc(row.images?.[0] || row.image),
+    image: resolveStorefrontImageSrc(row.images?.[0]),
     weightGrams: resolveWeightGrams(row),
     price: Math.max(1, Number(row.price || 0)),
   }));
@@ -138,7 +137,7 @@ export default function BulkWholesaleAdvantage() {
       const { data, error } = await supabase
         .from('products')
         .select(
-          'id, title, category, images, image, price, stock, net_weight_grams, inventory(available_quantity, weight_kg)'
+          'id, title, category, images, price, stock, net_weight_grams, inventory(available_quantity, weight_kg)'
         )
         .eq('is_active', true)
         .limit(80);
