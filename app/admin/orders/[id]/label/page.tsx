@@ -13,6 +13,17 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
+type LabelSizeKey = '4x6' | 'a6' | '4x4';
+
+const LABEL_SIZES: Record<
+  LabelSizeKey,
+  { label: string; widthMm: number; heightMm: number }
+> = {
+  '4x6': { label: '4 × 6 inch (100 × 150 mm)', widthMm: 101.6, heightMm: 152.4 },
+  a6: { label: 'A6 (105 × 148 mm)', widthMm: 105, heightMm: 148 },
+  '4x4': { label: '4 × 4 inch (100 × 100 mm)', widthMm: 101.6, heightMm: 101.6 },
+};
+
 export default function OrderShippingLabelPage() {
   const router = useRouter();
   const routeParams = useParams();
@@ -22,13 +33,16 @@ export default function OrderShippingLabelPage() {
   const [allOrders, setAllOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [labelSize, setLabelSize] = useState<LabelSizeKey>('4x6');
+
+  const selectedLabel = LABEL_SIZES[labelSize];
+  const isCompact = labelSize === '4x4';
 
   const fetchOrderAndList = async () => {
     setLoading(true);
     setErrorMsg(null);
 
     try {
-      // 1. Fetch recent orders for dropdown switcher
       const { data: recentOrders } = await supabase
         .from('orders')
         .select('id, order_number, customer_name, grand_total, created_at')
@@ -52,18 +66,14 @@ export default function OrderShippingLabelPage() {
 
       if (!isLiteralPlaceholder) {
         if (isUUID) {
-          // Query by UUID
           const { data, error } = await supabase
             .from('orders')
             .select('*')
             .eq('id', decodedId)
             .maybeSingle();
 
-          if (!error && data) {
-            targetOrder = data;
-          }
+          if (!error && data) targetOrder = data;
         } else {
-          // Query by Order Number
           const { data, error } = await supabase
             .from('orders')
             .select('*')
@@ -73,7 +83,6 @@ export default function OrderShippingLabelPage() {
           if (!error && data) {
             targetOrder = data;
           } else {
-            // Partial lookup fallback
             const { data: partialMatch } = await supabase
               .from('orders')
               .select('*')
@@ -81,25 +90,19 @@ export default function OrderShippingLabelPage() {
               .limit(1)
               .maybeSingle();
 
-            if (partialMatch) {
-              targetOrder = partialMatch;
-            }
+            if (partialMatch) targetOrder = partialMatch;
           }
         }
       }
 
-      // If literal [id] was accessed or order wasn't found by specific ID,
-      // auto-fallback to latest order.
-      if (!targetOrder) {
-        if (recentOrders && recentOrders.length > 0) {
-          const { data: latestFullOrder } = await supabase
-            .from('orders')
-            .select('*')
-            .eq('id', recentOrders[0].id)
-            .single();
+      if (!targetOrder && recentOrders && recentOrders.length > 0) {
+        const { data: latestFullOrder } = await supabase
+          .from('orders')
+          .select('*')
+          .eq('id', recentOrders[0].id)
+          .single();
 
-          targetOrder = latestFullOrder;
-        }
+        targetOrder = latestFullOrder;
       }
 
       if (!targetOrder) {
@@ -108,16 +111,12 @@ export default function OrderShippingLabelPage() {
         );
       }
 
-      // 2. Fetch line items decoupled
       const { data: itemsData } = await supabase
         .from('order_items')
         .select('*')
         .eq('order_id', targetOrder.id);
 
-      setOrder({
-        ...targetOrder,
-        order_items: itemsData || [],
-      });
+      setOrder({ ...targetOrder, order_items: itemsData || [] });
     } catch (err: any) {
       console.error('Label fetch error:', err);
       setErrorMsg(err.message || 'Failed to generate shipping label.');
@@ -127,7 +126,7 @@ export default function OrderShippingLabelPage() {
   };
 
   useEffect(() => {
-    fetchOrderAndList();
+    void fetchOrderAndList();
   }, [rawId]);
 
   if (loading) {
@@ -146,15 +145,10 @@ export default function OrderShippingLabelPage() {
       <div className="flex min-h-screen flex-col items-center justify-center space-y-4 bg-gray-50 p-6">
         <div className="w-full max-w-md space-y-4 rounded-3xl border border-gray-200 bg-white p-8 text-center shadow-sm">
           <AlertCircle size={40} className="mx-auto text-red-500" />
-
-          <h2 className="text-base font-bold text-gray-900">
-            No Order Record Found
-          </h2>
-
+          <h2 className="text-base font-bold text-gray-900">No Order Record Found</h2>
           <p className="text-xs text-gray-500">
             {errorMsg || 'Unable to locate order.'}
           </p>
-
           <div className="flex justify-center gap-2 pt-2">
             <Link
               href="/admin/orders"
@@ -162,13 +156,11 @@ export default function OrderShippingLabelPage() {
             >
               Back to Orders
             </Link>
-
             <button
               onClick={fetchOrderAndList}
               className="flex cursor-pointer items-center gap-1 rounded-xl bg-[#741f23] px-4 py-2 text-xs font-bold text-white transition hover:bg-[#5e171b]"
             >
-              <RefreshCw size={13} />
-              Retry
+              <RefreshCw size={13} /> Retry
             </button>
           </div>
         </div>
@@ -176,10 +168,8 @@ export default function OrderShippingLabelPage() {
     );
   }
 
-  // Address Parsing
   const shippingAddr =
-    typeof order.shipping_address === 'object' &&
-    order.shipping_address !== null
+    typeof order.shipping_address === 'object' && order.shipping_address !== null
       ? order.shipping_address
       : {
           address:
@@ -199,34 +189,73 @@ export default function OrderShippingLabelPage() {
     order.order_number || order.id.slice(0, 8).toUpperCase();
 
   return (
-    <div className="flex min-h-screen flex-col items-center bg-gray-100 p-4 sm:p-8">
-      {/* Top Action & Selector Bar */}
-      <div className="mb-4 flex w-full max-w-[420px] flex-col gap-2.5 print:hidden">
-        <div className="flex items-center justify-between">
+    <div className="flex min-h-screen flex-col items-center bg-gray-100 p-4 sm:p-8 print:min-h-0 print:bg-white print:p-0">
+      <style>{`
+        @media print {
+          @page {
+            size: ${selectedLabel.widthMm}mm ${selectedLabel.heightMm}mm;
+            margin: 0;
+          }
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: ${selectedLabel.widthMm}mm !important;
+            height: ${selectedLabel.heightMm}mm !important;
+            overflow: hidden !important;
+            background: #fff !important;
+          }
+          .print-label-page {
+            box-sizing: border-box !important;
+            width: ${selectedLabel.widthMm}mm !important;
+            height: ${selectedLabel.heightMm}mm !important;
+            min-height: ${selectedLabel.heightMm}mm !important;
+            max-height: ${selectedLabel.heightMm}mm !important;
+            margin: 0 !important;
+            box-shadow: none !important;
+            overflow: hidden !important;
+          }
+        }
+      `}</style>
+
+      <div className="mb-4 flex w-full max-w-[460px] flex-col gap-2.5 print:hidden">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <Link
             href="/admin/orders"
             className="flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-bold text-gray-600 shadow-2xs hover:text-gray-900"
           >
-            <ArrowLeft size={14} />
-            Back to Orders
+            <ArrowLeft size={14} /> Back to Orders
           </Link>
 
           <button
             onClick={() => window.print()}
             className="flex cursor-pointer items-center gap-1.5 rounded-xl bg-[#741f23] px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-[#5e171b]"
           >
-            <Printer size={14} />
-            Print A6 Label
+            <Printer size={14} /> Print Label
           </button>
         </div>
 
-        {/* Live Order Switcher Dropdown */}
+        <div className="flex items-center justify-between gap-2 rounded-2xl border border-gray-200 bg-white p-2.5 shadow-2xs">
+          <span className="shrink-0 text-[11px] font-bold uppercase text-gray-500">
+            Label Size:
+          </span>
+          <select
+            value={labelSize}
+            onChange={(e) => setLabelSize(e.target.value as LabelSizeKey)}
+            className="w-full rounded-xl border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-xs font-bold text-[#741f23] focus:outline-none"
+          >
+            {Object.entries(LABEL_SIZES).map(([key, value]) => (
+              <option key={key} value={key}>
+                {value.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
         {allOrders.length > 1 && (
           <div className="flex items-center justify-between gap-2 rounded-2xl border border-gray-200 bg-white p-2.5 shadow-2xs">
             <span className="shrink-0 text-[11px] font-bold uppercase text-gray-500">
               Switch Order:
             </span>
-
             <select
               value={order.id}
               onChange={(e) =>
@@ -236,113 +265,102 @@ export default function OrderShippingLabelPage() {
             >
               {allOrders.map((o) => (
                 <option key={o.id} value={o.id}>
-                  {o.order_number || o.id.slice(0, 8)} — {o.customer_name} (₹
-                  {o.grand_total})
+                  {o.order_number || o.id.slice(0, 8)} — {o.customer_name} (₹{o.grand_total})
                 </option>
               ))}
             </select>
           </div>
         )}
+
+        <p className="px-1 text-[10px] leading-relaxed text-gray-500">
+          Default is 4 × 6 inch for thermal courier printers. In the browser print dialog use 100% / Actual Size and disable browser headers & footers.
+        </p>
       </div>
 
-      {/* Standard A6 Thermal Shipping Label */}
-      <div className="flex min-h-[145mm] w-[100mm] flex-col justify-between border-2 border-black bg-white p-4 font-sans text-xs text-black shadow-xl print:m-0 print:border-0 print:p-2">
-        {/* Header */}
-        <div className="flex items-start justify-between border-b-2 border-black pb-2">
+      <div
+        className={`print-label-page flex flex-col justify-between border-2 border-black bg-white font-sans text-black shadow-xl print:border-0 ${
+          isCompact ? 'p-2 text-[9px] print:p-1.5' : 'p-4 text-xs print:p-2'
+        }`}
+        style={{
+          width: `${selectedLabel.widthMm}mm`,
+          minHeight: `${selectedLabel.heightMm}mm`,
+          height: `${selectedLabel.heightMm}mm`,
+        }}
+      >
+        <div className={`flex items-start justify-between border-b-2 border-black ${isCompact ? 'pb-1' : 'pb-2'}`}>
           <div>
-            <h2 className="text-base font-black uppercase tracking-tight">
+            <h2 className={`${isCompact ? 'text-sm' : 'text-base'} font-black uppercase tracking-tight`}>
               ADHYEY BROTHERS
             </h2>
-
-            <p className="text-[9px] font-bold text-gray-700">
+            <p className={`${isCompact ? 'text-[7px]' : 'text-[9px]'} font-bold text-gray-700`}>
               Surat, Gujarat • GSTIN: 24AKBPD1704F1Z1
             </p>
           </div>
-
           <div className="text-right">
-            <span className="rounded border-2 border-black px-2 py-0.5 text-xs font-black uppercase">
-              {isCod
-                ? `COD: ₹${order.grand_total || order.total_amount}`
-                : 'PREPAID'}
+            <span className={`rounded border-2 border-black px-2 py-0.5 font-black uppercase ${isCompact ? 'text-[9px]' : 'text-xs'}`}>
+              {isCod ? `COD: ₹${order.grand_total || order.total_amount}` : 'PREPAID'}
             </span>
           </div>
         </div>
 
-        {/* Barcode & Routing Block */}
-        <div className="flex items-center justify-between gap-3 border-b-2 border-black py-2.5">
-          <div className="space-y-1">
-            <p className="text-[9px] font-bold uppercase text-gray-600">
+        <div className={`flex items-center justify-between gap-3 border-b-2 border-black ${isCompact ? 'py-1' : 'py-2.5'}`}>
+          <div className={isCompact ? 'space-y-0.5' : 'space-y-1'}>
+            <p className={`${isCompact ? 'text-[7px]' : 'text-[9px]'} font-bold uppercase text-gray-600`}>
               Scan for Warehouse & Dispatch
             </p>
-
-            <p className="font-mono text-sm font-black">
+            <p className={`${isCompact ? 'text-xs' : 'text-sm'} font-mono font-black`}>
               {displayOrderNum}
             </p>
-
-            <p className="text-[10px] font-bold">
+            <p className={`${isCompact ? 'text-[8px]' : 'text-[10px]'} font-bold`}>
               Weight: ~{order.actual_weight_kg || 0.5} KG
             </p>
-
-            <p className="text-[9px] text-gray-600">
-              Date:{' '}
-              {new Date(order.created_at).toLocaleDateString('en-IN')}
+            <p className={`${isCompact ? 'text-[7px]' : 'text-[9px]'} text-gray-600`}>
+              Date: {new Date(order.created_at).toLocaleDateString('en-IN')}
             </p>
           </div>
-
           <div className="shrink-0 rounded-lg border border-black bg-white p-1">
-            <QRCodeSVG value={displayOrderNum} size={80} level="M" />
+            <QRCodeSVG value={displayOrderNum} size={isCompact ? 58 : 80} level="M" />
           </div>
         </div>
 
-        {/* Consignee */}
-        <div className="space-y-0.5 border-b-2 border-black py-2.5">
-          <p className="text-[9px] font-black uppercase text-gray-600">
+        <div className={`space-y-0.5 border-b-2 border-black ${isCompact ? 'py-1' : 'py-2.5'}`}>
+          <p className={`${isCompact ? 'text-[7px]' : 'text-[9px]'} font-black uppercase text-gray-600`}>
             Deliver To:
           </p>
-
-          <p className="text-sm font-black">
+          <p className={`${isCompact ? 'text-xs' : 'text-sm'} font-black`}>
             {order.customer_name || 'Customer'}
           </p>
-
-          <p className="text-[11px] font-medium leading-snug">
+          <p className={`${isCompact ? 'text-[8px]' : 'text-[11px]'} font-medium leading-snug`}>
             {shippingAddr.address}, {shippingAddr.city}, {shippingAddr.state}
           </p>
-
-          <p className="pt-0.5 font-mono text-base font-black tracking-wider">
+          <p className={`${isCompact ? 'text-sm' : 'text-base'} pt-0.5 font-mono font-black tracking-wider`}>
             PIN: {shippingAddr.pincode || '395007'}
           </p>
-
-          <p className="text-[11px] font-bold">
+          <p className={`${isCompact ? 'text-[8px]' : 'text-[11px]'} font-bold`}>
             Phone: {order.customer_phone || order.phone || 'N/A'}
           </p>
         </div>
 
-        {/* Package Manifest Items */}
-        <div className="flex-1 space-y-1 border-b-2 border-black py-2">
-          <p className="text-[9px] font-black uppercase text-gray-600">
+        <div className={`flex-1 space-y-1 border-b-2 border-black ${isCompact ? 'py-1' : 'py-2'}`}>
+          <p className={`${isCompact ? 'text-[7px]' : 'text-[9px]'} font-black uppercase text-gray-600`}>
             Package Contents:
           </p>
-
-          <div className="space-y-0.5 text-[10px]">
+          <div className={`${isCompact ? 'text-[7.5px]' : 'text-[10px]'} space-y-0.5`}>
             {(order.order_items || []).map((item: any, idx: number) => (
-              <div key={idx} className="flex justify-between font-semibold">
-                <span className="max-w-[200px] truncate">
+              <div key={idx} className="flex justify-between gap-2 font-semibold">
+                <span className={`${isCompact ? 'max-w-[230px]' : 'max-w-[250px]'} truncate`}>
                   {item.product_title} ({item.size || 'Free Size'})
                 </span>
-
-                <span>Qty: {item.quantity}</span>
+                <span className="shrink-0">Qty: {item.quantity}</span>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Return Address Footer */}
-        <div className="pt-2 text-[8.5px] leading-tight text-gray-700">
+        <div className={`${isCompact ? 'pt-1 text-[6.5px]' : 'pt-2 text-[8.5px]'} leading-tight text-gray-700`}>
           <p className="font-bold">If undelivered, return to:</p>
-
           <p>
-            ADHYEY BROTHERS, 3rd Floor, 33 Shaktinagar Society, Peoples Char
-            Rasta, Katargam, Surat, Gujarat - 395004, India
+            ADHYEY BROTHERS, 3rd Floor, 33 Shaktinagar Society, Peoples Char Rasta, Katargam, Surat, Gujarat - 395004, India
           </p>
         </div>
       </div>
