@@ -10,7 +10,6 @@ import { ArrowLeft, ShoppingBag } from 'lucide-react';
 import { getActiveStorefrontCategoryByName } from '@/lib/catalog/storefront-categories';
 
 const PAGE_SIZE = 16;
-const EMPTY_PRODUCT_ID = '00000000-0000-0000-0000-000000000000';
 
 function parsePage(value?: string) {
   if (!value || !/^\d+$/.test(value)) return 1;
@@ -25,10 +24,13 @@ async function getProductsByCategory(
   const decodedCategory = decodeURIComponent(categoryName);
   const activeCategory = await getActiveStorefrontCategoryByName(decodedCategory);
   const from = (page - 1) * PAGE_SIZE;
-  const ids = activeCategory?.product_ids || [];
 
-  if (ids.length === 0) {
-    return { products: [], count: 0, canonicalName: activeCategory?.name || decodedCategory };
+  if (!activeCategory || activeCategory.product_ids.length === 0) {
+    return {
+      products: [],
+      count: 0,
+      canonicalName: activeCategory?.name || decodedCategory,
+    };
   }
 
   const { data, error, count } = await supabase
@@ -38,7 +40,7 @@ async function getProductsByCategory(
       { count: 'exact' }
     )
     .eq('is_active', true)
-    .in('id', ids.length > 0 ? ids : [EMPTY_PRODUCT_ID])
+    .in('id', activeCategory.product_ids)
     .order('created_at', { ascending: false })
     .range(from, from + PAGE_SIZE - 1);
 
