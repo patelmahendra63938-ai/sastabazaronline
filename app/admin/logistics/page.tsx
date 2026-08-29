@@ -328,7 +328,9 @@ export default function LogisticsDashboard() {
           styles[status] || styles.NOT_ASSIGNED
         }`}
       >
-        {status.replace(/_/g, ' ')}
+        {status === 'NOT_ASSIGNED'
+          ? 'AWB PENDING'
+          : status.replace(/_/g, ' ')}
       </span>
     );
   };
@@ -476,7 +478,7 @@ export default function LogisticsDashboard() {
             >
               <option value="ALL">Active Shipments</option>
               <option value="NOT_ASSIGNED">
-                Not Assigned (Needs AWB)
+                AWB Pending
               </option>
               <option value="COURIER_ASSIGNED">
                 Courier Assigned
@@ -619,8 +621,8 @@ export default function LogisticsDashboard() {
                               </div>
                             ) : (
                               <span className="text-[10px] text-orange-600 font-bold bg-orange-50 border border-orange-200 px-2 py-1 rounded-md flex items-center gap-1 w-max">
-                                <AlertTriangle size={12} />
-                                Assign AWB
+                                <Clock size={12} />
+                                Waiting for NimbusPost
                               </span>
                             )}
                           </td>
