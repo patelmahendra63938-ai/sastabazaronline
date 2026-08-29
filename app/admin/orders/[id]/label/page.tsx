@@ -116,12 +116,29 @@ export default function OrderShippingLabelPage() {
         );
       }
 
-      const { data: itemsData } = await supabase
-        .from('order_items')
-        .select('*')
-        .eq('order_id', targetOrder.id);
+      const [{ data: itemsData }, { data: shipmentData, error: shipmentError }] =
+        await Promise.all([
+          supabase
+            .from('order_items')
+            .select('*')
+            .eq('order_id', targetOrder.id),
+          supabase
+            .from('shipments')
+            .select('id, awb_number, shipment_status, shipping_label_url')
+            .eq('order_id', targetOrder.id)
+            .limit(1)
+            .maybeSingle(),
+        ]);
 
-      setOrder({ ...targetOrder, order_items: itemsData || [] });
+      if (shipmentError) {
+        console.warn('Label shipment lookup warning:', shipmentError.message);
+      }
+
+      setOrder({
+        ...targetOrder,
+        order_items: itemsData || [],
+        shipment: shipmentData || null,
+      });
     } catch (err: any) {
       console.error('Label fetch error:', err);
       setErrorMsg(err.message || 'Failed to generate shipping label.');
@@ -192,6 +209,51 @@ export default function OrderShippingLabelPage() {
 
   const displayOrderNum =
     order.order_number || order.id.slice(0, 8).toUpperCase();
+  const awbNumber = String(order.shipment?.awb_number || '').trim();
+  const hasCourierAwb = awbNumber.length > 0;
+
+  if (!hasCourierAwb) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-gray-100 p-4 sm:p-8">
+        <div className="w-full max-w-lg space-y-5 rounded-3xl border border-amber-200 bg-white p-7 shadow-sm">
+          <div className="flex items-start gap-3">
+            <AlertCircle size={34} className="shrink-0 text-amber-500" />
+            <div>
+              <h1 className="text-lg font-black text-gray-900">AWB Pending — Courier Label Blocked</h1>
+              <p className="mt-1 text-sm leading-relaxed text-gray-600">
+                Order <span className="font-bold text-gray-900">{displayOrderNum}</span> does not have a courier AWB yet. A courier-scannable label cannot be printed until NimbusPost or a manually assigned courier provides a real AWB.
+              </p>
+            </div>
+          </div>
+
+          <div className="rounded-2xl bg-amber-50 p-4 text-xs leading-relaxed text-amber-900">
+            The SBZ order number is your internal order ID. It must not be encoded as the courier pickup QR. Go to Shipping & Logistics, create/sync the NimbusPost shipment or enter the courier's real AWB, then reopen this label.
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/admin/logistics"
+              className="rounded-xl bg-[#741f23] px-4 py-2 text-xs font-bold text-white hover:bg-[#5e171b]"
+            >
+              Open Shipping & Logistics
+            </Link>
+            <button
+              onClick={fetchOrderAndList}
+              className="flex items-center gap-1 rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-bold text-gray-700 hover:bg-gray-50"
+            >
+              <RefreshCw size={13} /> Recheck AWB
+            </button>
+            <Link
+              href="/admin/orders"
+              className="rounded-xl bg-gray-100 px-4 py-2 text-xs font-bold text-gray-700 hover:bg-gray-200"
+            >
+              Back to Orders
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col items-center bg-gray-100 p-4 sm:p-8 print:min-h-0 print:bg-white print:p-0">
@@ -246,8 +308,12 @@ export default function OrderShippingLabelPage() {
             onClick={() => window.print()}
             className="flex cursor-pointer items-center gap-1.5 rounded-xl bg-[#741f23] px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-[#5e171b]"
           >
-            <Printer size={14} /> Print Label
+            <Printer size={14} /> Print Courier Label
           </button>
+        </div>
+
+        <div className="rounded-2xl border border-green-200 bg-green-50 px-3 py-2 text-[11px] font-bold text-green-800">
+          Courier AWB ready: {awbNumber}. The QR below encodes this AWB, not the internal SBZ order number.
         </div>
 
         <div className="flex items-center justify-between gap-2 rounded-2xl border border-gray-200 bg-white p-2.5 shadow-2xs">
@@ -325,10 +391,13 @@ export default function OrderShippingLabelPage() {
         <div className={`flex items-center justify-between gap-3 border-b-2 border-black ${isCompact ? 'py-1' : 'py-2.5'}`}>
           <div className={isCompact ? 'space-y-0.5' : 'space-y-1'}>
             <p className={`${isCompact ? 'text-[7px]' : 'text-[9px]'} font-bold uppercase text-gray-600`}>
-              Scan for Warehouse & Dispatch
+              Courier AWB — Scan for Pickup
             </p>
             <p className={`${isCompact ? 'text-xs' : 'text-sm'} font-mono font-black`}>
-              {displayOrderNum}
+              {awbNumber}
+            </p>
+            <p className={`${isCompact ? 'text-[7px]' : 'text-[9px]'} font-bold text-gray-700`}>
+              Order ID: {displayOrderNum}
             </p>
             <p className={`${isCompact ? 'text-[8px]' : 'text-[10px]'} font-bold`}>
               Weight: ~{order.actual_weight_kg || 0.5} KG
@@ -338,7 +407,7 @@ export default function OrderShippingLabelPage() {
             </p>
           </div>
           <div className="mr-2 shrink-0 rounded-lg border border-black bg-white p-1">
-            <QRCodeSVG value={displayOrderNum} size={isCompact ? 54 : 76} level="M" />
+            <QRCodeSVG value={awbNumber} size={isCompact ? 54 : 76} level="M" />
           </div>
         </div>
 
