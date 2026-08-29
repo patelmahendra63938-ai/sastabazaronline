@@ -2,7 +2,7 @@
 
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { checkPincodeShippingRate } from '@/lib/shipping/serviceability';
 
 const NIMBUSPOST_V2_BASE_URL = 'https://api-v2.nimbuspost.com';
@@ -18,12 +18,9 @@ function cleanEnv(value?: string | null) {
   return String(value || '').trim();
 }
 
-
 function formatApiError(value: unknown): string {
   if (value == null) return '';
-
   if (typeof value === 'string') return value;
-
   if (value instanceof Error) return value.message;
 
   if (Array.isArray(value)) {
@@ -32,13 +29,8 @@ function formatApiError(value: unknown): string {
 
   if (typeof value === 'object') {
     const obj = value as Record<string, unknown>;
-
     const preferred =
-      obj.message ??
-      obj.error ??
-      obj.detail ??
-      obj.details ??
-      obj.errors;
+      obj.message ?? obj.error ?? obj.detail ?? obj.details ?? obj.errors;
 
     if (preferred != null && preferred !== value) {
       const formatted = formatApiError(preferred);
@@ -62,9 +54,7 @@ function toPositiveNumber(value: unknown, fallback = 0) {
 
 function toPhoneNumber(value: unknown) {
   const digits = String(value || '').replace(/\D/g, '');
-  const normalized =
-    digits.length > 10 ? digits.slice(-10) : digits;
-
+  const normalized = digits.length > 10 ? digits.slice(-10) : digits;
   const n = Number(normalized);
   return Number.isFinite(n) ? n : 0;
 }
@@ -75,13 +65,12 @@ function toPincodeNumber(value: unknown) {
   return Number.isFinite(n) ? n : 0;
 }
 
-
 function findDeepValue(
   value: unknown,
   keys: string[],
   maxDepth = 8
 ): unknown {
-  const wanted = new Set(keys.map((k) => k.toLowerCase()));
+  const wanted = new Set(keys.map((key) => key.toLowerCase()));
 
   function walk(node: unknown, depth: number): unknown {
     if (depth > maxDepth || node == null) return undefined;
@@ -89,9 +78,7 @@ function findDeepValue(
     if (Array.isArray(node)) {
       for (const item of node) {
         const found = walk(item, depth + 1);
-        if (found !== undefined && found !== null && found !== '') {
-          return found;
-        }
+        if (found !== undefined && found !== null && found !== '') return found;
       }
       return undefined;
     }
@@ -112,54 +99,11 @@ function findDeepValue(
 
       for (const val of Object.values(obj)) {
         const found = walk(val, depth + 1);
-        if (found !== undefined && found !== null && found !== '') {
-          return found;
-        }
+        if (found !== undefined && found !== null && found !== '') return found;
       }
     }
 
     return undefined;
-  }
-
-  return walk(value, 0);
-}
-
-function findDeepObjectContaining(
-  value: unknown,
-  keys: string[],
-  maxDepth = 8
-): Record<string, unknown> | null {
-  const wanted = new Set(keys.map((k) => k.toLowerCase()));
-
-  function walk(
-    node: unknown,
-    depth: number
-  ): Record<string, unknown> | null {
-    if (depth > maxDepth || node == null) return null;
-
-    if (Array.isArray(node)) {
-      for (const item of node) {
-        const found = walk(item, depth + 1);
-        if (found) return found;
-      }
-      return null;
-    }
-
-    if (typeof node === 'object') {
-      const obj = node as Record<string, unknown>;
-      const objectKeys = Object.keys(obj).map((k) => k.toLowerCase());
-
-      if (objectKeys.some((k) => wanted.has(k))) {
-        return obj;
-      }
-
-      for (const val of Object.values(obj)) {
-        const found = walk(val, depth + 1);
-        if (found) return found;
-      }
-    }
-
-    return null;
   }
 
   return walk(value, 0);
@@ -222,15 +166,34 @@ function extractNimbusBookingInfo(payload: unknown) {
   };
 }
 
+function extractOrderNumber(payload: unknown) {
+  const value = findDeepValue(payload, [
+    'order_number',
+    'order_no',
+    'merchant_order_id',
+    'merchant_order_number',
+    'reference_order_id',
+  ]);
+  return value ? String(value).trim() : '';
+}
+
+function isAlreadyExistsNimbusError(value: unknown) {
+  const text = formatApiError(value).toLowerCase();
+  return (
+    text.includes('already exists') ||
+    text.includes('already exist') ||
+    text.includes('duplicate order') ||
+    text.includes('order exists')
+  );
+}
+
 async function fetchNimbusOrderById(
   remoteOrderId: string,
   apiKey: string,
   apiSecret: string
 ) {
   const response = await fetch(
-    `${NIMBUSPOST_V2_BASE_URL}/v2/orders/${encodeURIComponent(
-      remoteOrderId
-    )}`,
+    `${NIMBUSPOST_V2_BASE_URL}/v2/orders/${encodeURIComponent(remoteOrderId)}`,
     {
       method: 'GET',
       headers: {
@@ -243,7 +206,6 @@ async function fetchNimbusOrderById(
   );
 
   const rawText = await response.text();
-
   let result: any = null;
 
   try {
@@ -291,9 +253,7 @@ async function requireAdminUser() {
     error: userError,
   } = await authClient.auth.getUser();
 
-  if (userError || !user) {
-    throw new Error('Authentication required.');
-  }
+  if (userError || !user) throw new Error('Authentication required.');
 
   const { data: profile, error: profileError } = await authClient
     .from('profiles')
@@ -301,12 +261,9 @@ async function requireAdminUser() {
     .eq('id', user.id)
     .maybeSingle();
 
-  if (profileError) {
-    throw new Error('Unable to verify admin access.');
-  }
+  if (profileError) throw new Error('Unable to verify admin access.');
 
   const role = String(profile?.role || '').toLowerCase();
-
   if (!['admin', 'super_admin', 'staff'].includes(role)) {
     throw new Error('Admin access required.');
   }
@@ -325,10 +282,7 @@ function getServiceSupabase() {
   }
 
   return createClient(url, serviceRoleKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
+    auth: { persistSession: false, autoRefreshToken: false },
   });
 }
 
@@ -336,7 +290,6 @@ function getNimbusCredentials() {
   const apiKey = cleanEnv(
     process.env.NIMBUSPOST_API_KEY || process.env.COURIER_API_KEY
   );
-
   const apiSecret = cleanEnv(
     process.env.NIMBUSPOST_API_SECRET || process.env.COURIER_SECRET_KEY
   );
@@ -354,6 +307,265 @@ function getNimbusCredentials() {
   }
 
   return { apiKey, apiSecret };
+}
+
+async function findBookingInfoInWebhookHistory(
+  supabase: SupabaseClient,
+  orderNumber: string
+) {
+  const { data, error } = await supabase
+    .from('nimbuspost_webhook_deliveries')
+    .select('payload, received_at')
+    .order('received_at', { ascending: false })
+    .limit(250);
+
+  if (error) {
+    console.warn('NimbusPost webhook recovery lookup warning:', error.message);
+    return null;
+  }
+
+  const normalizedOrderNumber = orderNumber.trim().toLowerCase();
+  for (const row of data || []) {
+    const payloadOrderNumber = extractOrderNumber(row.payload).toLowerCase();
+    if (!payloadOrderNumber || payloadOrderNumber !== normalizedOrderNumber) continue;
+
+    const info = extractNimbusBookingInfo(row.payload);
+    if (info.awb) return info;
+  }
+
+  return null;
+}
+
+async function saveRecoveredNimbusShipment(input: {
+  supabase: SupabaseClient;
+  orderId: string;
+  packageWeightKg: number;
+  bookingInfo: ReturnType<typeof extractNimbusBookingInfo>;
+  sourceDescription: string;
+}) {
+  const { supabase, orderId, packageWeightKg, bookingInfo, sourceDescription } = input;
+  const awbNumber = bookingInfo.awb;
+
+  if (!awbNumber) {
+    return { success: false as const, error: 'NimbusPost AWB is still unavailable.' };
+  }
+
+  const { data: existingShipment, error: existingError } = await supabase
+    .from('shipments')
+    .select('id, awb_number, shipment_status')
+    .eq('order_id', orderId)
+    .limit(1)
+    .maybeSingle();
+
+  if (existingError) {
+    return {
+      success: false as const,
+      error: `Unable to verify local shipment before sync: ${existingError.message}`,
+    };
+  }
+
+  if (existingShipment) {
+    return {
+      success: true as const,
+      awb: String(existingShipment.awb_number || awbNumber),
+      courier: bookingInfo.courier || 'NimbusPost Assigned Courier',
+      alreadySynced: true,
+      shipmentId: existingShipment.id,
+    };
+  }
+
+  const labelUrl = bookingInfo.labelUrl || '';
+  const shippingCost = bookingInfo.shippingCost || 0;
+
+  const { data: savedShipment, error: saveError } = await supabase
+    .from('shipments')
+    .insert({
+      order_id: orderId,
+      awb_number: String(awbNumber),
+      shipment_status: 'COURIER_ASSIGNED',
+      pickup_status: 'REQUESTED',
+      package_weight: packageWeightKg,
+      tracking_url: `https://nimbuspost.com/track?awb=${encodeURIComponent(
+        String(awbNumber)
+      )}`,
+      shipping_label_url: labelUrl,
+      shipping_cost: shippingCost,
+    })
+    .select()
+    .single();
+
+  if (saveError || !savedShipment) {
+    return {
+      success: false as const,
+      error: `NimbusPost AWB ${awbNumber} was found, but the website could not save the local shipment record: ${saveError?.message || 'Unknown database error.'}`,
+    };
+  }
+
+  const courierName = bookingInfo.courier || 'NimbusPost Assigned Courier';
+  const { error: trackingError } = await supabase
+    .from('shipment_tracking_events')
+    .insert({
+      shipment_id: savedShipment.id,
+      status: 'COURIER_ASSIGNED',
+      location: 'Surat Fulfillment Hub',
+      description: `${sourceDescription} AWB ${awbNumber} via ${courierName}. Ready for pickup.`,
+      event_time: new Date().toISOString(),
+      source: 'COURIER_API',
+    });
+
+  if (trackingError) {
+    console.warn('Recovered shipment tracking event warning:', trackingError.message);
+  }
+
+  const { error: orderUpdateError } = await supabase
+    .from('orders')
+    .update({ order_status: 'PACKED' })
+    .eq('id', orderId);
+
+  if (orderUpdateError) {
+    console.warn('Recovered shipment order status warning:', orderUpdateError.message);
+  }
+
+  return {
+    success: true as const,
+    awb: String(awbNumber),
+    courier: String(courierName),
+    alreadySynced: false,
+    shipmentId: savedShipment.id,
+  };
+}
+
+async function recoverExistingNimbusShipment(input: {
+  supabase: SupabaseClient;
+  orderId: string;
+  orderNumber: string;
+  packageWeightKg: number;
+  apiKey: string;
+  apiSecret: string;
+  duplicatePayload?: unknown;
+}) {
+  const {
+    supabase,
+    orderId,
+    orderNumber,
+    packageWeightKg,
+    apiKey,
+    apiSecret,
+    duplicatePayload,
+  } = input;
+
+  const duplicateInfo = extractNimbusBookingInfo(duplicatePayload);
+  if (duplicateInfo.awb) {
+    return saveRecoveredNimbusShipment({
+      supabase,
+      orderId,
+      packageWeightKg,
+      bookingInfo: duplicateInfo,
+      sourceDescription: 'Recovered from NimbusPost duplicate response.',
+    });
+  }
+
+  // Safe read-only lookup. NimbusPost's duplicate message identifies the merchant
+  // order number as an existing Order ID, so try that identifier without making
+  // any second create/booking request.
+  try {
+    const remote = await fetchNimbusOrderById(orderNumber, apiKey, apiSecret);
+    const remoteInfo = extractNimbusBookingInfo(
+      remote?.data || remote?.result || remote
+    );
+
+    if (remoteInfo.awb) {
+      return saveRecoveredNimbusShipment({
+        supabase,
+        orderId,
+        packageWeightKg,
+        bookingInfo: remoteInfo,
+        sourceDescription: 'Synced from existing NimbusPost order.',
+      });
+    }
+  } catch (error) {
+    console.warn('NimbusPost existing-order read-back warning:', formatApiError(error));
+  }
+
+  const webhookInfo = await findBookingInfoInWebhookHistory(supabase, orderNumber);
+  if (webhookInfo?.awb) {
+    return saveRecoveredNimbusShipment({
+      supabase,
+      orderId,
+      packageWeightKg,
+      bookingInfo: webhookInfo,
+      sourceDescription: 'Recovered from verified NimbusPost webhook history.',
+    });
+  }
+
+  return {
+    success: false as const,
+    error:
+      'This order already exists in NimbusPost, but its AWB could not be recovered yet. Do not book it again. Use the existing NimbusPost order/AWB and then sync or enter the AWB manually.',
+  };
+}
+
+export async function syncExistingNimbusPostShipment(orderId: string) {
+  try {
+    await requireAdminUser();
+    const { apiKey, apiSecret } = getNimbusCredentials();
+    const supabase = getServiceSupabase();
+
+    const { data: order, error: orderError } = await supabase
+      .from('orders')
+      .select('id, order_number, order_status, chargeable_weight_kg, actual_weight_kg, package_weight')
+      .eq('id', orderId)
+      .single();
+
+    if (orderError || !order) {
+      return { success: false, error: 'Order not found for NimbusPost sync.' };
+    }
+
+    const status = String(order.order_status || '').toUpperCase();
+    if (['CANCELLED', 'CANCELED'].includes(status)) {
+      return { success: false, error: 'Cancelled orders cannot be synced for shipping.' };
+    }
+
+    const { data: existingShipment } = await supabase
+      .from('shipments')
+      .select('id, awb_number')
+      .eq('order_id', order.id)
+      .limit(1)
+      .maybeSingle();
+
+    if (existingShipment?.awb_number) {
+      return {
+        success: true,
+        awb: String(existingShipment.awb_number),
+        courier: 'Courier Assigned',
+        alreadySynced: true,
+      };
+    }
+
+    const orderNumber = cleanEnv(order.order_number);
+    if (!orderNumber) {
+      return { success: false, error: 'Order number is missing; NimbusPost sync cannot continue.' };
+    }
+
+    const packageWeightKg = toPositiveNumber(
+      order.chargeable_weight_kg || order.actual_weight_kg || order.package_weight,
+      0.5
+    );
+
+    return await recoverExistingNimbusShipment({
+      supabase,
+      orderId: order.id,
+      orderNumber,
+      packageWeightKg,
+      apiKey,
+      apiSecret,
+    });
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message || 'NimbusPost existing shipment sync failed.',
+    };
+  }
 }
 
 /**
@@ -386,24 +598,13 @@ export async function verifyPincodeAndGetShippingAction(
       isServiceable: false,
       customerShippingCharge: 0,
       displayWeight: '0.50 kg',
-      error:
-        err?.message || 'Failed to verify PIN code serviceability.',
+      error: err?.message || 'Failed to verify PIN code serviceability.',
     };
   }
 }
 
 /**
  * Books an order directly with NimbusPost Partner API v2.
- *
- * Correct Partner API v2:
- *   Base URL: https://api-v2.nimbuspost.com
- *   Endpoint: POST /v2/shipments
- *   Headers:
- *     x-api-key
- *     x-api-secret
- *
- * POST /v2/orders only creates an order and does NOT book a courier.
- * POST /v2/shipments creates + books in one call.
  */
 export async function pushOrderToNimbusPost(orderId: string) {
   try {
@@ -419,29 +620,20 @@ export async function pushOrderToNimbusPost(orderId: string) {
       .single();
 
     if (orderError || !order) {
-      return {
-        success: false,
-        error: 'Order not found for NimbusPost booking.',
-      };
+      return { success: false, error: 'Order not found for NimbusPost booking.' };
     }
 
     const status = String(order.order_status || '').toUpperCase();
-
     if (['CANCELLED', 'CANCELED'].includes(status)) {
-      return {
-        success: false,
-        error: 'Cancelled orders cannot be booked with NimbusPost.',
-      };
+      return { success: false, error: 'Cancelled orders cannot be booked with NimbusPost.' };
     }
 
-    // Local duplicate guard before making any remote booking request.
-    const { data: existingShipment, error: existingShipmentError } =
-      await supabase
-        .from('shipments')
-        .select('id, awb_number, shipment_status')
-        .eq('order_id', order.id)
-        .limit(1)
-        .maybeSingle();
+    const { data: existingShipment, error: existingShipmentError } = await supabase
+      .from('shipments')
+      .select('id, awb_number, shipment_status')
+      .eq('order_id', order.id)
+      .limit(1)
+      .maybeSingle();
 
     if (existingShipmentError) {
       return {
@@ -459,68 +651,43 @@ export async function pushOrderToNimbusPost(orderId: string) {
       };
     }
 
-    const items = Array.isArray(order.order_items)
-      ? order.order_items
-      : [];
-
+    const items = Array.isArray(order.order_items) ? order.order_items : [];
     if (items.length === 0) {
       return {
         success: false,
-        error:
-          'This order has no product items. NimbusPost booking has been blocked.',
+        error: 'This order has no product items. NimbusPost booking has been blocked.',
       };
     }
 
     const rawAddress =
-      typeof order.shipping_address === 'object' &&
-      order.shipping_address !== null
+      typeof order.shipping_address === 'object' && order.shipping_address !== null
         ? order.shipping_address
         : {};
 
     const shippingAddress = {
-      name:
-        cleanEnv(rawAddress.name) ||
-        cleanEnv(order.customer_name) ||
-        'Customer',
-
+      name: cleanEnv(rawAddress.name) || cleanEnv(order.customer_name) || 'Customer',
       email:
         cleanEnv(rawAddress.email) ||
         cleanEnv(order.customer_email) ||
         'sales@sastabazaronline.in',
-
       address:
         cleanEnv(rawAddress.address) ||
         cleanEnv(rawAddress.address_line1) ||
         cleanEnv(order.shipping_address) ||
         '',
-
       address_opt:
         cleanEnv(rawAddress.address_opt) ||
         cleanEnv(rawAddress.address_line2) ||
         cleanEnv(rawAddress.landmark) ||
         '',
-
       pincode: toPincodeNumber(
-        rawAddress.pincode ||
-          rawAddress.postal_code ||
-          order.shipping_pincode
+        rawAddress.pincode || rawAddress.postal_code || order.shipping_pincode
       ),
-
-      city:
-        cleanEnv(rawAddress.city) ||
-        cleanEnv(order.shipping_city),
-
-      state:
-        cleanEnv(rawAddress.state) ||
-        cleanEnv(order.shipping_state),
-
-      country:
-        cleanEnv(rawAddress.country) || 'India',
-
+      city: cleanEnv(rawAddress.city) || cleanEnv(order.shipping_city),
+      state: cleanEnv(rawAddress.state) || cleanEnv(order.shipping_state),
+      country: cleanEnv(rawAddress.country) || 'India',
       phone: toPhoneNumber(
-        rawAddress.phone ||
-          order.customer_phone ||
-          order.phone
+        rawAddress.phone || order.customer_phone || order.phone
       ),
     };
 
@@ -551,78 +718,51 @@ export async function pushOrderToNimbusPost(orderId: string) {
       };
     }
 
-    const paymentMethod = String(
-      order.payment_method || ''
-    ).toLowerCase();
-
+    const paymentMethod = String(order.payment_method || '').toLowerCase();
     const isCod = paymentMethod.includes('cod');
-
     const orderTotal = Math.max(
       0,
-      Number(
-        order.grand_total ||
-          order.total_amount ||
-          0
-      ) || 0
+      Number(order.grand_total || order.total_amount || 0) || 0
     );
 
     const packageWeightKg = toPositiveNumber(
-      order.chargeable_weight_kg ||
-        order.actual_weight_kg ||
-        order.package_weight,
+      order.chargeable_weight_kg || order.actual_weight_kg || order.package_weight,
       0.5
     );
-
     const packageLengthCm = toPositiveNumber(
-      order.package_length_cm ||
-        order.length_cm,
+      order.package_length_cm || order.length_cm,
       15
     );
-
     const packageWidthCm = toPositiveNumber(
-      order.package_width_cm ||
-        order.width_cm ||
-        order.breadth_cm,
+      order.package_width_cm || order.width_cm || order.breadth_cm,
       12
     );
-
     const packageHeightCm = toPositiveNumber(
-      order.package_height_cm ||
-        order.height_cm,
+      order.package_height_cm || order.height_cm,
       5
     );
 
     const nimbusItems = items.map((item: any) => ({
-      name:
-        cleanEnv(item.product_title) ||
-        'ADHYEY BROTHERS Product',
+      name: cleanEnv(item.product_title) || 'ADHYEY BROTHERS Product',
       qty: Math.max(1, Number(item.quantity) || 1),
       price: Math.max(0, Number(item.unit_price) || 0),
-      sku:
-        cleanEnv(item.sku) ||
-        `SKU-${String(item.product_id || '').slice(0, 8)}`,
+      sku: cleanEnv(item.sku) || `SKU-${String(item.product_id || '').slice(0, 8)}`,
       hsn_code: cleanEnv(item.hsn_code) || undefined,
-      tax_rate:
-        Number.isFinite(Number(item.gst_rate))
-          ? Number(item.gst_rate)
-          : undefined,
+      tax_rate: Number.isFinite(Number(item.gst_rate))
+        ? Number(item.gst_rate)
+        : undefined,
     }));
 
+    const orderNumber =
+      cleanEnv(order.order_number) || `ORD-${String(order.id).slice(0, 8)}`;
+
     const payload: Record<string, any> = {
-      order_number:
-        cleanEnv(order.order_number) ||
-        `ORD-${String(order.id).slice(0, 8)}`,
-
+      order_number: orderNumber,
       order_type: 'b2c',
-
       payment_mode: isCod ? 'cod' : 'prepaid',
-
       warehouse_id: warehouseId,
-
       shipping_address: shippingAddress,
-
       items: nimbusItems,
-
       package: {
         weight: packageWeightKg,
         length: packageLengthCm,
@@ -631,27 +771,21 @@ export async function pushOrderToNimbusPost(orderId: string) {
       },
     };
 
-    if (isCod) {
-      payload.order_collectable_amount = orderTotal;
-    }
+    if (isCod) payload.order_collectable_amount = orderTotal;
 
-    const response = await fetch(
-      `${NIMBUSPOST_V2_BASE_URL}/v2/shipments`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-          'x-api-key': apiKey,
-          'x-api-secret': apiSecret,
-        },
-        body: JSON.stringify(payload),
-        cache: 'no-store',
-      }
-    );
+    const response = await fetch(`${NIMBUSPOST_V2_BASE_URL}/v2/shipments`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        'x-api-key': apiKey,
+        'x-api-secret': apiSecret,
+      },
+      body: JSON.stringify(payload),
+      cache: 'no-store',
+    });
 
     const rawText = await response.text();
-
     let result: any = null;
 
     try {
@@ -662,45 +796,53 @@ export async function pushOrderToNimbusPost(orderId: string) {
 
     if (!response.ok || result?.success === false) {
       const validationDetails =
-        result?.errors ||
-        result?.details ||
-        result?.data?.errors;
-
-      const validationText = validationDetails
-        ? ` ${JSON.stringify(validationDetails)}`
-        : '';
-
+        result?.errors || result?.details || result?.data?.errors;
       const primaryError =
         formatApiError(result?.message) ||
         formatApiError(result?.error) ||
-        (rawText && rawText !== '[object Object]'
-          ? rawText
-          : '') ||
+        (rawText && rawText !== '[object Object]' ? rawText : '') ||
         `NimbusPost returned HTTP ${response.status}.`;
+      const validationError = formatApiError(validationDetails);
+      const combinedError = validationError
+        ? `${primaryError} | Details: ${validationError}`
+        : primaryError;
 
-      const validationError =
-        formatApiError(validationDetails);
+      if (isAlreadyExistsNimbusError(result || combinedError)) {
+        const recovered = await recoverExistingNimbusShipment({
+          supabase,
+          orderId: order.id,
+          orderNumber,
+          packageWeightKg,
+          apiKey,
+          apiSecret,
+          duplicatePayload: result,
+        });
 
-      throw new Error(
-        validationError
-          ? `${primaryError} | Details: ${validationError}`
-          : primaryError
-      );
+        if (recovered.success) {
+          return {
+            success: true,
+            awb: recovered.awb,
+            courier: recovered.courier,
+            recoveredExistingShipment: true,
+            alreadySynced: recovered.alreadySynced,
+            itemCount: nimbusItems.length,
+          };
+        }
+
+        return {
+          success: false,
+          recoverable: true,
+          error: recovered.error,
+        };
+      }
+
+      throw new Error(combinedError);
     }
 
-    const data =
-      result?.data ||
-      result?.result ||
-      result ||
-      {};
-
+    const data = result?.data || result?.result || result || {};
     let bookingInfo = extractNimbusBookingInfo(data);
     let syncResponse: any = null;
 
-    // NimbusPost v2 may return an order object first while the booked
-    // courier/AWB is nested deeper or becomes available on the order resource.
-    // If AWB was not present in the create response but an order_id exists,
-    // perform one read-back sync before treating the booking as incomplete.
     if (!bookingInfo.awb && bookingInfo.remoteOrderId) {
       try {
         syncResponse = await fetchNimbusOrderById(
@@ -710,139 +852,60 @@ export async function pushOrderToNimbusPost(orderId: string) {
         );
 
         const syncedInfo = extractNimbusBookingInfo(
-          syncResponse?.data ||
-            syncResponse?.result ||
-            syncResponse
+          syncResponse?.data || syncResponse?.result || syncResponse
         );
 
         bookingInfo = {
           awb: syncedInfo.awb || bookingInfo.awb,
           courier: syncedInfo.courier || bookingInfo.courier,
-          remoteOrderId:
-            syncedInfo.remoteOrderId ||
-            bookingInfo.remoteOrderId,
-          shipmentId:
-            syncedInfo.shipmentId ||
-            bookingInfo.shipmentId,
-          labelUrl:
-            syncedInfo.labelUrl ||
-            bookingInfo.labelUrl,
-          shippingCost:
-            syncedInfo.shippingCost ||
-            bookingInfo.shippingCost,
+          remoteOrderId: syncedInfo.remoteOrderId || bookingInfo.remoteOrderId,
+          shipmentId: syncedInfo.shipmentId || bookingInfo.shipmentId,
+          labelUrl: syncedInfo.labelUrl || bookingInfo.labelUrl,
+          shippingCost: syncedInfo.shippingCost || bookingInfo.shippingCost,
         };
       } catch (syncError) {
-        console.warn(
-          'NimbusPost post-booking sync warning:',
-          syncError
-        );
+        console.warn('NimbusPost post-booking sync warning:', syncError);
       }
     }
 
     const awbNumber = bookingInfo.awb;
-
     if (!awbNumber) {
       throw new Error(
         `NimbusPost created/accepted the remote order${
-          bookingInfo.remoteOrderId
-            ? ` ${bookingInfo.remoteOrderId}`
-            : ''
+          bookingInfo.remoteOrderId ? ` ${bookingInfo.remoteOrderId}` : ''
         }, but the AWB was not present in the API response yet. Do NOT book again. The remote order should be synced instead. Remote response: ${formatApiError(
           syncResponse || data
         ).slice(0, 1600)}`
       );
     }
 
-    const courierName =
-      bookingInfo.courier ||
-      'NimbusPost Assigned Courier';
+    const saved = await saveRecoveredNimbusShipment({
+      supabase,
+      orderId: order.id,
+      packageWeightKg,
+      bookingInfo,
+      sourceDescription: 'Created via NimbusPost API.',
+    });
 
-    const labelUrl = bookingInfo.labelUrl || '';
-
-    const shippingCost = bookingInfo.shippingCost || 0;
-
-    const { data: savedShipment, error: saveError } =
-      await supabase
-        .from('shipments')
-        .insert({
-          order_id: order.id,
-          awb_number: String(awbNumber),
-          shipment_status: 'COURIER_ASSIGNED',
-          pickup_status: 'REQUESTED',
-          package_weight: packageWeightKg,
-          tracking_url: `https://nimbuspost.com/track?awb=${encodeURIComponent(
-            String(awbNumber)
-          )}`,
-          shipping_label_url: labelUrl,
-          shipping_cost: shippingCost,
-        })
-        .select()
-        .single();
-
-    if (saveError) {
-      throw new Error(
-        `NimbusPost created AWB ${awbNumber}, but the website could not save the local shipment record: ${saveError.message}`
-      );
-    }
-
-    if (savedShipment?.id) {
-      const { error: trackingError } =
-        await supabase
-          .from('shipment_tracking_events')
-          .insert({
-            shipment_id: savedShipment.id,
-            status: 'COURIER_ASSIGNED',
-            location: 'Surat Fulfillment Hub',
-            description: `AWB ${awbNumber} generated via ${courierName}. Ready for pickup.`,
-            event_time: new Date().toISOString(),
-            source: 'COURIER_API',
-          });
-
-      if (trackingError) {
-        console.warn(
-          'Shipment tracking event warning:',
-          trackingError.message
-        );
-      }
-    }
-
-    const { error: orderUpdateError } =
-      await supabase
-        .from('orders')
-        .update({
-          order_status: 'PACKED',
-        })
-        .eq('id', order.id);
-
-    if (orderUpdateError) {
-      console.warn(
-        'Order status update warning:',
-        orderUpdateError.message
-      );
-    }
+    if (!saved.success) throw new Error(saved.error);
 
     return {
       success: true,
-      awb: String(awbNumber),
-      courier: String(courierName),
-      labelUrl: String(labelUrl || ''),
-      shippingCost,
+      awb: saved.awb,
+      courier: saved.courier,
+      labelUrl: String(bookingInfo.labelUrl || ''),
+      shippingCost: bookingInfo.shippingCost || 0,
       itemCount: nimbusItems.length,
       remoteOrderId: bookingInfo.remoteOrderId,
       remoteShipmentId: bookingInfo.shipmentId,
       nimbusResponse: syncResponse || data,
     };
   } catch (err: any) {
-    console.error(
-      'NimbusPost v2 booking error:',
-      err
-    );
+    console.error('NimbusPost v2 booking error:', err);
 
     return {
       success: false,
-      error:
-        err?.message ||
-        'NimbusPost API v2 communication failed.',
+      error: err?.message || 'NimbusPost API v2 communication failed.',
     };
   }
 }
