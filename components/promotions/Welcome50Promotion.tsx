@@ -1,13 +1,18 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 
 const COUPON_CODE = 'WELCOME50';
 const MINIMUM_ORDER = 499;
+const PROMO_END_AT = Date.parse('2026-09-07T18:29:59.999Z'); // 07 Sep 2026, 23:59:59 IST
+
+function isPromotionActive() {
+  return Date.now() <= PROMO_END_AT;
+}
 
 function applyWelcome50ToCart() {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined' || !isPromotionActive()) return;
 
   const rawCart = window.localStorage.getItem('sastabazar_cart');
   if (!rawCart) return;
@@ -46,9 +51,12 @@ function applyWelcome50ToCart() {
 export default function Welcome50Promotion() {
   const pathname = usePathname();
   const isAdmin = pathname?.startsWith('/admin');
+  const [isActive, setIsActive] = useState(false);
 
   useEffect(() => {
-    if (isAdmin) return;
+    const active = isPromotionActive();
+    setIsActive(active);
+    if (isAdmin || !active) return;
 
     applyWelcome50ToCart();
     window.addEventListener('cartUpdated', applyWelcome50ToCart);
@@ -60,7 +68,7 @@ export default function Welcome50Promotion() {
     };
   }, [isAdmin]);
 
-  if (isAdmin) return null;
+  if (isAdmin || !isActive) return null;
 
   return (
     <div className="w-full bg-[#741f23] px-3 py-2 text-center text-xs font-semibold text-white sm:text-sm">
