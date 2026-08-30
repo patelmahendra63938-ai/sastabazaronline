@@ -67,7 +67,8 @@ export async function compressProductVideo(
       if (settled) return;
       settled = true;
       try {
-        if (recorder && recorder.state !== 'inactive') recorder.stop();
+        const currentRecorder = recorder;
+        if (currentRecorder && currentRecorder.state !== 'inactive') currentRecorder.stop();
       } catch {}
       cleanup();
       reject(new Error(message));
@@ -87,8 +88,6 @@ export async function compressProductVideo(
           throw new Error('Video duration could not be detected. Please try another MP4 video.');
         }
 
-        // We deliberately encode at normal playback speed so the saved video keeps its full duration.
-        // Timeout allows the original duration plus a generous processing margin.
         timeout = window.setTimeout(
           () => fail('Video compression timed out before completion. Please keep the browser tab open and try again.'),
           Math.max(180000, Math.ceil(duration * 1000 * 1.6 + 60000)),
@@ -129,25 +128,24 @@ export async function compressProductVideo(
         const fps = chooseFrameRate(duration);
         const outputStream = canvas.captureStream(fps);
 
-        // Target a 3.35 MB encoded file. Audio is intentionally omitted for large product videos
-        // so the size target is reliable and the visual product demonstration is preserved.
         const targetBits = TARGET_BYTES * 8;
         const calculatedBitrate = Math.floor((targetBits / duration) * 0.88);
         const videoBitrate = Math.max(24000, Math.min(900000, calculatedBitrate));
 
-        recorder = new MediaRecorder(outputStream, {
+        const activeRecorder = new MediaRecorder(outputStream, {
           mimeType,
           videoBitsPerSecond: videoBitrate,
         });
+        recorder = activeRecorder;
 
         const chunks: Blob[] = [];
-        recorder.ondataavailable = (event) => {
+        activeRecorder.ondataavailable = (event) => {
           if (event.data?.size) chunks.push(event.data);
         };
 
-        recorder.onerror = () => fail('Video compression failed while encoding. Please retry in Chrome or Edge.');
+        activeRecorder.onerror = () => fail('Video compression failed while encoding. Please retry in Chrome or Edge.');
 
-        recorder.onstop = () => {
+        activeRecorder.onstop = () => {
           if (settled) return;
 
           const compressed = new Blob(chunks, { type: mimeType });
@@ -188,10 +186,10 @@ export async function compressProductVideo(
           ctx.drawImage(video, 0, 0, width, height);
           onProgress(100);
           if (raf) cancelAnimationFrame(raf);
-          if (recorder?.state !== 'inactive') recorder.stop();
+          if (activeRecorder.state !== 'inactive') activeRecorder.stop();
         };
 
-        recorder.start(250);
+        activeRecorder.start(250);
         video.playbackRate = 1;
         await video.play();
         draw();
