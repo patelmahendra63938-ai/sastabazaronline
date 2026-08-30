@@ -4,6 +4,12 @@ import { getActiveStorefrontCategories } from '@/lib/catalog/storefront-categori
 
 const BASE_URL = 'https://www.adhyeybrothers.in';
 
+// The catalog changes from the admin panel without a new Next.js build.
+// Keep the sitemap request-time fresh so newly activated products are exposed
+// to search-engine crawlers immediately instead of being held in a cached route.
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: `${BASE_URL}/`, changeFrequency: 'daily', priority: 1 },
@@ -16,7 +22,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!supabaseUrl || !supabaseAnonKey) return staticRoutes;
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error('Sitemap: Supabase environment variables are missing');
+    return staticRoutes;
+  }
 
   const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: { persistSession: false, autoRefreshToken: false },
