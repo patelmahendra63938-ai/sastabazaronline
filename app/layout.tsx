@@ -5,6 +5,7 @@ import Script from 'next/script';
 import GA4EcommerceTracker from '@/components/GA4EcommerceTracker';
 import Welcome50Promotion from '@/components/promotions/Welcome50Promotion';
 import RetailQuantityGuard from '@/components/commerce/RetailQuantityGuard';
+import WhatsAppHelpButton from '@/components/WhatsAppHelpButton';
 
 const SITE_URL = 'https://www.adhyeybrothers.in';
 const SITE_NAME = 'ADHYEY BROTHERS';
@@ -141,8 +142,8 @@ export default function RootLayout({
     },
   };
 
-  const organizationJson = JSON.stringify(organizationJsonLd).replace(/</g, '\\u003c');
-  const websiteJson = JSON.stringify(websiteJsonLd).replace(/</g, '\\u003c');
+  const organizationJson = JSON.stringify(organizationJsonLd).replace(/</g, '\u003c');
+  const websiteJson = JSON.stringify(websiteJsonLd).replace(/</g, '\u003c');
 
   return (
     <html lang="en-IN" className="scroll-smooth">
@@ -162,6 +163,7 @@ export default function RootLayout({
         <RetailQuantityGuard />
         <Welcome50Promotion />
         {children}
+        <WhatsAppHelpButton />
 
         <GA4EcommerceTracker />
 
