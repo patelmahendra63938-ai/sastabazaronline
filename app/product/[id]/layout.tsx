@@ -15,8 +15,6 @@ interface ProductSeoRecord {
   is_active?: boolean | null;
   category?: string | null;
   images?: string[] | null;
-  brand?: string | null;
-  style_code?: string | null;
 }
 
 interface InventoryRow {
@@ -48,7 +46,7 @@ const getProduct = cache(async (id: string): Promise<ProductSeoRecord | null> =>
 
   const { data, error } = await supabase
     .from('products')
-    .select('id,title,description,price,is_active,category,images,brand,style_code')
+    .select('id,title,description,price,is_active,category,images')
     .eq('id', id)
     .maybeSingle();
 
@@ -230,8 +228,7 @@ export default async function ProductLayout({
   const availability = await getProductAvailability(product.id);
   const category = storefrontCategory(product);
   const image = getProductImage(product);
-  const sku = product.style_code?.trim() || product.id;
-  const brand = product.brand?.trim();
+  const sku = product.id;
 
   const productJsonLd = {
     '@context': 'https://schema.org',
@@ -242,14 +239,6 @@ export default async function ProductLayout({
     sku,
     url: canonical,
     ...(image ? { image: [image] } : {}),
-    ...(brand
-      ? {
-          brand: {
-            '@type': 'Brand',
-            name: brand,
-          },
-        }
-      : {}),
     ...(category ? { category } : {}),
     ...(price > 0
       ? {
