@@ -15,6 +15,7 @@ interface ProductSeoRecord {
   is_active?: boolean | null;
   category?: string | null;
   images?: string[] | null;
+  video?: string | null;
 }
 
 interface InventoryRow {
@@ -46,7 +47,7 @@ const getProduct = cache(async (id: string): Promise<ProductSeoRecord | null> =>
 
   const { data, error } = await supabase
     .from('products')
-    .select('id,title,description,price,is_active,category,images')
+    .select('id,title,description,price,is_active,category,images,video')
     .eq('id', id)
     .maybeSingle();
 
@@ -75,6 +76,25 @@ function getProductImage(product?: ProductSeoRecord | null): string | undefined 
   if (/^https?:\/\//i.test(resolved)) return resolved;
 
   return `${SITE_URL}${resolved.startsWith('/') ? resolved : `/${resolved}`}`;
+}
+
+function getProductVideo(product?: ProductSeoRecord | null): string | undefined {
+  const candidate = product?.video?.trim();
+  if (!candidate || !/^https?:\/\//i.test(candidate)) return undefined;
+  return candidate;
+}
+
+function getVideoUploadDate(videoUrl: string): string | undefined {
+  const match = decodeURIComponent(videoUrl).match(/vid-(\d{13})-/i);
+  if (!match) return undefined;
+
+  const timestamp = Number(match[1]);
+  if (!Number.isFinite(timestamp)) return undefined;
+
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return undefined;
+
+  return date.toISOString();
 }
 
 async function getProductAvailability(productId: string): Promise<string> {
@@ -228,6 +248,8 @@ export default async function ProductLayout({
   const availability = await getProductAvailability(product.id);
   const category = storefrontCategory(product);
   const image = getProductImage(product);
+  const video = getProductVideo(product);
+  const videoUploadDate = video ? getVideoUploadDate(video) : undefined;
   const sku = product.id;
 
   const productJsonLd = {
@@ -298,8 +320,31 @@ export default async function ProductLayout({
     itemListElement: breadcrumbItems,
   };
 
+  const videoJsonLd =
+    video && image && videoUploadDate
+      ? {
+          '@context': 'https://schema.org',
+          '@type': 'VideoObject',
+          '@id': `${canonical}#video`,
+          name: `${product.title} product video`,
+          description,
+          thumbnailUrl: [image],
+          uploadDate: videoUploadDate,
+          contentUrl: video,
+          mainEntityOfPage: canonical,
+          publisher: {
+            '@type': 'Organization',
+            '@id': `${SITE_URL}/#organization`,
+            name: 'ADHYEY BROTHERS',
+          },
+        }
+      : null;
+
   const productJson = JSON.stringify(productJsonLd).replace(/</g, '\\u003c');
   const breadcrumbJson = JSON.stringify(breadcrumbJsonLd).replace(/</g, '\\u003c');
+  const videoJson = videoJsonLd
+    ? JSON.stringify(videoJsonLd).replace(/</g, '\\u003c')
+    : null;
 
   return (
     <>
@@ -311,6 +356,12 @@ export default async function ProductLayout({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: breadcrumbJson }}
       />
+      {videoJson ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: videoJson }}
+        />
+      ) : null}
       {children}
     </>
   );
