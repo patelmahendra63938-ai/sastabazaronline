@@ -9,6 +9,21 @@ export type VideoCompressionResult = {
 };
 
 const MB = 1024 * 1024;
+const MAX_UPLOAD_BYTES = 4 * MB;
+// Leave headroom for container overhead and browser encoder variance.
+const TARGET_BYTES = Math.floor(3.35 * MB);
+
+function chooseMaxDimension(durationSeconds: number) {
+  if (durationSeconds <= 45) return 720;
+  if (durationSeconds <= 90) return 540;
+  return 360;
+}
+
+function chooseFrameRate(durationSeconds: number) {
+  if (durationSeconds <= 45) return 20;
+  if (durationSeconds <= 90) return 16;
+  return 12;
+}
 
 export async function compressProductVideo(
   file: File,
@@ -16,7 +31,7 @@ export async function compressProductVideo(
 ): Promise<VideoCompressionResult> {
   const originalSizeMB = +(file.size / MB).toFixed(2);
 
-  if (file.size <= 4 * MB) {
+  if (file.size <= MAX_UPLOAD_BYTES) {
     onProgress(100);
     return {
       blob: file,
@@ -28,7 +43,7 @@ export async function compressProductVideo(
   }
 
   if (typeof window === 'undefined' || typeof MediaRecorder === 'undefined') {
-    throw new Error('This browser cannot compress large videos. Please use Chrome/Edge or upload a video under 4 MB.');
+    throw new Error('This browser cannot compress large videos. Please use the latest Chrome or Edge.');
   }
 
   return new Promise((resolve, reject) => {
@@ -37,10 +52,13 @@ export async function compressProductVideo(
     let settled = false;
     let raf = 0;
     let recorder: MediaRecorder | null = null;
+    let timeout = 0;
 
     const cleanup = () => {
       if (raf) cancelAnimationFrame(raf);
+      if (timeout) window.clearTimeout(timeout);
       URL.revokeObjectURL(objectUrl);
+      video.pause();
       video.removeAttribute('src');
       video.load();
     };
@@ -55,20 +73,30 @@ export async function compressProductVideo(
       reject(new Error(message));
     };
 
-    const timeout = window.setTimeout(() => fail('Video compression timed out. Please try a shorter video.'), 180000);
-
     video.preload = 'auto';
     video.muted = true;
     video.playsInline = true;
     video.src = objectUrl;
 
-    video.onerror = () => fail('The selected video could not be read by this browser. Try MP4 (H.264).');
+    video.onerror = () => fail('The selected video could not be read by this browser. Please use MP4 (H.264) or WEBM.');
 
     video.onloadedmetadata = async () => {
       try {
+        const duration = Number(video.duration);
+        if (!Number.isFinite(duration) || duration <= 0) {
+          throw new Error('Video duration could not be detected. Please try another MP4 video.');
+        }
+
+        // We deliberately encode at normal playback speed so the saved video keeps its full duration.
+        // Timeout allows the original duration plus a generous processing margin.
+        timeout = window.setTimeout(
+          () => fail('Video compression timed out before completion. Please keep the browser tab open and try again.'),
+          Math.max(180000, Math.ceil(duration * 1000 * 1.6 + 60000)),
+        );
+
+        const maxDim = chooseMaxDimension(duration);
         let width = video.videoWidth || 1280;
         let height = video.videoHeight || 720;
-        const maxDim = 1080;
 
         if (width > maxDim || height > maxDim) {
           if (width >= height) {
@@ -79,6 +107,7 @@ export async function compressProductVideo(
             height = maxDim;
           }
         }
+
         width = Math.max(2, width - (width % 2));
         height = Math.max(2, height - (height % 2));
 
@@ -95,36 +124,45 @@ export async function compressProductVideo(
           'video/mp4',
         ];
         const mimeType = mimeCandidates.find((m) => MediaRecorder.isTypeSupported(m));
-        if (!mimeType) throw new Error('This browser does not support a compatible video encoder.');
+        if (!mimeType) throw new Error('This browser does not support a compatible video encoder. Please use Chrome or Edge.');
 
-        const outputStream = canvas.captureStream(25);
-        const captureStream = (video as HTMLVideoElement & { captureStream?: () => MediaStream }).captureStream?.();
-        const audioTrack = captureStream?.getAudioTracks?.()[0];
-        if (audioTrack) outputStream.addTrack(audioTrack);
+        const fps = chooseFrameRate(duration);
+        const outputStream = canvas.captureStream(fps);
+
+        // Target a 3.35 MB encoded file. Audio is intentionally omitted for large product videos
+        // so the size target is reliable and the visual product demonstration is preserved.
+        const targetBits = TARGET_BYTES * 8;
+        const calculatedBitrate = Math.floor((targetBits / duration) * 0.88);
+        const videoBitrate = Math.max(24000, Math.min(900000, calculatedBitrate));
 
         recorder = new MediaRecorder(outputStream, {
           mimeType,
-          videoBitsPerSecond: 1_600_000,
-          audioBitsPerSecond: 96_000,
+          videoBitsPerSecond: videoBitrate,
         });
 
         const chunks: Blob[] = [];
         recorder.ondataavailable = (event) => {
           if (event.data?.size) chunks.push(event.data);
         };
-        recorder.onerror = () => fail('Video compression failed while encoding.');
+
+        recorder.onerror = () => fail('Video compression failed while encoding. Please retry in Chrome or Edge.');
+
         recorder.onstop = () => {
           if (settled) return;
-          window.clearTimeout(timeout);
+
           const compressed = new Blob(chunks, { type: mimeType });
           if (!compressed.size) {
             fail('Video compression produced an empty file. Please try another MP4 video.');
             return;
           }
-          if (compressed.size >= file.size) {
-            fail('This video could not be reduced safely. Please trim it or use a smaller MP4 video.');
+
+          if (compressed.size > MAX_UPLOAD_BYTES) {
+            fail(
+              `Compressed video is ${(compressed.size / MB).toFixed(2)} MB. It was blocked before Supabase upload because the final file must be under 4 MB.`,
+            );
             return;
           }
+
           settled = true;
           cleanup();
           const compressedSizeMB = +(compressed.size / MB).toFixed(2);
@@ -137,11 +175,12 @@ export async function compressProductVideo(
           });
         };
 
-        const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 1;
         const draw = () => {
-          if (video.ended || video.paused) return;
-          ctx.drawImage(video, 0, 0, width, height);
-          onProgress(Math.min(98, Math.max(1, Math.round((video.currentTime / duration) * 100))));
+          if (video.ended) return;
+          if (!video.paused) {
+            ctx.drawImage(video, 0, 0, width, height);
+            onProgress(Math.min(98, Math.max(1, Math.round((video.currentTime / duration) * 100))));
+          }
           raf = requestAnimationFrame(draw);
         };
 
@@ -149,11 +188,11 @@ export async function compressProductVideo(
           ctx.drawImage(video, 0, 0, width, height);
           onProgress(100);
           if (raf) cancelAnimationFrame(raf);
-          if (recorder?.state !== 'inactive') recorder?.stop();
+          if (recorder?.state !== 'inactive') recorder.stop();
         };
 
         recorder.start(250);
-        video.playbackRate = 2;
+        video.playbackRate = 1;
         await video.play();
         draw();
       } catch (error) {
