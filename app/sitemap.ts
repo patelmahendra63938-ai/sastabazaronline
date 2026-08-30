@@ -13,6 +13,8 @@ export const revalidate = 0;
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: `${BASE_URL}/`, changeFrequency: 'daily', priority: 1 },
+    { url: `${BASE_URL}/contact`, changeFrequency: 'monthly', priority: 0.5 },
+    { url: `${BASE_URL}/gst-invoice`, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${BASE_URL}/privacy-policy`, changeFrequency: 'monthly', priority: 0.3 },
     { url: `${BASE_URL}/shipping-policy`, changeFrequency: 'monthly', priority: 0.4 },
     { url: `${BASE_URL}/return-policy`, changeFrequency: 'monthly', priority: 0.4 },
