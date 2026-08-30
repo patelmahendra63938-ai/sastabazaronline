@@ -88,16 +88,29 @@ Sensitive credentials are handled through environment variables and are not inte
 
 ## Project Screenshots
 
-Selected screenshots of the production storefront and administration experience will be added here to demonstrate the project visually.
+### Storefront Homepage
 
-Recommended showcase views:
+Production storefront showing the customer-facing shopping experience, navigation, product discovery, and responsive commerce layout.
 
-1. Homepage / storefront
-2. Product detail page
-3. Cart and checkout
-4. Admin dashboard
-5. Mobile storefront
-6. SEO / search visibility evidence
+![ADHYEY BROTHERS storefront homepage](docs/screenshots/mainpage.jpeg)
+
+### Category & Product Discovery
+
+Category browsing experience designed to help customers discover relevant products efficiently.
+
+![ADHYEY BROTHERS category page](docs/screenshots/catagory.jpeg)
+
+### Product Detail Experience
+
+Product detail interface presenting product imagery, information, purchase options, and the customer shopping flow.
+
+![ADHYEY BROTHERS product detail page](docs/screenshots/product.jpeg)
+
+### Administration Dashboard
+
+Operational dashboard used for day-to-day e-commerce administration and business management.
+
+![ADHYEY BROTHERS admin dashboard](docs/screenshots/admin.png)
 
 ## Deployment
 
