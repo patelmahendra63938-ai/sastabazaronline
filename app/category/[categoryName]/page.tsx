@@ -54,14 +54,19 @@ function categorySeo(name: string) {
 
 export async function generateMetadata({
   params,
+  searchParams,
 }: {
   params: Promise<{ categoryName: string }> | { categoryName: string };
+  searchParams: Promise<{ page?: string }> | { page?: string };
 }): Promise<Metadata> {
   const resolvedParams = await params;
+  const resolvedSearchParams = await searchParams;
   const requestedName = decodeURIComponent(resolvedParams.categoryName);
   const activeCategory = await getActiveStorefrontCategoryByName(requestedName);
   const canonicalName = activeCategory?.name || requestedName;
-  const canonical = `${SITE_URL}/category/${encodeURIComponent(canonicalName)}`;
+  const currentPage = parsePage(resolvedSearchParams.page);
+  const canonicalBase = `${SITE_URL}/category/${encodeURIComponent(canonicalName)}`;
+  const canonical = currentPage > 1 ? `${canonicalBase}?page=${currentPage}` : canonicalBase;
   const seo = categorySeo(canonicalName);
   const isIndexable = Boolean(activeCategory && activeCategory.product_count > 0);
 
