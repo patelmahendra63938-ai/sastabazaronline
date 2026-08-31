@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { SYSTEM_OFFERS, getSystemOfferStatus } from '@/lib/promotions/system-offers';
 import { createCampaignAction } from './actions';
-import { Ticket, Plus, Trash2, Loader2, Sparkles, Power, ArrowLeft } from 'lucide-react';
+import { Ticket, Plus, Trash2, Loader2, Sparkles, Power, ArrowLeft, LockKeyhole } from 'lucide-react';
 
 export default function AdminCouponsPage() {
   const [campaigns, setCampaigns] = useState<any[]>([]);
@@ -49,7 +50,7 @@ export default function AdminCouponsPage() {
       .from('promotions')
       .select('*')
       .order('created_at', { ascending: false });
-      
+
     if (!error && data) {
       setCampaigns(data);
     } else if (error) {
@@ -101,8 +102,8 @@ export default function AdminCouponsPage() {
       setView('dashboard');
       fetchCampaigns();
       setFormData({
-        name: '', description: '', discount_type: 'PERCENTAGE', discount_value: '', 
-        campaign_mode: 'AUTOMATIC', coupon_code: '', target_category: 'ALL', 
+        name: '', description: '', discount_type: 'PERCENTAGE', discount_value: '',
+        campaign_mode: 'AUTOMATIC', coupon_code: '', target_category: 'ALL',
         start_at: '', end_at: '', theme: 'Festive', is_homepage_visible: true
       });
     } else {
@@ -150,9 +151,21 @@ export default function AdminCouponsPage() {
     return { label: 'LIVE NOW', classes: 'bg-green-50 text-green-700 border-green-200' };
   };
 
+  const statusClasses = (label: string) => {
+    if (label === 'LIVE NOW') return 'bg-green-50 text-green-700 border-green-200';
+    if (label === 'UPCOMING') return 'bg-blue-50 text-blue-700 border-blue-200';
+    if (label === 'EXPIRED') return 'bg-red-50 text-red-700 border-red-200';
+    return 'bg-gray-100 text-gray-600 border-gray-200';
+  };
+
   const now = new Date().getTime();
-  const liveCount = campaigns.filter(c => c.is_enabled && new Date(c.start_at).getTime() <= now && new Date(c.end_at).getTime() > now).length;
-  const upcomingCount = campaigns.filter(c => c.is_enabled && new Date(c.start_at).getTime() > now).length;
+  const liveDatabaseCount = campaigns.filter(c => c.is_enabled && new Date(c.start_at).getTime() <= now && new Date(c.end_at).getTime() >= now).length;
+  const upcomingDatabaseCount = campaigns.filter(c => c.is_enabled && new Date(c.start_at).getTime() > now).length;
+  const liveSystemCount = SYSTEM_OFFERS.filter(offer => getSystemOfferStatus(offer, now) === 'LIVE NOW').length;
+  const upcomingSystemCount = SYSTEM_OFFERS.filter(offer => getSystemOfferStatus(offer, now) === 'UPCOMING').length;
+  const liveCount = liveDatabaseCount + liveSystemCount;
+  const upcomingCount = upcomingDatabaseCount + upcomingSystemCount;
+  const totalOfferCount = campaigns.length + SYSTEM_OFFERS.length;
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12 font-sans">
@@ -179,7 +192,7 @@ export default function AdminCouponsPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="bg-white p-5 rounded-2xl border shadow-sm"><p className="text-xs font-bold text-gray-500 uppercase">Live Campaigns</p><p className="text-2xl font-black text-green-600">{liveCount}</p></div>
             <div className="bg-white p-5 rounded-2xl border shadow-sm"><p className="text-xs font-bold text-gray-500 uppercase">Upcoming</p><p className="text-2xl font-black text-blue-600">{upcomingCount}</p></div>
-            <div className="bg-white p-5 rounded-2xl border shadow-sm"><p className="text-xs font-bold text-gray-500 uppercase">Total Offers</p><p className="text-2xl font-black text-indigo-950">{campaigns.length}</p></div>
+            <div className="bg-white p-5 rounded-2xl border shadow-sm"><p className="text-xs font-bold text-gray-500 uppercase">Total Offers</p><p className="text-2xl font-black text-indigo-950">{totalOfferCount}</p></div>
           </div>
 
           <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
@@ -188,7 +201,7 @@ export default function AdminCouponsPage() {
             </div>
             {loading ? (
               <div className="p-16 flex justify-center text-gray-500"><Loader2 size={24} className="animate-spin text-orange-500" /></div>
-            ) : campaigns.length === 0 ? (
+            ) : totalOfferCount === 0 ? (
               <div className="p-16 text-center text-gray-400 text-sm">No campaigns found. Create your first festival sale for SASTABAZARONLINE!</div>
             ) : (
               <div className="overflow-x-auto">
@@ -203,6 +216,45 @@ export default function AdminCouponsPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y">
+                    {SYSTEM_OFFERS.map(offer => {
+                      const systemStatus = getSystemOfferStatus(offer, now);
+                      return (
+                        <tr key={offer.id} className="bg-amber-50/30 hover:bg-amber-50/50">
+                          <td className="p-4">
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="font-bold text-gray-900 text-sm">{offer.name}</p>
+                              <span className="bg-amber-100 text-amber-800 border border-amber-200 px-1.5 py-0.5 rounded text-[9px] font-black">SYSTEM OFFER</span>
+                            </div>
+                            <p className="text-[10px] text-gray-500 flex items-center gap-1">
+                              <Sparkles size={10} /> {offer.campaignMode} • {offer.scope === 'ORDER' ? 'Order Level' : 'Product Level'}
+                              {offer.minimumOrder ? ` • Min ₹${offer.minimumOrder}` : ''}
+                            </p>
+                            <p className="text-[10px] text-gray-400 mt-1">{offer.description}</p>
+                          </td>
+                          <td className="p-4">
+                            <p className="font-black text-indigo-950 text-sm">
+                              {offer.discountType === 'PERCENTAGE' ? `${offer.discountValue}% OFF` : `₹${offer.discountValue} OFF`}
+                            </p>
+                            {offer.couponCode && <span className="bg-gray-100 border text-gray-700 px-1.5 py-0.5 rounded text-[10px] font-mono mt-1 inline-block">{offer.couponCode}</span>}
+                          </td>
+                          <td className="p-4 text-gray-500">
+                            <p>{new Date(offer.startAt).toLocaleDateString()}</p>
+                            <p>to {new Date(offer.endAt).toLocaleDateString()}</p>
+                          </td>
+                          <td className="p-4">
+                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${statusClasses(systemStatus)}`}>
+                              {systemStatus}
+                            </span>
+                          </td>
+                          <td className="p-4 text-right">
+                            <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-2" title="This order-level offer is managed by the server pricing rules.">
+                              <LockKeyhole size={13} /> System managed
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+
                     {campaigns.map(c => {
                       const status = getStatus(c.start_at, c.end_at, c.is_enabled);
                       return (
@@ -230,7 +282,7 @@ export default function AdminCouponsPage() {
                             </span>
                           </td>
                           <td className="p-4 flex items-center justify-end gap-2">
-                            <button onClick={() => handleToggleStatus(c.id, c.is_enabled)} className={`p-2 rounded-lg transition cursor-pointer ${c.is_enabled ? 'text-green-600 bg-green-50 hover:bg-green-100' : 'text-gray-400 bg-gray-50 hover:bg-gray-200'}`} title={c.is_enabled ? "Disable" : "Enable"}>
+                            <button onClick={() => handleToggleStatus(c.id, c.is_enabled)} className={`p-2 rounded-lg transition cursor-pointer ${c.is_enabled ? 'text-green-600 bg-green-50 hover:bg-green-100' : 'text-gray-400 bg-gray-50 hover:bg-gray-200'}`} title={c.is_enabled ? 'Disable' : 'Enable'}>
                               <Power size={16} />
                             </button>
                             <button onClick={() => handleDelete(c.id, c.name)} className="p-2 text-red-500 bg-red-50 hover:bg-red-100 rounded-lg transition cursor-pointer" title="Delete">
@@ -307,7 +359,7 @@ export default function AdminCouponsPage() {
                   <input type="text" name="coupon_code" required value={formData.coupon_code} onChange={handleInputChange} placeholder="e.g. DIWALI20" className="w-full px-4 py-3 border rounded-xl uppercase font-mono" />
                 </div>
               )}
-              
+
               <div className="md:col-span-2">
                 <label className="block font-bold text-gray-700 mb-1">Target Category</label>
                 <select name="target_category" value={formData.target_category} onChange={handleInputChange} className="w-full px-4 py-3 border rounded-xl bg-white font-medium">
@@ -318,7 +370,7 @@ export default function AdminCouponsPage() {
                   <option value="Beauty & Personal Care">Beauty & Personal Care</option>
                   <option value="Grocery">Grocery</option>
                 </select>
-                
+
                 {eligibleProductCount !== null && (
                   <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-xl flex items-center gap-2 text-xs text-green-700 font-bold">
                     <span className="text-base">✓</span>
@@ -337,7 +389,7 @@ export default function AdminCouponsPage() {
                 <input type="datetime-local" name="start_at" required value={formData.start_at} onChange={handleInputChange} className="w-full px-4 py-3 border rounded-xl" />
               </div>
               <div>
-                <label className="block font-bold text-gray-700 md:g-auto px-8 py-4 bg-indigo-950 hover:bg-indigo-900 text-white font-black text-sm uppercase tracking-wider rounded-xl transition flex items-center justify-center gap-2 shadow-lg disabled:opacity-70 cursor-pointer">End Date & Time</label>
+                <label className="block font-bold text-gray-700 mb-1">End Date & Time</label>
                 <input type="datetime-local" name="end_at" required value={formData.end_at} onChange={handleInputChange} className="w-full px-4 py-3 border rounded-xl" />
               </div>
             </div>
