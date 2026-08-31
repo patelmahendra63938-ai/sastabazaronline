@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { createClient } from '@supabase/supabase-js';
 import { cache } from 'react';
 
+import ProductReviews from '@/components/ProductReviews';
 import { resolveStorefrontImageSrc } from '@/lib/storefront-image';
 import { classifyStorefrontCategory } from '@/lib/catalog/storefront-categories';
 
@@ -20,6 +21,13 @@ interface ProductSeoRecord {
 
 interface InventoryRow {
   available_quantity?: number | null;
+}
+
+interface ApprovedReviewRow {
+  customer_name?: string | null;
+  rating: number;
+  review_text: string;
+  created_at: string;
 }
 
 function getSupabaseClient() {
@@ -62,6 +70,27 @@ const getProduct = cache(async (id: string): Promise<ProductSeoRecord | null> =>
 
   return (data as ProductSeoRecord | null) || null;
 });
+
+async function getApprovedReviews(productId: string): Promise<ApprovedReviewRow[]> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from('reviews')
+    .select('customer_name,rating,review_text,created_at')
+    .eq('product_id', productId)
+    .eq('status', 'approved')
+    .order('created_at', { ascending: false })
+    .limit(25);
+
+  if (error) {
+    // Before the migration is applied, product SEO must continue rendering normally.
+    console.warn('Product review SEO fetch skipped:', { message: error.message, productId });
+    return [];
+  }
+
+  return (data || []) as ApprovedReviewRow[];
+}
 
 function getProductImage(product?: ProductSeoRecord | null): string | undefined {
   const candidate =
@@ -246,11 +275,15 @@ export default async function ProductLayout({
   const description = cleanDescription(product.description);
   const price = Number(product.price ?? 0);
   const availability = await getProductAvailability(product.id);
+  const approvedReviews = await getApprovedReviews(product.id);
   const category = storefrontCategory(product);
   const image = getProductImage(product);
   const video = getProductVideo(product);
   const videoUploadDate = video ? getVideoUploadDate(video) : undefined;
   const sku = product.id;
+  const ratingValue = approvedReviews.length
+    ? approvedReviews.reduce((sum, row) => sum + Number(row.rating || 0), 0) / approvedReviews.length
+    : 0;
 
   const productJsonLd = {
     '@context': 'https://schema.org',
@@ -262,6 +295,32 @@ export default async function ProductLayout({
     url: canonical,
     ...(image ? { image: [image] } : {}),
     ...(category ? { category } : {}),
+    ...(approvedReviews.length > 0
+      ? {
+          aggregateRating: {
+            '@type': 'AggregateRating',
+            ratingValue: Number(ratingValue.toFixed(2)),
+            reviewCount: approvedReviews.length,
+            bestRating: 5,
+            worstRating: 1,
+          },
+          review: approvedReviews.map((row) => ({
+            '@type': 'Review',
+            author: {
+              '@type': 'Person',
+              name: row.customer_name || 'Verified Customer',
+            },
+            datePublished: row.created_at,
+            reviewBody: row.review_text,
+            reviewRating: {
+              '@type': 'Rating',
+              ratingValue: Number(row.rating),
+              bestRating: 5,
+              worstRating: 1,
+            },
+          })),
+        }
+      : {}),
     ...(price > 0
       ? {
           offers: {
@@ -363,6 +422,7 @@ export default async function ProductLayout({
         />
       ) : null}
       {children}
+      <ProductReviews productId={product.id} />
     </>
   );
 }
