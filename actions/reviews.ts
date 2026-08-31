@@ -32,10 +32,10 @@ export async function submitVerifiedReviewAction(input: {
     .from('orders')
     .select('id,order_number,customer_id,customer_name,customer_email,status')
     .eq('order_number', orderNumber)
-    .ilike('customer_email', email)
     .maybeSingle();
 
   if (orderError || !order) return { success: false, error: 'We could not verify this order with that email.' };
+  if (normalizeEmail(String(order.customer_email || '')) !== email) return { success: false, error: 'We could not verify this order with that email.' };
   if (String(order.status || '').toUpperCase() !== 'DELIVERED') return { success: false, error: 'Reviews are available after the order is delivered.' };
 
   const { data: item, error: itemError } = await supabaseAdmin
