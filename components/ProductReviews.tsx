@@ -36,6 +36,15 @@ export default function ProductReviews({ productId }: { productId: string }) {
 
   useEffect(() => { loadReviews(); }, [productId]);
 
+  useEffect(() => {
+    const openFromHash = () => {
+      if (window.location.hash === '#reviews') setOpen(true);
+    };
+    openFromHash();
+    window.addEventListener('hashchange', openFromHash);
+    return () => window.removeEventListener('hashchange', openFromHash);
+  }, []);
+
   const average = useMemo(() => {
     if (!reviews.length) return 0;
     return reviews.reduce((sum, item) => sum + Number(item.rating || 0), 0) / reviews.length;
@@ -55,9 +64,17 @@ export default function ProductReviews({ productId }: { productId: string }) {
     }
   }
 
+  function closePopup() {
+    setOpen(false);
+    if (window.location.hash === '#reviews') {
+      window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+    }
+  }
+
   return (
     <>
       <button
+        id="reviews"
         type="button"
         onClick={() => setOpen(true)}
         className="fixed bottom-24 left-4 z-40 rounded-full border border-[#ead8b8] bg-white px-4 py-2.5 shadow-lg flex items-center gap-2 text-xs font-bold text-[#741f23]"
@@ -75,7 +92,7 @@ export default function ProductReviews({ productId }: { productId: string }) {
                 <h2 className="text-xl font-black text-[#741f23]">Customer Ratings & Reviews</h2>
                 <p className="text-xs text-gray-500 mt-1">Only delivered orders can submit verified reviews.</p>
               </div>
-              <button type="button" onClick={() => setOpen(false)} className="p-2 rounded-full hover:bg-gray-100" aria-label="Close reviews">
+              <button type="button" onClick={closePopup} className="p-2 rounded-full hover:bg-gray-100" aria-label="Close reviews">
                 <X size={20} />
               </button>
             </div>
