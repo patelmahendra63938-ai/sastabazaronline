@@ -1,6 +1,7 @@
 import 'server-only';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Campaign, calculateDiscountedPrice, getActiveCampaigns } from '@/lib/promotions';
+import { WELCOME50_OFFER, isSystemOfferActive } from '@/lib/promotions/system-offers';
 import { checkPincodeShippingRate, type ShippingPackageInput } from '@/lib/shipping/serviceability';
 
 export type PricingPaymentMethod = 'COD' | 'ONLINE' | 'UPI_QR';
@@ -8,10 +9,6 @@ export interface PricingCartItem { id?: string; product_id?: string; size?: stri
 export interface VerifiedPricingItem { product_id: string; product_title: string; size: string; sku: string; hsn_code: string; gst_rate: number; unit_price: number; original_price: number; applied_offer_label: string | null; discount_reduction: number; weight_kg: number; quantity: number; line_total: number; }
 export interface PricingBreakdown { pricingMode: 'nimbuspost_live'; originalProductPriceTotal: number; discountDeductionAmount: number; primaryOfferName: string | null; discountedSubtotal: number; totalTaxAmount: number; actualWeightGrams: number; chargeableWeightGrams: number; shippingCharge: number; codCharge: number; totalPayable: number; freeShippingApplied: boolean; serviceable: boolean; message: string; verifiedItems: VerifiedPricingItem[]; ruleVersion: number; }
 
-const WELCOME50_CODE = 'WELCOME50';
-const WELCOME50_MINIMUM_ORDER = 499;
-const WELCOME50_DISCOUNT = 50;
-const WELCOME50_END_AT_UTC = Date.parse('2026-09-07T18:29:59.999Z'); // 07 Sep 2026, 23:59:59 IST
 const MAX_RETAIL_QTY_PER_PRODUCT_SIZE = 5;
 
 export async function calculateAuthoritativeOrderPricing(input: { db: SupabaseClient; pincode: string; paymentMethod: PricingPaymentMethod; cart: PricingCartItem[]; couponCode?: string; }): Promise<PricingBreakdown> {
@@ -142,19 +139,19 @@ export async function calculateAuthoritativeOrderPricing(input: { db: SupabaseCl
   // prevents a fixed ₹50 discount from multiplying across a multi-item cart.
   const normalizedCouponCode = String(input.couponCode || '').trim().toUpperCase();
   const productCampaignDiscount = Math.max(0, originalProductPriceTotal - discountedSubtotal);
-  const isWelcome50Active = Date.now() <= WELCOME50_END_AT_UTC;
-  const hasNoCompetingCoupon = normalizedCouponCode === '' || normalizedCouponCode === WELCOME50_CODE;
+  const isWelcome50Active = isSystemOfferActive(WELCOME50_OFFER);
+  const hasNoCompetingCoupon = normalizedCouponCode === '' || normalizedCouponCode === WELCOME50_OFFER.couponCode;
   const canApplyWelcome50 =
     hasNoCompetingCoupon &&
     isWelcome50Active &&
-    discountedSubtotal >= WELCOME50_MINIMUM_ORDER &&
+    discountedSubtotal >= (WELCOME50_OFFER.minimumOrder || 0) &&
     productCampaignDiscount === 0;
 
   if (canApplyWelcome50) {
     const subtotalBeforeCoupon = discountedSubtotal;
     const subtotalBeforeCouponCents = Math.round(subtotalBeforeCoupon * 100);
     const couponCents = Math.min(
-      Math.round(WELCOME50_DISCOUNT * 100),
+      Math.round(WELCOME50_OFFER.discountValue * 100),
       subtotalBeforeCouponCents
     );
     let remainingCouponCents = couponCents;
@@ -177,7 +174,7 @@ export async function calculateAuthoritativeOrderPricing(input: { db: SupabaseCl
         ? item.line_total / item.quantity
         : item.unit_price;
       item.discount_reduction = Math.round((item.discount_reduction + allocatedCents / 100) * 100) / 100;
-      item.applied_offer_label = 'Website Launch Offer — ₹50 OFF (WELCOME50)';
+      item.applied_offer_label = WELCOME50_OFFER.label;
 
       remainingCouponCents -= allocatedCents;
     });
@@ -191,7 +188,7 @@ export async function calculateAuthoritativeOrderPricing(input: { db: SupabaseCl
       totalTaxAmount *= discountedSubtotal / subtotalBeforeCoupon;
     }
 
-    primaryOfferName = 'Website Launch Offer — ₹50 OFF (WELCOME50)';
+    primaryOfferName = WELCOME50_OFFER.label;
   }
 
   const combinedShipment: ShippingPackageInput[] = [{
