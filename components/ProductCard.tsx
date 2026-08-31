@@ -102,25 +102,31 @@ export default function ProductCard({ product, activeCampaigns = [], priorityIma
 
   return (
     <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-[#ead8b8] bg-white transition-all duration-300 hover:-translate-y-0.5 hover:border-[#d7aa5b] hover:shadow-xl">
-      <ProductRatingTag productId={product.id} />
-
-      <Link href={`/product/${product.id}`} className="relative block cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d7aa5b]" aria-label={`View ${product.title}`}>
-        <div className="relative aspect-square overflow-hidden bg-[#fffaf5]">
-          <Image src={imageUrl} alt={product.title} fill sizes="(max-width: 640px) calc(50vw - 24px), (max-width: 1024px) 33vw, 25vw" loading={priorityImage ? 'eager' : 'lazy'} fetchPriority={priorityImage ? 'high' : 'auto'} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
-          {appliedOffer && !isOutOfStock && <span className="absolute left-2.5 top-2.5 rounded-md bg-[#741f23] px-2 py-0.5 text-[10px] font-black text-white shadow-sm">{appliedOffer.offerLabel}</span>}
-          {isOutOfStock && <span className="absolute left-2.5 top-2.5 rounded-md bg-stone-800 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-white shadow-sm">Out of Stock</span>}
-          {discountPercent > 0 && !isOutOfStock && <span className="absolute right-2.5 top-2.5 rounded-md bg-[#fff7e8] px-2 py-0.5 text-[10px] font-black text-[#741f23] shadow-sm">{discountPercent}% OFF</span>}
-        </div>
+      <div>
+        <Link href={`/product/${product.id}`} className="relative block cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d7aa5b]" aria-label={`View ${product.title}`}>
+          <div className="relative aspect-square overflow-hidden bg-[#fffaf5]">
+            <Image src={imageUrl} alt={product.title} fill sizes="(max-width: 640px) calc(50vw - 24px), (max-width: 1024px) 33vw, 25vw" loading={priorityImage ? 'eager' : 'lazy'} fetchPriority={priorityImage ? 'high' : 'auto'} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+            {appliedOffer && !isOutOfStock && <span className="absolute left-2.5 top-2.5 rounded-md bg-[#741f23] px-2 py-0.5 text-[10px] font-black text-white shadow-sm">{appliedOffer.offerLabel}</span>}
+            {isOutOfStock && <span className="absolute left-2.5 top-2.5 rounded-md bg-stone-800 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-white shadow-sm">Out of Stock</span>}
+            {discountPercent > 0 && !isOutOfStock && <span className="absolute right-2.5 top-2.5 rounded-md bg-[#fff7e8] px-2 py-0.5 text-[10px] font-black text-[#741f23] shadow-sm">{discountPercent}% OFF</span>}
+          </div>
+        </Link>
 
         <div className="space-y-2 p-3.5">
-          {product.category && <p className="text-[10px] font-bold uppercase tracking-wider text-[#b5843d]">{product.category}</p>}
-          <h3 className="line-clamp-2 min-h-[2.5rem] text-xs font-bold leading-5 text-stone-900 transition group-hover:text-[#741f23] sm:text-sm">{product.title}</h3>
-          <div className="space-y-1 pt-0.5">
-            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-              <span className="text-base font-black text-[#741f23]">₹{finalPrice.toLocaleString('en-IN')}</span>
-              {hasRealMrp && <span className="text-[11px] text-stone-500 line-through">₹{mrpValue.toLocaleString('en-IN')}</span>}
+          <Link href={`/product/${product.id}`} className="block rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d7aa5b]">
+            {product.category && <p className="text-[10px] font-bold uppercase tracking-wider text-[#b5843d]">{product.category}</p>}
+            <h3 className="mt-1 line-clamp-2 min-h-[2.5rem] text-xs font-bold leading-5 text-stone-900 transition group-hover:text-[#741f23] sm:text-sm">{product.title}</h3>
+          </Link>
+
+          <div className="pt-0.5">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                <span className="text-base font-black text-[#741f23]">₹{finalPrice.toLocaleString('en-IN')}</span>
+                {hasRealMrp && <span className="text-[11px] text-stone-500 line-through">₹{mrpValue.toLocaleString('en-IN')}</span>}
+              </div>
+              <ProductRatingTag productId={product.id} />
             </div>
-            <p className="text-[10px] font-semibold text-stone-500">Inclusive of applicable GST</p>
+            <p className="mt-1 text-[10px] font-semibold text-stone-500">Inclusive of applicable GST</p>
           </div>
 
           {hasInventoryVariants && (
@@ -134,7 +140,7 @@ export default function ProductCard({ product, activeCampaigns = [], priorityIma
             </div>
           )}
         </div>
-      </Link>
+      </div>
 
       <div className="p-3.5 pt-0">
         {isOutOfStock ? (
