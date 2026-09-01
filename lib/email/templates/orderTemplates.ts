@@ -41,6 +41,31 @@ export interface EmailOrderPayload {
   refundUtr?: string;
 }
 
+const PUBLIC_STORE_URL = 'https://www.adhyeybrothers.in';
+
+function getPublicSiteUrl(): string {
+  const configuredUrl = String(process.env.NEXT_PUBLIC_SITE_URL || '').trim();
+
+  if (!configuredUrl) return PUBLIC_STORE_URL;
+
+  try {
+    const url = new URL(configuredUrl);
+    const hostname = url.hostname.toLowerCase();
+    const isLocalHost =
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      hostname === '::1';
+
+    if (url.protocol !== 'https:' || isLocalHost) {
+      return PUBLIC_STORE_URL;
+    }
+
+    return url.origin;
+  } catch {
+    return PUBLIC_STORE_URL;
+  }
+}
+
 /**
  * Builds professional, responsive, inline-styled HTML email bodies.
  */
@@ -51,9 +76,7 @@ export function buildOrderEmailHtml(
   subject: string;
   html: string;
 } {
-  const siteUrl =
-    process.env.NEXT_PUBLIC_SITE_URL || 'https://www.adhyeybrothers.in';
-
+  const siteUrl = getPublicSiteUrl();
   const trackingUrl = `${siteUrl}/orders/${data.orderId}`;
 
   // Dynamic header configurations based on lifecycle event
