@@ -38,22 +38,31 @@ export default function FooterCategories() {
     };
   }, []);
 
-  if (categories.length === 0) {
-    return <li className="py-2 text-stone-400">Browse products from the main catalog</li>;
-  }
+  const dynamicCategories = categories.filter(
+    category => category.name.trim().toLowerCase() !== 'dhoti choli'
+  );
 
   return (
     <>
-      {categories.map(category => (
-        <li key={category.name}>
-          <Link
-            href={`/category/${encodeURIComponent(category.name)}`}
-            className={linkClass}
-          >
-            {category.name}
-          </Link>
-        </li>
-      ))}
+      <li>
+        <Link href="/collections/dhoti-choli" className={linkClass}>
+          Women’s Dhoti Choli
+        </Link>
+      </li>
+      {dynamicCategories.length === 0 ? (
+        <li className="py-2 text-stone-400">Browse products from the main catalog</li>
+      ) : (
+        dynamicCategories.map(category => (
+          <li key={category.name}>
+            <Link
+              href={`/category/${encodeURIComponent(category.name)}`}
+              className={linkClass}
+            >
+              {category.name}
+            </Link>
+          </li>
+        ))
+      )}
     </>
   );
 }
