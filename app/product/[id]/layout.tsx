@@ -7,6 +7,7 @@ import { resolveStorefrontImageSrc } from '@/lib/storefront-image';
 import { classifyStorefrontCategory } from '@/lib/catalog/storefront-categories';
 
 const SITE_URL = 'https://www.adhyeybrothers.in';
+const DHOTI_CHOLI_COLLECTION_URL = `${SITE_URL}/collections/dhoti-choli`;
 
 interface ProductSeoRecord {
   id: string;
@@ -196,6 +197,11 @@ function storefrontCategory(product: ProductSeoRecord): string | undefined {
   );
 }
 
+function isDhotiCholiProduct(product: ProductSeoRecord): boolean {
+  const text = `${product.title || ''} ${product.description || ''}`.toLowerCase();
+  return text.includes('dhoti choli') || (text.includes('dhoti') && text.includes('choli'));
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -277,6 +283,7 @@ export default async function ProductLayout({
   const availability = await getProductAvailability(product.id);
   const approvedReviews = await getApprovedReviews(product.id);
   const category = storefrontCategory(product);
+  const isDhotiCholi = isDhotiCholiProduct(product);
   const image = getProductImage(product);
   const video = getProductVideo(product);
   const videoUploadDate = video ? getVideoUploadDate(video) : undefined;
@@ -294,7 +301,9 @@ export default async function ProductLayout({
     sku,
     url: canonical,
     ...(image ? { image: [image] } : {}),
-    ...(category ? { category } : {}),
+    ...(category
+      ? { category: isDhotiCholi ? `${category} > Dhoti Choli` : category }
+      : {}),
     ...(approvedReviews.length > 0
       ? {
           aggregateRating: {
@@ -365,9 +374,19 @@ export default async function ProductLayout({
           },
         ]
       : []),
+    ...(isDhotiCholi
+      ? [
+          {
+            '@type': 'ListItem',
+            position: category ? 3 : 2,
+            name: 'Dhoti Choli',
+            item: DHOTI_CHOLI_COLLECTION_URL,
+          },
+        ]
+      : []),
     {
       '@type': 'ListItem',
-      position: category ? 3 : 2,
+      position: category ? (isDhotiCholi ? 4 : 3) : (isDhotiCholi ? 3 : 2),
       name: product.title,
       item: canonical,
     },
