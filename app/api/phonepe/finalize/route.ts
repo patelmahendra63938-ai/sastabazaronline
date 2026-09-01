@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import {
   finalizePhonePePayment,
 } from '@/lib/phonepe/finalize-payment';
+import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit';
 
 export const runtime = 'nodejs';
 
@@ -14,6 +15,23 @@ export async function POST(
   request: Request
 ) {
   try {
+    const clientIp = getClientIp(request);
+    const rateLimit = checkRateLimit({
+      key: `phonepe-finalize:${clientIp}`,
+      limit: 20,
+      windowMs: 10 * 60 * 1000,
+    });
+
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { success: false, error: 'Too many payment verification requests. Please try again shortly.' },
+        {
+          status: 429,
+          headers: { 'Retry-After': String(rateLimit.retryAfterSeconds) },
+        }
+      );
+    }
+
     const body =
       (await request.json()) as FinalizeBody;
 
@@ -22,12 +40,11 @@ export async function POST(
         body.merchantOrderId || ''
       ).trim();
 
-    if (!merchantOrderId) {
+    if (!/^PP-\d{10,16}-[A-Z0-9]{12}$/.test(merchantOrderId)) {
       return NextResponse.json(
         {
           success: false,
-          error:
-            'Merchant order ID is required.',
+          error: 'Invalid merchant order ID.',
         },
         {
           status: 400,
@@ -61,10 +78,7 @@ export async function POST(
     return NextResponse.json(
       {
         success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Unable to finalize PhonePe payment.',
+        error: 'Unable to finalize PhonePe payment.',
       },
       {
         status: 500,

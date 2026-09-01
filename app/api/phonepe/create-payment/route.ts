@@ -9,6 +9,7 @@ import {
 
 import { getPhonePeClient } from '@/lib/phonepe/client';
 import { calculateAuthoritativeOrderPricing } from '@/lib/pricing/pricing-engine';
+import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit';
 
 export const runtime = 'nodejs';
 
@@ -54,6 +55,28 @@ export async function POST(request: Request) {
   let merchantOrderId: string | null = null;
 
   try {
+    const clientIp = getClientIp(request);
+    const rateLimit = checkRateLimit({
+      key: `phonepe:create:${clientIp}`,
+      limit: 5,
+      windowMs: 10 * 60 * 1000,
+    });
+
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Too many payment attempts. Please try again shortly.',
+        },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimit.retryAfterSeconds),
+          },
+        }
+      );
+    }
+
     const body =
       (await request.json()) as CreatePhonePePaymentBody;
 
@@ -197,13 +220,6 @@ export async function POST(request: Request) {
       }
     );
 
-    /*
-     * Never trust an amount sent from the browser.
-     *
-     * Recalculate product prices, offers, stock,
-     * weight and shipping completely on the server.
-     * ONLINE intentionally produces zero COD charge.
-     */
     const pricing =
       await calculateAuthoritativeOrderPricing({
         db,
@@ -237,29 +253,19 @@ export async function POST(request: Request) {
     merchantOrderId =
       createMerchantOrderId();
 
-    /*
-     * Preserve everything required to create the
-     * actual local order only AFTER PhonePe confirms
-     * successful payment.
-     */
     const customerPayload = {
       customer_name: customerName,
       fullName: customerName,
-
       customer_email: customerEmail,
       email: customerEmail,
-
       customer_phone: customerPhone,
       phone: customerPhone,
-
       address,
       city,
       state,
       pincode,
-
       paymentMethod: 'ONLINE',
       payment_method: 'ONLINE',
-
       coupon_code:
         body.coupon_code || undefined,
     };
@@ -284,18 +290,13 @@ export async function POST(request: Request) {
       .insert({
         merchant_order_id:
           merchantOrderId,
-
         status: 'PENDING',
-
         customer_payload:
           customerPayload,
-
         cart_payload:
           cartPayload,
-
         expected_amount:
           expectedAmount,
-
         phonepe_state:
           'PAYMENT_CREATED',
       });
@@ -319,11 +320,6 @@ export async function POST(request: Request) {
     const client =
       getPhonePeClient();
 
-    /*
-     * Customer returns to checkout first.
-     * The checkout page will later verify PhonePe
-     * server-side and finalize the actual order.
-     */
     const redirectUrl =
       `https://www.adhyeybrothers.in/checkout?phonepe_order_id=${encodeURIComponent(
         merchantOrderId
@@ -405,7 +401,6 @@ export async function POST(request: Request) {
       merchantOrderId,
       redirectUrl:
         phonePeResponse.redirectUrl,
-
       amount:
         expectedAmount,
     });
