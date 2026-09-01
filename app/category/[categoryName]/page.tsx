@@ -163,6 +163,7 @@ export default async function CategoryPage({
     ? Math.min((currentPage - 1) * PAGE_SIZE + products.length, count)
     : 0;
   const canonical = `${SITE_URL}/category/${encodeURIComponent(canonicalName)}`;
+  const isWomenEthnicWear = canonicalName.trim().toLowerCase() === 'women ethnic wear';
 
   const breadcrumbJsonLd = JSON.stringify({
     '@context': 'https://schema.org',
@@ -210,6 +211,30 @@ export default async function CategoryPage({
               </Link>
             </div>
           </section>
+
+          {isWomenEthnicWear && (
+            <section className="mb-8 rounded-3xl border border-[#e7c88d] bg-[#fff7e8] p-5 shadow-xs sm:p-7" aria-labelledby="dhoti-choli-collection-heading">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#b5843d]">
+                Featured festive collection
+              </p>
+              <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="max-w-2xl">
+                  <h2 id="dhoti-choli-collection-heading" className="text-xl font-black text-[#741f23] sm:text-2xl">
+                    Women’s Dhoti Choli for Navratri, Garba & Weddings
+                  </h2>
+                  <p className="mt-2 text-xs leading-relaxed text-stone-600 sm:text-sm">
+                    Explore our dedicated Dhoti Choli collection with velvet, Vichitra silk, sequin and embroidered festive styles for Navratri, Garba, Dandiya, Haldi and wedding celebrations.
+                  </p>
+                </div>
+                <Link
+                  href="/collections/dhoti-choli"
+                  className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-[#741f23] px-5 text-xs font-black text-white transition hover:bg-[#5e171b]"
+                >
+                  Shop Dhoti Choli Collection
+                </Link>
+              </div>
+            </section>
+          )}
 
           {products.length === 0 ? (
             <section className="rounded-3xl border border-[#ead8b8] bg-white px-5 py-12 text-center shadow-xs sm:px-8">
