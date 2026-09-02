@@ -13,7 +13,6 @@ export default function AdminInvoicesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedInvoice, setSelectedInvoice] = useState<any | null>(null);
 
-  // Fetch orders (the exact same source powering the working Admin Order Book)
   const fetchInvoices = async () => {
     setLoading(true);
     const { data, error } = await supabase
@@ -31,7 +30,6 @@ export default function AdminInvoicesPage() {
     fetchInvoices();
   }, []);
 
-  // Professional Tax & GST Breakdown Calculator using real order items
   const calculateTaxBreakdown = (items: any[], customerState: string, businessState: string = 'Gujarat') => {
     const taxSummary: Record<number, { taxable: number; cgst: number; sgst: number; igst: number; totalTax: number }> = {};
     let grandTaxable = 0;
@@ -41,9 +39,8 @@ export default function AdminInvoicesPage() {
 
     items?.forEach(item => {
       const lineTotal = Number(item.line_total || (item.unit_price * item.quantity) || item.total_amount || 0);
-      const gstRate = Number(item.gst_rate || 5); // Default GST fallback
+      const gstRate = Number(item.gst_rate || 5);
 
-      // Inclusive GST formula: Taxable Value = Line Total / (1 + Rate / 100)
       const taxableVal = lineTotal / (1 + (gstRate / 100));
       const taxVal = lineTotal - taxableVal;
 
@@ -72,26 +69,35 @@ export default function AdminInvoicesPage() {
     };
   };
 
-  const filteredOrders = orders.filter(o => 
-    (o.order_number || o.id || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (o.customer_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (o.customer_phone || o.phone || '').includes(searchQuery)
-  );
+  const getCustomerGst = (order: any) => {
+    if (!order?.shipping_address || typeof order.shipping_address !== 'object') return null;
+    return order.shipping_address.gst_invoice || null;
+  };
+
+  const filteredOrders = orders.filter(o => {
+    const gst = getCustomerGst(o);
+    const query = searchQuery.toLowerCase();
+    return (
+      (o.order_number || o.id || '').toLowerCase().includes(query) ||
+      (o.customer_name || '').toLowerCase().includes(query) ||
+      (o.customer_phone || o.phone || '').includes(searchQuery) ||
+      String(gst?.gstin || '').toLowerCase().includes(query)
+    );
+  });
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-black text-[#741f23]">GST Invoices & Tax Management</h1>
-        <p className="text-xs text-gray-500 mt-1">Official B2C tax invoices synchronized directly from active orders (GSTIN: 24AKBPD1704F1Z1).</p>
+        <p className="text-xs text-gray-500 mt-1">Official B2C and customer-requested GST invoices synchronized directly from active orders (GSTIN: 24AKBPD1704F1Z1).</p>
       </div>
 
-      {/* Search Bar */}
       <div className="flex items-center justify-between rounded-2xl border border-[#ead8b8] bg-white p-4 shadow-sm">
         <div className="relative flex-1 max-w-sm">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
-            placeholder="Search by Order #, Customer Name, Phone..."
+            placeholder="Search by Order #, Customer, Phone or GSTIN..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-3 py-2 text-xs border rounded-xl bg-gray-50 outline-none focus:ring-2 focus:ring-[#741f23]"
@@ -100,7 +106,6 @@ export default function AdminInvoicesPage() {
         <span className="text-xs font-bold text-gray-500">Total Invoices Available: {orders.length}</span>
       </div>
 
-      {/* Invoices Table linked to Orders */}
       <div className="overflow-hidden rounded-2xl border border-[#ead8b8] bg-white shadow-sm">
         {loading ? (
           <div className="p-16 text-center text-xs text-gray-400 flex items-center justify-center gap-2">
@@ -131,6 +136,7 @@ export default function AdminInvoicesPage() {
                   const breakdown = calculateTaxBreakdown(items, customerState);
                   const orderNum = order.order_number || order.id?.slice(0, 8) || 'SBZ-000';
                   const grandTotal = Number(order.grand_total || order.total_amount || 0);
+                  const customerGst = getCustomerGst(order);
 
                   return (
                     <tr key={order.id} className="hover:bg-gray-50 transition">
@@ -141,13 +147,18 @@ export default function AdminInvoicesPage() {
                       <td className="p-3.5 font-bold text-gray-900">
                         {order.customer_name || 'Customer'}
                         <p className="text-[10px] font-normal text-gray-500">{order.customer_phone || order.phone}</p>
+                        {customerGst?.gstin && (
+                          <span className="mt-1 inline-block rounded-md border border-green-200 bg-green-50 px-2 py-0.5 font-mono text-[9px] font-bold text-green-700">
+                            GSTIN {customerGst.gstin}
+                          </span>
+                        )}
                       </td>
                       <td className="p-3.5 font-mono text-gray-700">₹{breakdown.grandTaxable.toFixed(2)}</td>
                       <td className="p-3.5 font-mono text-[#741f23] font-bold">₹{breakdown.grandTax.toFixed(2)}</td>
                       <td className="p-3.5 font-mono font-black text-gray-950">₹{grandTotal}</td>
                       <td className="p-3.5 text-right">
                         <button
-                          onClick={() => setSelectedInvoice({ ...order, computedBreakdown: breakdown, itemsList: items, invoiceNum: orderNum })}
+                          onClick={() => setSelectedInvoice({ ...order, computedBreakdown: breakdown, itemsList: items, invoiceNum: orderNum, customerGst })}
                           className="bg-[#fff7e8] hover:bg-[#f8ead2] text-[#741f23] font-bold px-3 py-1.5 rounded-lg transition inline-flex items-center gap-1.5"
                         >
                           <FileText size={14} /> View Tax Invoice
@@ -162,36 +173,26 @@ export default function AdminInvoicesPage() {
         )}
       </div>
 
-      {/* ========================================================================= */}
-      {/* MODAL: OFFICIAL TAX INVOICE PREVIEW & PRINT                               */}
-      {/* ========================================================================= */}
       {selectedInvoice && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-8 shadow-2xl space-y-6 text-xs">
-            
-            {/* Modal Actions Header */}
             <div className="flex items-center justify-between border-b pb-4 print:hidden">
               <h3 className="font-black text-[#741f23] text-sm flex items-center gap-2">
                 <Receipt size={18} className="text-[#b5843d]" /> Tax Invoice — INV-{selectedInvoice.invoiceNum}
-                  <OrderStatusBadge status={selectedInvoice.order_status} />
+                <OrderStatusBadge status={selectedInvoice.order_status} />
               </h3>
               <div className="flex items-center gap-2">
-                <button 
+                <button
                   onClick={() => window.print()}
                   className="bg-[#741f23] text-white font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 hover:bg-[#5e171b] transition shadow"
                 >
                   <Printer size={14} /> Print / Download PDF
                 </button>
-                <button onClick={() => setSelectedInvoice(null)} className="text-gray-400 hover:text-gray-600 px-3 py-1 text-lg font-bold">
-                  ✕
-                </button>
+                <button onClick={() => setSelectedInvoice(null)} className="text-gray-400 hover:text-gray-600 px-3 py-1 text-lg font-bold">✕</button>
               </div>
             </div>
 
-            {/* Printable Invoice Container */}
             <div className="space-y-6 rounded-2xl border border-[#ead8b8] bg-white p-6 shadow-sm">
-              
-              {/* Company Header */}
               <div className="flex justify-between items-start border-b pb-4">
                 <div>
                   <h2 className="text-xl font-black text-[#741f23]">ADHYEY BROTHERS</h2>
@@ -209,14 +210,21 @@ export default function AdminInvoicesPage() {
                 </div>
               </div>
 
-              {/* Billing & Shipping Details */}
-              <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-xl">
+              <div className="grid grid-cols-1 gap-4 bg-gray-50 p-4 rounded-xl sm:grid-cols-2">
                 <div>
-                  <span className="font-bold text-gray-400 uppercase text-[10px]">Billed To Customer:</span>
+                  <span className="font-bold text-gray-400 uppercase text-[10px]">
+                    {selectedInvoice.customerGst?.gstin ? 'Billed To GST Customer:' : 'Billed To Customer:'}
+                  </span>
                   <p className="font-bold text-gray-900 mt-0.5">{selectedInvoice.customer_name}</p>
                   <p className="text-gray-600">{selectedInvoice.customer_phone || selectedInvoice.phone}</p>
                   <p className="text-gray-600">{selectedInvoice.customer_email}</p>
-                  <p className="mt-1 font-bold text-gray-700">
+                  {selectedInvoice.customerGst?.gstin && (
+                    <div className="mt-2 rounded-xl border border-green-200 bg-green-50 p-2.5 text-green-900">
+                      <p><span className="font-bold">Customer GSTIN:</span> <span className="font-mono">{selectedInvoice.customerGst.gstin}</span></p>
+                      <p className="mt-1 leading-relaxed"><span className="font-bold">GST Billing Address:</span> {selectedInvoice.customerGst.billing_address}</p>
+                    </div>
+                  )}
+                  <p className="mt-2 font-bold text-gray-700">
                     Place of Supply: {typeof selectedInvoice.shipping_address === 'object' && selectedInvoice.shipping_address
                       ? selectedInvoice.shipping_address.state || 'Gujarat'
                       : 'Gujarat'}
@@ -232,7 +240,6 @@ export default function AdminInvoicesPage() {
                 </div>
               </div>
 
-              {/* Product Items Table */}
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b bg-gray-50 font-bold text-gray-600 text-[10px] uppercase">
@@ -263,7 +270,6 @@ export default function AdminInvoicesPage() {
                 </tbody>
               </table>
 
-              {/* GST Tax Summary Breakdown (CGST / SGST / IGST) */}
               {(() => {
                 const breakdown = selectedInvoice.computedBreakdown;
                 return (
@@ -296,38 +302,22 @@ export default function AdminInvoicesPage() {
                       </tbody>
                     </table>
 
-                    {/* Grand Totals */}
                     <div className="flex justify-end pt-2">
                       <div className="w-64 space-y-1.5 font-mono">
-                        <div className="flex justify-between text-gray-600">
-                          <span>Taxable Subtotal:</span>
-                          <span>₹{breakdown.grandTaxable.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between text-gray-600">
-                          <span>Total GST:</span>
-                          <span>₹{breakdown.grandTax.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between text-gray-600">
-                          <span>Shipping Charge:</span>
-                          <span>₹{selectedInvoice.shipping_charge || 0}</span>
-                        </div>
+                        <div className="flex justify-between text-gray-600"><span>Taxable Subtotal:</span><span>₹{breakdown.grandTaxable.toFixed(2)}</span></div>
+                        <div className="flex justify-between text-gray-600"><span>Total GST:</span><span>₹{breakdown.grandTax.toFixed(2)}</span></div>
+                        <div className="flex justify-between text-gray-600"><span>Shipping Charge:</span><span>₹{selectedInvoice.shipping_charge || 0}</span></div>
                         {resolveOrderTotals(selectedInvoice).isCod && <div className="flex justify-between text-gray-600"><span>COD Charge:</span><span>₹{resolveOrderTotals(selectedInvoice).codCharge}</span></div>}
-                        <div className="flex justify-between font-black text-[#741f23] text-sm border-t pt-2">
-                          <span>Grand Total:</span>
-                          <span>₹{selectedInvoice.grand_total}</span>
-                        </div>
+                        <div className="flex justify-between font-black text-[#741f23] text-sm border-t pt-2"><span>Grand Total:</span><span>₹{selectedInvoice.grand_total}</span></div>
                       </div>
                     </div>
                   </div>
                 );
               })()}
-
             </div>
-
           </div>
         </div>
       )}
-
     </div>
   );
 }
