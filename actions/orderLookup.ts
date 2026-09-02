@@ -1,5 +1,6 @@
 'use server';
 
+import { createClient } from '@supabase/supabase-js';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getCurrentUser } from '@/lib/auth';
 import { headers } from 'next/headers';
@@ -13,16 +14,14 @@ export interface OrderLookupResult {
 }
 
 /**
- * Validates and retrieves orders using authenticated user ID or verified guest email.
+ * Validates and retrieves orders using authenticated user ID or verified guest email + phone.
  */
 export async function lookupOrdersAction(input?: { email?: string; phone?: string }): Promise<OrderLookupResult> {
   try {
     const supabase = await createServerSupabaseClient();
     const { user } = await getCurrentUser();
 
-    // =========================================================================
     // CASE 1: CUSTOMER IS LOGGED IN
-    // =========================================================================
     if (user) {
       const { data: orders, error: ordersError } = await supabase
         .from('orders')
@@ -77,9 +76,7 @@ export async function lookupOrdersAction(input?: { email?: string; phone?: strin
       };
     }
 
-    // =========================================================================
-    // CASE 2: GUEST CUSTOMER (EMAIL LOOKUP VIA SECURE RPC)
-    // =========================================================================
+    // CASE 2: GUEST CUSTOMER
     if (!input?.email || !input.email.trim() || !input.phone) {
       return { success: false, error: 'Enter the email and phone number used when placing your order.' };
     }
@@ -87,27 +84,49 @@ export async function lookupOrdersAction(input?: { email?: string; phone?: strin
     const cleanEmail = input.email.trim().toLowerCase();
     const cleanPhone = input.phone.replace(/\D/g, '');
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
     if (!emailRegex.test(cleanEmail)) {
       return { success: false, error: 'Please enter a valid email address.' };
     }
-    if (cleanPhone.length < 10) return { success: false, error: 'Enter a valid order phone number.' };
 
-    // Extract client IP for rate limiting
+    if (cleanPhone.length < 10) {
+      return { success: false, error: 'Enter a valid order phone number.' };
+    }
+
     const headersList = await headers();
-    const clientIp = 
-      headersList.get('x-forwarded-for')?.split(',')[0]?.trim() || 
-      headersList.get('x-real-ip') || 
+    const clientIp =
+      headersList.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+      headersList.get('x-real-ip') ||
       'anonymous-client';
 
-    // Invoke PostgreSQL Security Definer RPC
-    const { data: rpcResponse, error: rpcError } = await supabase.rpc('get_orders_by_guest_identity', {
+    // This RPC is intentionally executable only by service_role. Because this
+    // is a server action and the RPC itself verifies email + phone, invoke it
+    // with the service-role client instead of the public/anon client.
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !serviceRoleKey) {
+      console.error('[ORDER_LOOKUP] Missing secure Supabase server credentials.');
+      return { success: false, error: 'Order lookup service is temporarily unavailable.' };
+    }
+
+    const admin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+    });
+
+    const { data: rpcResponse, error: rpcError } = await admin.rpc('get_orders_by_guest_identity', {
       p_email: cleanEmail,
       p_phone: cleanPhone,
-      p_ip: clientIp
+      p_ip: clientIp,
     });
 
     if (rpcError) {
-      return { success: false, error: 'Order lookup service is momentarily unavailable.' };
+      console.error('[ORDER_LOOKUP_RPC_ERROR]', rpcError.message);
+      return { success: false, error: 'Order lookup service is temporarily unavailable.' };
     }
 
     if (!rpcResponse?.success) {
@@ -118,10 +137,10 @@ export async function lookupOrdersAction(input?: { email?: string; phone?: strin
       success: true,
       orders: rpcResponse.orders || [],
       isLoggedIn: false,
-      email: cleanEmail
+      email: cleanEmail,
     };
-
   } catch (err: any) {
-    return { success: false, error: err.message || 'An unexpected error occurred during order lookup.' };
+    console.error('[ORDER_LOOKUP_ERROR]', err);
+    return { success: false, error: 'Unable to look up this order right now. Please try again.' };
   }
 }
