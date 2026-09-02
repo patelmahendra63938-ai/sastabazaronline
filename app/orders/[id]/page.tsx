@@ -8,6 +8,7 @@ import Footer from '@/components/Footer';
 import { supabase } from '@/lib/supabase';
 import { resolveOrderTotals } from '@/lib/orders/order-totals';
 import { getVerifiedOrderDetailAction } from '@/actions/orderDetails';
+import { cancelCustomerOrderAction } from '@/actions/customerCancel';
 import { 
   Package, Truck, CheckCircle2, Clock, XCircle, RotateCcw, 
   AlertCircle, ChevronRight, ArrowLeft, Loader2,
@@ -43,7 +44,6 @@ export default function CustomerOrderDetailPage({
   
   // Cancellation Form State
   const [cancelReason, setCancelReason] = useState('Changed mind / placed by mistake');
-  const [cancelRefundUpi, setCancelRefundUpi] = useState('');
   
   // Return / Exchange Form State
   const [returnType, setReturnType] = useState<'RETURN' | 'EXCHANGE'>('RETURN');
@@ -87,82 +87,33 @@ export default function CustomerOrderDetailPage({
                          order?.payment_status === 'PAID';
   const totals = order ? resolveOrderTotals(order) : null;
 
-  // Handle Order Cancellation (with Prepaid Refund support)
+  // Cancellation has one authoritative mutation path: the secure server action.
   const handleConfirmCancel = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!order) return;
-    
-    if (isPrepaidOrder && !cancelRefundUpi.trim()) {
-      setErrorMsg('Please enter a valid UPI ID to receive your refund.');
-      return;
-    }
 
     setActionLoading(true);
     setErrorMsg(null);
 
     try {
-      // 1. Update Order Status
-      const { error: updateErr } = await supabase
-        .from('orders')
-        .update({ 
-          order_status: 'CANCELLED',
-          payment_status: isPrepaidOrder ? 'REFUND_PENDING' : order.payment_status,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', order.id);
+      const result = await cancelCustomerOrderAction({
+        orderId: order.id,
+        reason: cancelReason,
+        email: order.customer_email || verificationEmail,
+        phone: order.customer_phone || verificationPhone,
+      });
 
-      if (updateErr) throw updateErr;
-
-      // 2. If Prepaid, create a Refund Queue Record for Admin
-      if (isPrepaidOrder) {
-        const refundNumber = `REF-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.floor(1000 + Math.random() * 9000)}`;
-        await supabase.from('refunds').insert([{
-          refund_number: refundNumber,
-          order_id: order.id,
-          refund_amount: order.grand_total || order.total_amount,
-          refund_method: 'UPI',
-          status: 'REFUND_PENDING',
-          customer_upi_id: cancelRefundUpi.trim(),
-          notes: `Auto-generated refund from order cancellation. Reason: ${cancelReason}`
-        }]);
+      if (!result.success) {
+        throw new Error(result.error || 'Unable to cancel this order.');
       }
 
-      // 3. Restore Reserved Inventory
-      for (const item of (order.order_items || [])) {
-        if (item.product_id) {
-          const { data: inv } = await supabase
-            .from('inventory')
-            .select('available_quantity')
-            .eq('product_id', item.product_id)
-            .eq('size', item.size || 'Free Size')
-            .maybeSingle();
-
-          if (inv) {
-            await supabase
-              .from('inventory')
-              .update({ available_quantity: inv.available_quantity + item.quantity })
-              .eq('product_id', item.product_id)
-              .eq('size', item.size || 'Free Size');
-          }
-        }
-      }
-
-      // 4. Log Audit Trail
-      await supabase.from('order_status_history').insert([{
-        order_id: order.id,
-        previous_status: order.order_status,
-        new_status: 'CANCELLED',
-        notes: `Customer cancelled order. Reason: ${cancelReason}. ${isPrepaidOrder ? `Refund requested via UPI: ${cancelRefundUpi}` : 'No refund required (COD).'}` ,
-        changed_by: 'CUSTOMER'
-      }]);
-
-      setSuccessMsg(
-        isPrepaidOrder
-          ? 'Your order has been cancelled. A refund request of ₹' + (order.grand_total || order.total_amount) + ' has been queued to your UPI ID (' + cancelRefundUpi + ').'
-          : 'Your order has been successfully cancelled.'
-      );
+      setSuccessMsg(result.message || 'Your order has been successfully cancelled.');
       setShowCancelModal(false);
-      fetchOrderDetails();
+      await fetchOrderDetails(
+        verificationEmail && verificationPhone
+          ? { email: verificationEmail, phone: verificationPhone }
+          : undefined
+      );
     } catch (err: any) {
       setErrorMsg('Failed to cancel order: ' + err.message);
     } finally {
@@ -402,7 +353,7 @@ export default function CustomerOrderDetailPage({
                   <p className="text-amber-800 text-[11px]">
                     Refund of <b>₹{order.grand_total || order.total_amount}</b> is queued. 
                     {refundRecord?.customer_upi_id ? ` Target UPI ID: ${refundRecord.customer_upi_id}` : ''}
-                    {refundRecord?.status === 'REFUNDED' ? ' (Completed - UTR: ' + refundRecord.refund_utr + ')' : ' (Processing within 24-48 business hours)'}
+                    {refundRecord?.status === 'REFUNDED' ? ' (Completed - UTR: ' + refundRecord.refund_utr + ')' : ' (Pending configured refund processing)'}
                   </p>
                 </div>
               ) : (
@@ -547,7 +498,7 @@ export default function CustomerOrderDetailPage({
       </div>
 
       {/* ===================================================================== */}
-      {/* 1. CANCEL ORDER MODAL WITH PREPAID REFUND SUPPORT                      */}
+      {/* 1. CANCEL ORDER MODAL                                                  */}
       {/* ===================================================================== */}
       {showCancelModal && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
@@ -580,7 +531,6 @@ export default function CustomerOrderDetailPage({
               </select>
             </div>
 
-            {/* Prepaid Refund UPI Input Field */}
             {isPrepaidOrder && (
               <div className="bg-indigo-50 border border-indigo-200 p-4 rounded-2xl space-y-2">
                 <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-950">
@@ -588,16 +538,8 @@ export default function CustomerOrderDetailPage({
                   <span>Prepaid Order Refund (₹{order.grand_total || order.total_amount})</span>
                 </div>
                 <p className="text-[11px] text-gray-600">
-                  Enter your UPI ID so our accounts team can process your refund directly:
+                  After cancellation, the payment will be marked for refund processing through the configured payment/refund workflow.
                 </p>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. yourname@okaxis / 9876543210@upi"
-                  value={cancelRefundUpi}
-                  onChange={(e) => setCancelRefundUpi(e.target.value)}
-                  className="w-full text-xs p-2.5 bg-white border rounded-xl font-mono text-indigo-950 font-bold outline-none"
-                />
               </div>
             )}
 
@@ -717,7 +659,6 @@ export default function CustomerOrderDetailPage({
                 className="w-full text-xs p-2.5 border rounded-xl"
               />
             </div>
-
             <div className="flex gap-2 pt-2">
               <button
                 type="button"
