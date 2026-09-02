@@ -5,6 +5,7 @@ import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import { calculateAuthoritativeOrderPricing } from '@/lib/pricing/pricing-engine';
 import { dispatchOrderNotifications } from '@/lib/notifications/dispatcher';
+import { CHECKOUT_GST_COOKIE, parseCheckoutGstCookie } from '@/lib/gst/checkout-gst';
 
 export interface CheckoutCartItem {
   id?: string;
@@ -72,6 +73,9 @@ export async function processSecureCheckout(payload: {
 export async function processOrderCheckout(formData: CheckoutInput) {
   try {
     const cookieStore = await cookies();
+    const checkoutGst = parseCheckoutGstCookie(
+      cookieStore.get(CHECKOUT_GST_COOKIE)?.value
+    );
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -83,16 +87,12 @@ export async function processOrderCheckout(formData: CheckoutInput) {
       };
     }
 
-    // Auth/session client. This client is used for the atomic RPC so auth.uid()
-    // inside place_order_atomic can resolve the logged-in customer when present.
     const authSupabase = createServerClient(supabaseUrl, anonKey, {
       cookies: {
         getAll: () => cookieStore.getAll(),
       },
     });
 
-    // Server-side database client.
-    // The secure checkout RPC is intentionally executable only by service_role.
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!serviceRoleKey) {
@@ -222,9 +222,9 @@ export async function processOrderCheckout(formData: CheckoutInput) {
       state: deliveryState,
       pincode: cleanPincode,
       country: 'India',
+      ...(checkoutGst ? { gst_invoice: checkoutGst } : {}),
     };
 
-    // Preserve the logged-in customer relationship when a customer session exists.
     const {
       data: { user },
       error: authUserError,
@@ -236,14 +236,6 @@ export async function processOrderCheckout(formData: CheckoutInput) {
 
     const customerId = user?.id ?? null;
 
-    /*
-     * Sole order/inventory write path:
-     * public.place_order_atomic_secure
-     *
-     * This function inserts the order, locks inventory rows with FOR UPDATE,
-     * validates stock, decrements inventory, writes movements and inserts
-     * order_items in one database transaction.
-     */
     const { data: rpcResult, error: rpcError } =
       await dbSupabase.rpc('place_order_atomic_secure', {
         p_order_number: orderNumber,
@@ -304,8 +296,6 @@ export async function processOrderCheckout(formData: CheckoutInput) {
       };
     }
 
-    // Notifications are intentionally outside the atomic database transaction.
-    // A notification failure must not undo an otherwise successful order.
     try {
       await dispatchOrderNotifications({
         orderNumber,
