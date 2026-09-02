@@ -79,9 +79,11 @@ function generateOrderEmailHtml(data: EmailOrderPayload): string {
     year: 'numeric',
   });
 
-  const orderTrackingUrl = `${getPublicSiteUrl()}/orders/${encodeURIComponent(
-    data.orderNumber
-  )}`;
+  // Send customers to the secure order-management page first. Guest customers
+  // verify the checkout email + phone there, then see tracking and the secure
+  // Cancel Order action for eligible orders. This avoids dropping a guest onto
+  // the detail page without verified management credentials.
+  const orderTrackingUrl = `${getPublicSiteUrl()}/orders`;
 
   const itemsRows = data.items
     .map(
@@ -289,8 +291,11 @@ function generateOrderEmailHtml(data: EmailOrderPayload): string {
                   href="${orderTrackingUrl}"
                   style="background-color: #741f23; color: #ffffff; text-decoration: none; font-size: 13px; font-weight: 700; padding: 12px 28px; border-radius: 12px; display: inline-block;"
                 >
-                  Track Live Order Status →
+                  Track & Manage Order →
                 </a>
+                <p style="color: #64748b; font-size: 10px; margin: 10px 0 0 0;">
+                  Verify with the same email and phone used at checkout to see live status and eligible cancellation options.
+                </p>
               </td>
             </tr>
 
