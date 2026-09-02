@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { BadgeIndianRupee, CheckCircle2, X } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { BadgeIndianRupee, CheckCircle2, Pencil, X } from 'lucide-react';
 import { CHECKOUT_GST_COOKIE } from '@/lib/gst/checkout-gst';
 
 const GSTIN_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
@@ -29,6 +30,7 @@ export default function CheckoutGstInvoiceOption() {
   const [gstin, setGstin] = useState('');
   const [billingAddress, setBillingAddress] = useState('');
   const [error, setError] = useState('');
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
     const saved = readSavedDetails();
@@ -37,6 +39,49 @@ export default function CheckoutGstInvoiceOption() {
       setGstin(String(saved.gstin || ''));
       setBillingAddress(String(saved.billing_address || ''));
     }
+
+    let createdTarget: HTMLDivElement | null = null;
+
+    const placeInline = () => {
+      const headings = Array.from(document.querySelectorAll('h3'));
+      const paymentHeading = headings.find((heading) =>
+        heading.textContent?.includes('2. Payment Method')
+      );
+      const paymentSection = paymentHeading?.parentElement;
+      const form = paymentSection?.parentElement;
+
+      if (!paymentSection || !form) return false;
+
+      const existing = document.getElementById('checkout-gst-inline-slot');
+      if (existing) {
+        setPortalTarget(existing);
+        return true;
+      }
+
+      createdTarget = document.createElement('div');
+      createdTarget.id = 'checkout-gst-inline-slot';
+      paymentSection.insertAdjacentElement('beforebegin', createdTarget);
+      setPortalTarget(createdTarget);
+      return true;
+    };
+
+    if (!placeInline()) {
+      const observer = new MutationObserver(() => {
+        if (placeInline()) observer.disconnect();
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+
+      const timeout = window.setTimeout(() => observer.disconnect(), 5000);
+      return () => {
+        window.clearTimeout(timeout);
+        observer.disconnect();
+        if (createdTarget?.isConnected) createdTarget.remove();
+      };
+    }
+
+    return () => {
+      if (createdTarget?.isConnected) createdTarget.remove();
+    };
   }, []);
 
   const clearDetails = () => {
@@ -45,6 +90,7 @@ export default function CheckoutGstInvoiceOption() {
     setGstin('');
     setBillingAddress('');
     setError('');
+    setOpen(false);
   };
 
   const saveDetails = () => {
@@ -70,22 +116,60 @@ export default function CheckoutGstInvoiceOption() {
     document.cookie = `${CHECKOUT_GST_COOKIE}=${payload}; path=/; max-age=7200; SameSite=Lax`;
     setEnabled(true);
     setGstin(cleanGstin);
+    setBillingAddress(cleanAddress);
     setError('');
     setOpen(false);
   };
 
-  return (
-    <>
-      <div className="fixed bottom-5 right-5 z-40 max-w-[calc(100vw-2rem)]">
+  const inlineCard = (
+    <section className={`rounded-2xl border-2 p-4 sm:p-5 transition ${enabled ? 'border-green-200 bg-green-50/70' : 'border-[#ead8b8] bg-[#fff7e8]'}`}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex gap-3">
+          <div className={`mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl ${enabled ? 'bg-green-100 text-green-700' : 'bg-white text-[#741f23]'}`}>
+            {enabled ? <CheckCircle2 size={18} /> : <BadgeIndianRupee size={18} />}
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#b5843d]">GST Billing</p>
+            <h3 className="mt-0.5 text-sm font-black text-[#741f23]">
+              {enabled ? 'GST Invoice Requested ✓' : 'Need GST Invoice for this order?'}
+            </h3>
+            {!enabled && (
+              <p className="mt-1 text-[11px] leading-5 text-gray-600">
+                Add your GSTIN and GST billing address before placing the order.
+              </p>
+            )}
+          </div>
+        </div>
+
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="flex items-center gap-2 rounded-2xl border border-[#d7aa5b] bg-white px-4 py-3 text-xs font-black text-[#741f23] shadow-xl transition hover:bg-[#fff7e8]"
+          className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-[#741f23] px-4 py-2.5 text-[11px] font-black text-white transition hover:bg-[#5e171b]"
         >
-          {enabled ? <CheckCircle2 size={17} className="text-green-600" /> : <BadgeIndianRupee size={17} />}
-          {enabled ? `GST Invoice: ${gstin}` : 'Need GST Invoice?'}
+          {enabled ? <Pencil size={13} /> : <BadgeIndianRupee size={13} />}
+          {enabled ? 'Edit GST Details' : 'Add GST Details'}
         </button>
       </div>
+
+      {enabled && (
+        <div className="mt-4 rounded-xl border border-green-200 bg-white p-3 text-[11px] leading-5 text-gray-700">
+          <div className="grid gap-2 sm:grid-cols-[120px_1fr]">
+            <span className="font-black text-gray-500">GSTIN</span>
+            <span className="font-mono font-black text-[#741f23]">{gstin}</span>
+            <span className="font-black text-gray-500">Billing Address</span>
+            <span className="font-medium">{billingAddress}</span>
+          </div>
+          <p className="mt-3 border-t border-green-100 pt-2 text-[10px] text-gray-500">
+            GST invoice details will be attached to this order as provided. The invoice is prepared only after the order is placed.
+          </p>
+        </div>
+      )}
+    </section>
+  );
+
+  return (
+    <>
+      {portalTarget ? createPortal(inlineCard, portalTarget) : null}
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -95,7 +179,7 @@ export default function CheckoutGstInvoiceOption() {
                 <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#b5843d]">Secure Checkout</p>
                 <h2 className="mt-1 text-xl font-black text-[#741f23]">GST Invoice Details</h2>
                 <p className="mt-2 text-xs leading-relaxed text-gray-600">
-                  Enter your GSTIN and GST billing address. These details will be stored with this order exactly as provided for GST invoice preparation.
+                  Enter your GSTIN and GST billing address. These details will be attached to this order exactly as provided.
                 </p>
               </div>
               <button type="button" onClick={() => setOpen(false)} className="rounded-xl p-2 text-gray-500 hover:bg-gray-100" aria-label="Close GST invoice dialog">
@@ -141,7 +225,7 @@ export default function CheckoutGstInvoiceOption() {
               </div>
 
               <p className="text-[10px] leading-relaxed text-gray-500">
-                We perform structural GSTIN validation only. The GSTIN is not marked as externally verified.
+                We perform structural GSTIN validation only. Your GSTIN is not marked as externally verified.
               </p>
             </div>
           </div>
