@@ -116,7 +116,7 @@ async function processAwbAssignment(
 
   const { data: order, error: orderError } = await supabase
     .from('orders')
-    .select('id, order_number, order_status, chargeable_weight_kg, actual_weight_kg, package_weight')
+    .select('id, order_number, order_status, chargeable_weight_kg, actual_weight_kg')
     .eq('order_number', fields.orderNumber)
     .maybeSingle();
 
@@ -152,7 +152,7 @@ async function processAwbAssignment(
     if (updateError) throw updateError;
   } else {
     const packageWeight =
-      Number(order.chargeable_weight_kg || order.actual_weight_kg || order.package_weight || 0.5) || 0.5;
+      Number(order.chargeable_weight_kg || order.actual_weight_kg || 0.5) || 0.5;
 
     const insertPayload: Record<string, unknown> = {
       order_id: order.id,
