@@ -113,18 +113,56 @@ export async function cancelCustomerOrderAction(input: CancelCustomerOrderInput)
 
       let inventoryQuery = admin
         .from('inventory')
-        .select('id, available_quantity')
+        .select('id, size, available_quantity, sold_quantity')
         .eq('product_id', item.product_id);
 
       if (item.size) inventoryQuery = inventoryQuery.eq('size', item.size);
 
-      const { data: inventoryRow } = await inventoryQuery.maybeSingle();
+      const { data: inventoryRow, error: inventoryLookupError } = await inventoryQuery.maybeSingle();
+      if (inventoryLookupError) {
+        console.error('[CUSTOMER_CANCEL_INVENTORY_LOOKUP_ERROR]', inventoryLookupError);
+        continue;
+      }
       if (!inventoryRow) continue;
 
-      await admin
+      const quantity = Number(item.quantity || 0);
+      const previousAvailable = Number(inventoryRow.available_quantity || 0);
+      const previousSold = Number(inventoryRow.sold_quantity || 0);
+      const newAvailable = previousAvailable + quantity;
+      const newSold = Math.max(0, previousSold - quantity);
+
+      const { error: inventoryUpdateError } = await admin
         .from('inventory')
-        .update({ available_quantity: Number(inventoryRow.available_quantity || 0) + Number(item.quantity || 0) })
+        .update({
+          available_quantity: newAvailable,
+          sold_quantity: newSold,
+          updated_at: new Date().toISOString(),
+        })
         .eq('id', inventoryRow.id);
+
+      if (inventoryUpdateError) {
+        console.error('[CUSTOMER_CANCEL_INVENTORY_UPDATE_ERROR]', inventoryUpdateError);
+        continue;
+      }
+
+      const { error: movementError } = await admin
+        .from('inventory_movements')
+        .insert({
+          product_id: item.product_id,
+          order_id: order.id,
+          size: item.size || inventoryRow.size || 'Free Size',
+          quantity,
+          movement_type: 'ORDER_RELEASED',
+          previous_quantity: previousAvailable,
+          new_quantity: newAvailable,
+          reference: order.order_number,
+          notes: `Customer cancelled order. Reason: ${reason}`,
+          created_by: user ? user.id : 'CUSTOMER_GUEST',
+        });
+
+      if (movementError) {
+        console.error('[CUSTOMER_CANCEL_MOVEMENT_ERROR]', movementError);
+      }
     }
 
     await admin.from('order_status_history').insert({
