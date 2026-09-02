@@ -3,10 +3,11 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { lookupOrdersAction } from '@/actions/orderLookup';
+import { cancelCustomerOrderAction } from '@/actions/customerCancel';
 import { resolveOrderTotals } from '@/lib/orders/order-totals';
 import { 
   Package, Search, Mail, CheckCircle2, ChevronRight, 
-  Truck, Clock, RotateCcw, AlertCircle, Loader2, ArrowRight, ShieldCheck 
+  Truck, Clock, RotateCcw, AlertCircle, Loader2, XCircle
 } from 'lucide-react';
 
 interface Props {
@@ -19,7 +20,9 @@ export default function OrdersLookupClient({ isLoggedIn, initialEmail, initialOr
   const [emailInput, setEmailInput] = useState('');
   const [phoneInput, setPhoneInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [searchedEmail, setSearchedEmail] = useState<string | null>(initialEmail);
   const [orders, setOrders] = useState<any[] | null>(initialOrders);
   const [hasSearched, setHasSearched] = useState(isLoggedIn);
@@ -34,6 +37,7 @@ export default function OrdersLookupClient({ isLoggedIn, initialEmail, initialOr
 
     setLoading(true);
     setErrorMsg(null);
+    setSuccessMsg(null);
 
     const res = await lookupOrdersAction({ email: emailInput.trim(), phone: phoneInput });
 
@@ -47,6 +51,55 @@ export default function OrdersLookupClient({ isLoggedIn, initialEmail, initialOr
     setOrders(res.orders || []);
     setHasSearched(true);
     setLoading(false);
+  };
+
+  const handleCancelOrder = async (ord: any) => {
+    const confirmed = window.confirm(
+      `Cancel order ${ord.order_number}? This action cannot be undone.`
+    );
+
+    if (!confirmed) return;
+
+    setCancellingOrderId(ord.id);
+    setErrorMsg(null);
+    setSuccessMsg(null);
+
+    try {
+      const result = await cancelCustomerOrderAction({
+        orderId: ord.id,
+        reason: 'Cancelled by customer from Track My Order',
+        email: isLoggedIn ? undefined : emailInput.trim(),
+        phone: isLoggedIn ? undefined : phoneInput,
+      });
+
+      if (!result.success) {
+        setErrorMsg(result.error || 'Unable to cancel this order.');
+        return;
+      }
+
+      setOrders((current) =>
+        (current || []).map((item) =>
+          item.id === ord.id
+            ? {
+                ...item,
+                order_status: result.orderStatus || 'CANCELLED',
+                payment_status: result.paymentStatus || item.payment_status,
+              }
+            : item
+        )
+      );
+
+      setSuccessMsg(
+        result.message ||
+          (result.refundPending
+            ? 'Order cancelled. Your prepaid payment is marked for refund processing.'
+            : 'Order cancelled successfully.')
+      );
+    } catch (error: any) {
+      setErrorMsg(error?.message || 'Unable to cancel this order.');
+    } finally {
+      setCancellingOrderId(null);
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -132,6 +185,13 @@ export default function OrdersLookupClient({ isLoggedIn, initialEmail, initialOr
             </div>
           )}
 
+          {successMsg && (
+            <div className="p-3 bg-green-50 border border-green-200 rounded-2xl text-xs text-green-700 font-semibold flex items-center gap-2">
+              <CheckCircle2 size={16} className="shrink-0" />
+              <span>{successMsg}</span>
+            </div>
+          )}
+
           <form onSubmit={handleGuestSearch} className="space-y-3">
             <div>
               <label className="block text-[11px] font-bold text-gray-700 uppercase mb-1">
@@ -173,6 +233,20 @@ export default function OrdersLookupClient({ isLoggedIn, initialEmail, initialOr
         </div>
       )}
 
+      {isLoggedIn && errorMsg && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-2xl text-xs text-red-700 font-semibold flex items-center gap-2">
+          <AlertCircle size={16} className="shrink-0" />
+          <span>{errorMsg}</span>
+        </div>
+      )}
+
+      {isLoggedIn && successMsg && (
+        <div className="p-3 bg-green-50 border border-green-200 rounded-2xl text-xs text-green-700 font-semibold flex items-center gap-2">
+          <CheckCircle2 size={16} className="shrink-0" />
+          <span>{successMsg}</span>
+        </div>
+      )}
+
       {/* =================================================================== */}
       {/* ORDERS LIST CONTAINER                                              */}
       {/* =================================================================== */}
@@ -199,7 +273,7 @@ export default function OrdersLookupClient({ isLoggedIn, initialEmail, initialOr
               </p>
               {!isLoggedIn && (
                 <button
-                  onClick={() => { setHasSearched(false); setEmailInput(''); setPhoneInput(''); }}
+                  onClick={() => { setHasSearched(false); setEmailInput(''); setPhoneInput(''); setSuccessMsg(null); setErrorMsg(null); }}
                   className="bg-indigo-50 text-indigo-950 text-xs font-bold px-5 py-2.5 rounded-xl border border-indigo-200 hover:bg-indigo-100 transition"
                 >
                   Try Another Email
@@ -209,7 +283,11 @@ export default function OrdersLookupClient({ isLoggedIn, initialEmail, initialOr
           ) : (
             /* Populated Orders Cards */
             <div className="space-y-4">
-              {orders.map((ord: any) => (
+              {orders.map((ord: any) => {
+                const orderStatus = String(ord.order_status || '').toUpperCase();
+                const isCancellable = ['PENDING', 'CONFIRMED', 'PROCESSING'].includes(orderStatus);
+
+                return (
                 <div 
                   key={ord.id} 
                   className="bg-white rounded-3xl border border-gray-200 overflow-hidden shadow-xs hover:shadow-md transition-all duration-200"
@@ -280,6 +358,22 @@ export default function OrdersLookupClient({ isLoggedIn, initialEmail, initialOr
                     </div>
 
                     <div className="flex items-center gap-2">
+                      {isCancellable && (
+                        <button
+                          type="button"
+                          onClick={() => handleCancelOrder(ord)}
+                          disabled={cancellingOrderId === ord.id}
+                          className="bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs font-bold px-4 py-2 rounded-xl transition flex items-center gap-1.5 disabled:opacity-50"
+                        >
+                          {cancellingOrderId === ord.id ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <XCircle size={14} />
+                          )}
+                          <span>{cancellingOrderId === ord.id ? 'Cancelling...' : 'Cancel Order'}</span>
+                        </button>
+                      )}
+
                       <Link
                         href={`/orders/${ord.order_number}`}
                         className="bg-indigo-950 hover:bg-indigo-900 text-white text-xs font-bold px-4 py-2 rounded-xl transition flex items-center gap-1.5 shadow-xs"
@@ -291,7 +385,8 @@ export default function OrdersLookupClient({ isLoggedIn, initialEmail, initialOr
                   </div>
 
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

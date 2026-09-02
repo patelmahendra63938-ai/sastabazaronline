@@ -43,6 +43,35 @@ function getTransporter() {
   });
 }
 
+function getPublicSiteUrl(): string {
+  const configuredUrl = String(
+    process.env.PUBLIC_SITE_URL ||
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.APP_URL ||
+    ''
+  ).trim();
+
+  if (configuredUrl) {
+    try {
+      const parsed = new URL(configuredUrl);
+      const hostname = parsed.hostname.toLowerCase();
+      const isLocalHost =
+        hostname === 'localhost' ||
+        hostname === '127.0.0.1' ||
+        hostname === '0.0.0.0' ||
+        hostname === '::1';
+
+      if (!isLocalHost && (parsed.protocol === 'https:' || parsed.protocol === 'http:')) {
+        return parsed.origin.replace(/\/$/, '');
+      }
+    } catch {
+      console.warn('[EMAIL_TRACKING_URL] Ignoring invalid configured site URL.');
+    }
+  }
+
+  return 'https://www.adhyeybrothers.in';
+}
+
 function generateOrderEmailHtml(data: EmailOrderPayload): string {
   const orderDate = new Date().toLocaleDateString('en-IN', {
     day: 'numeric',
@@ -50,9 +79,9 @@ function generateOrderEmailHtml(data: EmailOrderPayload): string {
     year: 'numeric',
   });
 
-  const orderTrackingUrl = `${
-    process.env.NEXT_PUBLIC_SITE_URL || 'https://www.adhyeybrothers.in'
-  }/orders/${data.orderNumber}`;
+  const orderTrackingUrl = `${getPublicSiteUrl()}/orders/${encodeURIComponent(
+    data.orderNumber
+  )}`;
 
   const itemsRows = data.items
     .map(
