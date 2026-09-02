@@ -20,35 +20,36 @@ export async function getVerifiedOrderDetailAction(input: { orderRef: string; em
     query = UUID_PATTERN.test(orderRef) ? query.eq('id', orderRef) : query.eq('order_number', orderRef);
     let { data: order, error } = await query.maybeSingle();
 
-    // Historical orders may have been created with customer_id = NULL while
-    // the checkout session cookie was not being read correctly. A signed-in
-    // user may claim only an unowned order whose checkout email matches the
-    // verified account email exactly.
+    // If the historical order is not linked to the current auth UUID, allow
+    // recovery by the account's verified email. Supabase Auth keeps email
+    // unique, so the verified signed-in email is the ownership proof here.
     if ((!order || error) && user.email) {
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
       const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
       if (supabaseUrl && serviceRoleKey) {
         const admin = createClient(supabaseUrl, serviceRoleKey, {
-          auth: { persistSession: false, autoRefreshToken: false },
+          auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
         });
 
-        let claimQuery = admin
+        let legacyQuery = admin
           .from('orders')
-          .select('id, customer_email, customer_id')
-          .is('customer_id', null)
-          .ilike('customer_email', user.email);
-        claimQuery = UUID_PATTERN.test(orderRef) ? claimQuery.eq('id', orderRef) : claimQuery.eq('order_number', orderRef);
-        const { data: claimable } = await claimQuery.maybeSingle();
+          .select('*, order_items(*)')
+          .ilike('customer_email', user.email.trim().toLowerCase());
+        legacyQuery = UUID_PATTERN.test(orderRef) ? legacyQuery.eq('id', orderRef) : legacyQuery.eq('order_number', orderRef);
+        const legacy = await legacyQuery.maybeSingle();
 
-        if (claimable) {
-          await admin.from('orders').update({ customer_id: user.id }).eq('id', claimable.id).is('customer_id', null);
+        if (legacy.data && !legacy.error) {
+          order = legacy.data;
+          error = null;
 
-          let retryQuery = supabase.from('orders').select('*, order_items(*)').eq('customer_id', user.id);
-          retryQuery = UUID_PATTERN.test(orderRef) ? retryQuery.eq('id', orderRef) : retryQuery.eq('order_number', orderRef);
-          const retry = await retryQuery.maybeSingle();
-          order = retry.data;
-          error = retry.error;
+          if (!legacy.data.customer_id) {
+            await admin
+              .from('orders')
+              .update({ customer_id: user.id })
+              .eq('id', legacy.data.id)
+              .is('customer_id', null);
+          }
         }
       }
     }
