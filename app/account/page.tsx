@@ -99,7 +99,7 @@ export default function CustomerAccountPage() {
         data.user.email || email.trim().toLowerCase()
       );
 
-      router.replace(safeRedirect);
+      router.replace('/orders');
       router.refresh();
     } catch (err: any) {
       setErrorMsg(err.message || 'Unable to sign in.');
