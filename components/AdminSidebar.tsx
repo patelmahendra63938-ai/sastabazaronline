@@ -8,24 +8,13 @@ import {
   LayoutDashboard,
   ShoppingCart,
   Package,
-  PackagePlus,
-  Warehouse,
-  Tags,
   Users,
-  Receipt,
-  Truck,
-  BarChart3,
-  Landmark,
-  RotateCcw,
-  MessageSquare,
   Ticket,
-  Plug,
+  Truck,
+  Landmark,
   Settings,
   LogOut,
   Menu,
-  SlidersHorizontal,
-  CreditCard,
-  Wrench,
   X,
 } from 'lucide-react';
 
@@ -33,80 +22,23 @@ type NavItem = {
   name: string;
   href: string;
   icon: React.ComponentType<{ size?: number; className?: string }>;
+  match: string[];
 };
 
-type NavGroup = {
-  label: string;
-  items: NavItem[];
-};
-
-const adminNavGroups: NavGroup[] = [
-  {
-    label: 'Overview',
-    items: [{ name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard }],
-  },
-  {
-    label: 'Orders',
-    items: [
-      { name: 'All Orders', href: '/admin/orders', icon: ShoppingCart },
-      { name: 'Returns & Refunds', href: '/admin/returns', icon: RotateCcw },
-    ],
-  },
-  {
-    label: 'Products',
-    items: [
-      { name: 'All Products', href: '/admin/products', icon: Package },
-      { name: 'Add Product', href: '/admin/add-product', icon: PackagePlus },
-      { name: 'Categories', href: '/admin/categories', icon: Tags },
-      { name: 'Inventory', href: '/admin/inventory', icon: Warehouse },
-      { name: 'Image Tools', href: '/admin/image-optimizer', icon: SlidersHorizontal },
-    ],
-  },
-  {
-    label: 'Customers',
-    items: [
-      { name: 'Customers', href: '/admin/customers', icon: Users },
-      { name: 'Reviews', href: '/admin/reviews', icon: MessageSquare },
-    ],
-  },
-  {
-    label: 'Marketing',
-    items: [{ name: 'Coupons & Promotions', href: '/admin/coupons', icon: Ticket }],
-  },
-  {
-    label: 'Shipping',
-    items: [
-      { name: 'Shipments & Logistics', href: '/admin/logistics', icon: Truck },
-      { name: 'Rates & Rules', href: '/admin/shipping', icon: Wrench },
-    ],
-  },
-  {
-    label: 'Finance & GST',
-    items: [
-      { name: 'Accounts & GST', href: '/admin/accounts', icon: Landmark },
-      { name: 'Payments', href: '/admin/payments', icon: CreditCard },
-      { name: 'Invoices', href: '/admin/invoices', icon: Receipt },
-    ],
-  },
-  {
-    label: 'Reports',
-    items: [{ name: 'Reports', href: '/admin/reports', icon: BarChart3 }],
-  },
-  {
-    label: 'Settings',
-    items: [
-      { name: 'General', href: '/admin/settings', icon: Settings },
-      { name: 'Homepage Display', href: '/admin/settings/homepage-display', icon: LayoutDashboard },
-      { name: 'Integrations', href: '/admin/integrations', icon: Plug },
-    ],
-  },
+const adminNavItems: NavItem[] = [
+  { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard, match: ['/admin/dashboard'] },
+  { name: 'Orders', href: '/admin/orders', icon: ShoppingCart, match: ['/admin/orders', '/admin/returns'] },
+  { name: 'Products', href: '/admin/products', icon: Package, match: ['/admin/products', '/admin/add-product', '/admin/categories', '/admin/inventory', '/admin/image-optimizer'] },
+  { name: 'Customers', href: '/admin/customers', icon: Users, match: ['/admin/customers', '/admin/reviews'] },
+  { name: 'Marketing', href: '/admin/coupons', icon: Ticket, match: ['/admin/coupons', '/admin/settings/discounts'] },
+  { name: 'Shipping', href: '/admin/logistics', icon: Truck, match: ['/admin/logistics', '/admin/shipping'] },
+  { name: 'Finance & GST', href: '/admin/accounts', icon: Landmark, match: ['/admin/accounts', '/admin/payments', '/admin/invoices', '/admin/reports'] },
+  { name: 'Settings', href: '/admin/settings', icon: Settings, match: ['/admin/settings', '/admin/integrations'] },
 ];
 
-function isItemActive(pathname: string, href: string) {
-  if (href === '/admin/dashboard' || href === '/admin/settings') {
-    return pathname === href;
-  }
-  return pathname === href || pathname.startsWith(`${href}/`);
+function isItemActive(pathname: string, item: NavItem) {
+  if (item.name === 'Settings' && pathname.startsWith('/admin/settings/discounts')) return false;
+  return item.match.some((path) => pathname === path || pathname.startsWith(`${path}/`));
 }
 
 export default function AdminSidebar() {
@@ -126,36 +58,32 @@ export default function AdminSidebar() {
   };
 
   const navLinks = (
-    <nav className="flex-1 overflow-y-auto px-3 py-3" aria-label="Admin navigation">
-      {adminNavGroups.map((group) => (
-        <div key={group.label} className="mb-4 last:mb-0">
-          <p className="mb-1.5 px-3 text-[9px] font-black uppercase tracking-[0.18em] text-[#d7aa5b]">
-            {group.label}
-          </p>
-          <div className="space-y-1">
-            {group.items.map((item) => {
-              const active = isItemActive(pathname, item.href);
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setMobileOpen(false)}
-                  aria-current={active ? 'page' : undefined}
-                  className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold transition-all ${
-                    active
-                      ? 'bg-[#d7aa5b] font-bold text-[#5e171b] shadow-md'
-                      : 'text-[#f5e8d6] hover:bg-white/10 hover:text-white'
-                  }`}
-                >
-                  <Icon size={16} className={active ? 'text-[#5e171b]' : 'text-[#e7c995]'} />
-                  <span>{item.name}</span>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      ))}
+    <nav className="flex-1 overflow-y-auto px-3 py-4" aria-label="Admin navigation">
+      <p className="mb-2 px-3 text-[9px] font-black uppercase tracking-[0.18em] text-[#d7aa5b]">
+        Main Modules
+      </p>
+      <div className="space-y-1.5">
+        {adminNavItems.map((item) => {
+          const active = isItemActive(pathname, item);
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={() => setMobileOpen(false)}
+              aria-current={active ? 'page' : undefined}
+              className={`flex items-center gap-3 rounded-xl px-3 py-3 text-xs font-semibold transition-all ${
+                active
+                  ? 'bg-[#d7aa5b] font-bold text-[#5e171b] shadow-md'
+                  : 'text-[#f5e8d6] hover:bg-white/10 hover:text-white'
+              }`}
+            >
+              <Icon size={17} className={active ? 'text-[#5e171b]' : 'text-[#e7c995]'} />
+              <span>{item.name}</span>
+            </Link>
+          );
+        })}
+      </div>
     </nav>
   );
 
@@ -182,7 +110,7 @@ export default function AdminSidebar() {
         {mobileOpen ? <X size={20} /> : <Menu size={20} />}
       </button>
 
-      <aside className="sticky top-0 z-30 hidden h-screen w-64 shrink-0 flex-col bg-[#5e171b] text-white shadow-xl md:flex">
+      <aside className="sticky top-0 z-30 hidden h-screen w-60 shrink-0 flex-col bg-[#5e171b] text-white shadow-xl md:flex">
         <div className="border-b border-white/10 p-5">
           <span className="block text-[10px] font-black uppercase tracking-widest text-[#d7aa5b]">Control Panel</span>
           <h2 className="mt-1 text-lg font-black tracking-wide text-white">ADHYEY BROTHERS</h2>
