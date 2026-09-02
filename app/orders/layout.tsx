@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import OrderGstInvoicePanel from './OrderGstInvoicePanel';
 
 export const metadata: Metadata = {
   title: 'My Orders',
@@ -13,5 +14,10 @@ export default function OrdersLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return children;
+  return (
+    <>
+      {children}
+      <OrderGstInvoicePanel />
+    </>
+  );
 }
