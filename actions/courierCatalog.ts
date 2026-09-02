@@ -1,5 +1,7 @@
 'use server';
 
+import { requireAdminUser } from '@/lib/auth';
+
 export async function pushProductToCourierCatalog(productData: {
   title: string;
   style_code: string;
@@ -9,6 +11,8 @@ export async function pushProductToCourierCatalog(productData: {
   gst_rate: number;
   category: string;
 }) {
+  await requireAdminUser();
+
   const apiKey =
     process.env.COURIER_API_KEY ||
     process.env.NIMBUSPOST_API_KEY;

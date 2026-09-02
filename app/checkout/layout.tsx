@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import CheckoutGstInvoiceOption from './CheckoutGstInvoiceOption';
 
 export const metadata: Metadata = {
   title: 'Checkout',
@@ -13,5 +14,10 @@ export default function CheckoutLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return children;
+  return (
+    <>
+      {children}
+      <CheckoutGstInvoiceOption />
+    </>
+  );
 }
