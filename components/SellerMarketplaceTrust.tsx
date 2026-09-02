@@ -1,65 +1,60 @@
 import React from 'react';
-import { ShieldCheck, ExternalLink, Store, BadgeCheck } from 'lucide-react';
-import { sanitizeMarketplaceUrl, sanitizeMarketplaceName } from '@/lib/utils';
 
-type Marketplace = {
-  name?: string | null;
-  url?: string | null;
-  rating?: number | string | null;
-  reviews?: number | string | null;
-};
-
-export function SellerMarketplaceTrust({ marketplaces = [] }: { marketplaces?: Marketplace[] }) {
-  const valid = marketplaces
-    .map((marketplace) => ({
-      ...marketplace,
-      name: sanitizeMarketplaceName(marketplace?.name),
-      url: sanitizeMarketplaceUrl(marketplace?.url),
-    }))
-    .filter((marketplace) => marketplace.name && marketplace.url);
-
-  if (valid.length === 0) return null;
-
-  return (
-    <section className="mt-5 rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4">
-      <div className="flex items-center gap-2 text-emerald-900">
-        <ShieldCheck size={18} />
-        <h3 className="text-sm font-black">Seller Marketplace Presence</h3>
-      </div>
-      <p className="mt-1 text-[11px] leading-relaxed text-emerald-800/80">
-        You can also review our seller presence on supported marketplaces.
-      </p>
-
-      <div className="mt-3 grid gap-2 sm:grid-cols-2">
-        {valid.map((marketplace, index) => (
-          <a
-            key={`${marketplace.name}-${index}`}
-            href={marketplace.url || '#'}
-            target="_blank"
-            rel="noopener noreferrer nofollow"
-            className="flex items-center justify-between gap-3 rounded-xl border border-emerald-100 bg-white px-3 py-2.5 transition hover:border-emerald-200 hover:shadow-sm"
-          >
-            <span className="flex min-w-0 items-center gap-2">
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
-                <Store size={15} />
-              </span>
-              <span className="min-w-0">
-                <span className="block truncate text-xs font-black text-gray-900">{marketplace.name}</span>
-                {(marketplace.rating || marketplace.reviews) && (
-                  <span className="mt-0.5 flex items-center gap-1 text-[10px] font-semibold text-gray-500">
-                    <BadgeCheck size={11} className="text-emerald-600" />
-                    {marketplace.rating ? `${marketplace.rating} rating` : 'Marketplace profile'}
-                    {marketplace.reviews ? ` • ${marketplace.reviews} reviews` : ''}
-                  </span>
-                )}
-              </span>
-            </span>
-            <ExternalLink size={14} className="shrink-0 text-gray-400" />
-          </a>
-        ))}
-      </div>
-    </section>
-  );
+interface Testimonial {
+  name: string;
+  comment: string;
+  rating: number;
 }
 
-export default SellerMarketplaceTrust;
+interface SellerMarketplaceTrustProps {
+  amazonUrl?: string;
+  flipkartUrl?: string;
+  meeshoUrl?: string;
+  testimonials?: Testimonial[];
+}
+
+export const SellerMarketplaceTrust: React.FC<SellerMarketplaceTrustProps> = ({
+  amazonUrl,
+  flipkartUrl,
+  meeshoUrl,
+  testimonials = []
+}) => {
+  if (!amazonUrl && !flipkartUrl && !meeshoUrl) return null;
+
+  return (
+    <div className="marketplace-trust-container" style={{ padding: '20px', textAlign: 'center', background: '#f9f9f9', margin: '20px 0', borderRadius: '8px' }}>
+      <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '8px' }}>અમારી અન્ય શોપિંગ પ્લેટફોર્મ પર પણ મુલાકાત લો</h3>
+      <p style={{ fontSize: '12px', color: '#666', marginBottom: '15px' }}>ગ્રાહકોના વિશ્વાસ માટે તમે અમને નીચેના પ્લેટફોર્મ પર પણ શોધી શકો છો:</p>
+      
+      <div className="buttons-group" style={{ display: 'flex', justifyContent: 'center', gap: '15px', flexWrap: 'wrap' }}>
+        {amazonUrl && (
+          <a href={amazonUrl} target="_blank" rel="noopener noreferrer" style={{ background: '#FF9900', color: '#fff', padding: '10px 20px', textDecoration: 'none', borderRadius: '5px', fontWeight: 'bold', fontSize: '12px' }}>
+            Amazon પર જુઓ
+          </a>
+        )}
+        {flipkartUrl && (
+          <a href={flipkartUrl} target="_blank" rel="noopener noreferrer" style={{ background: '#2874F0', color: '#fff', padding: '10px 20px', textDecoration: 'none', borderRadius: '5px', fontWeight: 'bold', fontSize: '12px' }}>
+            Flipkart પર જુઓ
+          </a>
+        )}
+        {meeshoUrl && (
+          <a href={meeshoUrl} target="_blank" rel="noopener noreferrer" style={{ background: '#F43397', color: '#fff', padding: '10px 20px', textDecoration: 'none', borderRadius: '5px', fontWeight: 'bold', fontSize: '12px' }}>
+            Meesho પર જુઓ
+          </a>
+        )}
+      </div>
+
+      {testimonials.length > 0 && (
+        <div className="testimonials-section" style={{ marginTop: '20px' }}>
+          <h4>ગ્રાહકોના અભિપ્રાય</h4>
+          {testimonials.map((t, index) => (
+            <div key={index} style={{ background: '#fff', padding: '10px', margin: '10px auto', maxWidth: '400px', borderRadius: '5px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+              <p>"{t.comment}"</p>
+              <strong>- {t.name}</strong>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
