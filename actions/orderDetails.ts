@@ -70,7 +70,21 @@ export async function getVerifiedOrderDetailAction(input: { orderRef: string; em
 
   const headerStore = await headers();
   const clientIp = headerStore.get('x-forwarded-for')?.split(',')[0]?.trim() || headerStore.get('x-real-ip') || 'anonymous-client';
-  const { data, error } = await supabase.rpc('get_guest_order_secure', { p_order_number: orderRef, p_email: email, p_phone: phone, p_ip: clientIp });
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    console.error('[ORDER_DETAIL_CONFIG_ERROR] Secure guest lookup is unavailable.');
+    return { success: false, requiresVerification: true, error: 'Order lookup is temporarily unavailable.' };
+  }
+
+  // Guest lookup is exposed only through this validated server action. The
+  // underlying SECURITY DEFINER RPC is restricted to service_role so it cannot
+  // be called directly with the public Supabase key.
+  const admin = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
+  const { data, error } = await admin.rpc('get_guest_order_secure', { p_order_number: orderRef, p_email: email, p_phone: phone, p_ip: clientIp });
   if (error || !data?.success || !data?.order) return { success: false, requiresVerification: true, error: 'Order details did not match. Check the order number, email, and phone.' };
   return { success: true, order: data.order, returnRequest: null, refundRecord: null, canManage: false };
 }
