@@ -3,7 +3,6 @@ import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import Script from 'next/script';
 import GA4EcommerceTracker from '@/components/GA4EcommerceTracker';
-import Welcome50Promotion from '@/components/promotions/Welcome50Promotion';
 import RetailQuantityGuard from '@/components/commerce/RetailQuantityGuard';
 import WhatsAppHelpButton from '@/components/WhatsAppHelpButton';
 
@@ -161,7 +160,6 @@ export default function RootLayout({
         />
 
         <RetailQuantityGuard />
-        <Welcome50Promotion />
         {children}
         <WhatsAppHelpButton />
 
@@ -169,10 +167,10 @@ export default function RootLayout({
 
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-VSXDLN7MH5"
-          strategy="afterInteractive"
+          strategy="lazyOnload"
         />
 
-        <Script id="google-analytics" strategy="afterInteractive">
+        <Script id="google-analytics" strategy="lazyOnload">
           {`
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}

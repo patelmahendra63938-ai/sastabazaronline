@@ -82,6 +82,11 @@ export default function Header() {
   }, []);
 
   useEffect(() => {
+    if (categories.length > 0) return;
+
+    const isDesktop = window.matchMedia('(min-width: 1024px)').matches;
+    if (!isDesktop && !mobileMenuOpen) return;
+
     let cancelled = false;
 
     const loadCategories = async () => {
@@ -109,7 +114,7 @@ export default function Header() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [mobileMenuOpen, categories.length]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
