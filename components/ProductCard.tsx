@@ -105,7 +105,7 @@ export default function ProductCard({ product, activeCampaigns = [], priorityIma
       <div>
         <Link href={`/product/${product.id}`} className="relative block cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d7aa5b]" aria-label={`View ${product.title}`}>
           <div className="relative aspect-square overflow-hidden bg-[#fffaf5]">
-            <Image src={imageUrl} alt={product.title} fill sizes="(max-width: 640px) calc(50vw - 24px), (max-width: 1024px) 33vw, 25vw" loading={priorityImage ? 'eager' : 'lazy'} fetchPriority={priorityImage ? 'high' : 'auto'} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+            <Image src={imageUrl} alt={product.title} fill sizes="(max-width: 640px) calc(50vw - 24px), (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 288px" loading={priorityImage ? 'eager' : 'lazy'} fetchPriority={priorityImage ? 'high' : 'auto'} quality={70} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
             {appliedOffer && !isOutOfStock && <span className="absolute left-2.5 top-2.5 rounded-md bg-[#741f23] px-2 py-0.5 text-[10px] font-black text-white shadow-sm">{appliedOffer.offerLabel}</span>}
             {isOutOfStock && <span className="absolute left-2.5 top-2.5 rounded-md bg-stone-800 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-white shadow-sm">Out of Stock</span>}
             {discountPercent > 0 && !isOutOfStock && <span className="absolute right-2.5 top-2.5 rounded-md bg-[#fff7e8] px-2 py-0.5 text-[10px] font-black text-[#741f23] shadow-sm">{discountPercent}% OFF</span>}
