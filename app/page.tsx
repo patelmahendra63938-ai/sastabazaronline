@@ -422,22 +422,54 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
     p_categories: activeMainCategories.length > 0 ? activeMainCategories : null,
   });
 
-  const [productResult, featuredResult, facetResult] = await Promise.all([
+  let [productResult, featuredResult, facetResult] = await Promise.all([
     query,
     featuredQuery,
     facetQuery,
   ]);
 
-  const products = (productResult.data || []) as any[];
+  // P1 storefront resilience: transient data errors must not look like an empty store.
+  if (productResult.error) {
+    console.error('Homepage product query failed; retrying once:', productResult.error);
+    productResult = await applyFilters(
+      supabase
+        .from('products')
+        .select(productSelect, { count: 'exact' })
+        .eq('is_active', true)
+    ).range(rangeFrom, rangeTo);
+  }
+
+  if (featuredResult.error) {
+    console.error('Homepage featured query failed; retrying once:', featuredResult.error);
+    featuredResult = await applyFilters(
+      supabase
+        .from('products')
+        .select(productSelect)
+        .eq('is_active', true)
+    ).limit(8);
+  }
+
   const featuredProducts = (featuredResult.data || []) as any[];
-  const totalProducts = productResult.count || 0;
+  const canUseFeaturedFallback =
+    currentPage === 1 &&
+    selectedCollections.length === 0 &&
+    !productResult.data?.length &&
+    Boolean(productResult.error) &&
+    featuredProducts.length > 0;
+  const products = (canUseFeaturedFallback
+    ? featuredProducts
+    : productResult.data || []) as any[];
+  const productQueryFailed = Boolean(productResult.error) && !canUseFeaturedFallback;
+  const totalProducts = canUseFeaturedFallback
+    ? featuredProducts.length
+    : productResult.count || 0;
   const facets = (facetResult.data || {}) as StorefrontFacets;
 
   if (productResult.error) {
-    console.error('Homepage product query failed:', productResult.error);
+    console.error('Homepage product query failed after retry:', productResult.error);
   }
   if (featuredResult.error) {
-    console.error('Homepage featured query failed:', featuredResult.error);
+    console.error('Homepage featured query failed after retry:', featuredResult.error);
   }
   if (facetResult.error) {
     console.error('Storefront facet lookup failed:', facetResult.error.message);
@@ -641,7 +673,24 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
                   </span>
                 </div>
 
-                {products.length === 0 ? (
+                {productQueryFailed ? (
+                  <div className="rounded-3xl border border-amber-200 bg-white p-8 text-center shadow-xs sm:p-12">
+                    <h3 className="text-base font-black text-stone-900">
+                      Products are temporarily unavailable
+                    </h3>
+                    <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed text-stone-500">
+                      We could not load the catalog just now. Please retry.
+                    </p>
+                    <div className="mt-5 flex justify-center">
+                      <Link
+                        href={effectiveSearchParams.q ? `/?q=${encodeURIComponent(effectiveSearchParams.q)}` : '/'}
+                        className="rounded-xl bg-[#741f23] px-4 py-2.5 text-xs font-bold text-white transition hover:bg-[#5e171b]"
+                      >
+                        Retry Catalog
+                      </Link>
+                    </div>
+                  </div>
+                ) : products.length === 0 ? (
                   <div className="rounded-3xl border border-[#ead8b8] bg-white p-8 text-center shadow-xs sm:p-12">
                     <h3 className="text-base font-black text-stone-900">
                       No products match these results
