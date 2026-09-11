@@ -5,6 +5,11 @@ import { cache } from 'react';
 import ProductReviews from '@/components/ProductReviews';
 import { resolveStorefrontImageSrc } from '@/lib/storefront-image';
 import { classifyStorefrontCategory } from '@/lib/catalog/storefront-categories';
+import {
+  CUSTOMER_SHIPPING_MAX_INR,
+  SHIPPING_HANDLING_MAX_DAYS,
+  SHIPPING_HANDLING_MIN_DAYS,
+} from '@/lib/shipping/policy';
 
 const SITE_URL = 'https://www.adhyeybrothers.in';
 const DHOTI_CHOLI_COLLECTION_URL = `${SITE_URL}/collections/dhoti-choli`;
@@ -346,6 +351,27 @@ export default async function ProductLayout({
               '@type': 'Organization',
               '@id': `${SITE_URL}/#organization`,
               name: 'ADHYEY BROTHERS',
+            },
+            shippingDetails: {
+              '@type': 'OfferShippingDetails',
+              shippingRate: {
+                '@type': 'MonetaryAmount',
+                maxValue: CUSTOMER_SHIPPING_MAX_INR,
+                currency: 'INR',
+              },
+              shippingDestination: {
+                '@type': 'DefinedRegion',
+                addressCountry: 'IN',
+              },
+              deliveryTime: {
+                '@type': 'ShippingDeliveryTime',
+                handlingTime: {
+                  '@type': 'QuantitativeValue',
+                  minValue: SHIPPING_HANDLING_MIN_DAYS,
+                  maxValue: SHIPPING_HANDLING_MAX_DAYS,
+                  unitCode: 'DAY',
+                },
+              },
             },
             hasMerchantReturnPolicy: {
               '@type': 'MerchantReturnPolicy',
