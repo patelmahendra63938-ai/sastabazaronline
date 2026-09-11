@@ -85,7 +85,6 @@ async function getApprovedReviews(productId: string): Promise<ApprovedReviewRow[
     .limit(25);
 
   if (error) {
-    // Before the migration is applied, product SEO must continue rendering normally.
     console.warn('Product review SEO fetch skipped:', { message: error.message, productId });
     return [];
   }
@@ -297,6 +296,10 @@ export default async function ProductLayout({
     '@type': 'Product',
     '@id': `${canonical}#product`,
     name: product.title,
+    brand: {
+      '@type': 'Brand',
+      name: 'ADHYEY BROTHERS',
+    },
     description,
     sku,
     url: canonical,
@@ -350,6 +353,8 @@ export default async function ProductLayout({
               returnPolicyCategory:
                 'https://schema.org/MerchantReturnFiniteReturnWindow',
               merchantReturnDays: 7,
+              returnMethod: 'https://schema.org/ReturnByMail',
+              returnFees: 'https://schema.org/FreeReturn',
               merchantReturnLink: `${SITE_URL}/return-policy`,
             },
           },
