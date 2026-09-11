@@ -1,3 +1,5 @@
+import { CUSTOMER_SHIPPING_MAX_INR } from '@/lib/shipping/policy';
+
 export interface ShippingPackageInput {
   weight: number; // grams
   length: number; // cm
@@ -81,7 +83,8 @@ function getCourierCostPaise(courier: NimbusCourier): number {
 
 /**
  * Customer shipping price authority.
- * Shipping shown to customer = NimbusPost forward courier rate x 1.30.
+ * Shipping shown to customer = NimbusPost forward courier rate x 1.30,
+ * capped at CUSTOMER_SHIPPING_MAX_INR.
  * COD shown to customer = NimbusPost original COD charge (no markup).
  */
 export async function checkPincodeShippingRate(
@@ -204,7 +207,8 @@ export async function checkPincodeShippingRate(
     }
 
     const baseCourierRate = best.courierPaise / 100;
-    const finalCustomerShipping = Math.ceil(baseCourierRate * 1.30);
+    const markedUpShipping = Math.ceil(baseCourierRate * 1.30);
+    const finalCustomerShipping = Math.min(markedUpShipping, CUSTOMER_SHIPPING_MAX_INR);
     const providerCodCharge =
       paymentType === 'COD'
         ? positiveNumber(best.courier.result?.codChargesPaise) / 100
