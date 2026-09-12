@@ -10,6 +10,8 @@ import {
   CUSTOMER_SHIPPING_MAX_INR,
   SHIPPING_HANDLING_MAX_DAYS,
   SHIPPING_HANDLING_MIN_DAYS,
+  SHIPPING_TRANSIT_MAX_DAYS,
+  SHIPPING_TRANSIT_MIN_DAYS,
 } from '@/lib/shipping/policy';
 
 const SITE_URL = 'https://www.adhyeybrothers.in';
@@ -40,78 +42,44 @@ interface ApprovedReviewRow {
 function getSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
   if (!supabaseUrl || !anonKey) return null;
-
-  return createClient(supabaseUrl, anonKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  });
+  return createClient(supabaseUrl, anonKey, { auth: { persistSession: false, autoRefreshToken: false } });
 }
 
 const getProduct = cache(async (id: string): Promise<ProductSeoRecord | null> => {
   if (!id) return null;
-
   const supabase = getSupabaseClient();
   if (!supabase) {
     console.error('Product SEO: Supabase environment variables missing');
     const fallback = await getStorefrontFallbackProduct(id);
     return fallback as ProductSeoRecord | null;
   }
-
-  const { data, error } = await supabase
-    .from('products')
-    .select('id,title,description,price,is_active,category,images,video')
-    .eq('id', id)
-    .maybeSingle();
-
+  const { data, error } = await supabase.from('products').select('id,title,description,price,is_active,category,images,video').eq('id', id).maybeSingle();
   if (error) {
-    console.error('Product SEO fetch failed; using cached storefront record when available:', {
-      message: error.message,
-      code: error.code,
-      productId: id,
-    });
+    console.error('Product SEO fetch failed; using cached storefront record when available:', { message: error.message, code: error.code, productId: id });
     const fallback = await getStorefrontFallbackProduct(id);
     return fallback as ProductSeoRecord | null;
   }
-
   return (data as ProductSeoRecord | null) || null;
 });
 
 async function getApprovedReviews(productId: string): Promise<ApprovedReviewRow[]> {
   const supabase = getSupabaseClient();
   if (!supabase) return [];
-
-  const { data, error } = await supabase
-    .from('reviews')
-    .select('customer_name,rating,review_text,created_at')
-    .eq('product_id', productId)
-    .eq('status', 'approved')
-    .order('created_at', { ascending: false })
-    .limit(25);
-
+  const { data, error } = await supabase.from('reviews').select('customer_name,rating,review_text,created_at').eq('product_id', productId).eq('status', 'approved').order('created_at', { ascending: false }).limit(25);
   if (error) {
     console.warn('Product review SEO fetch skipped:', { message: error.message, productId });
     return [];
   }
-
   return (data || []) as ApprovedReviewRow[];
 }
 
 function getProductImage(product?: ProductSeoRecord | null): string | undefined {
-  const candidate =
-    Array.isArray(product?.images) && product.images.length > 0
-      ? product.images[0]
-      : undefined;
-
+  const candidate = Array.isArray(product?.images) && product.images.length > 0 ? product.images[0] : undefined;
   if (!candidate || typeof candidate !== 'string') return undefined;
-
   const resolved = resolveStorefrontImageSrc(candidate);
   if (!resolved || resolved.includes('product-placeholder')) return undefined;
   if (/^https?:\/\//i.test(resolved)) return resolved;
-
   return `${SITE_URL}${resolved.startsWith('/') ? resolved : `/${resolved}`}`;
 }
 
@@ -124,13 +92,10 @@ function getProductVideo(product?: ProductSeoRecord | null): string | undefined 
 function getVideoUploadDate(videoUrl: string): string | undefined {
   const match = decodeURIComponent(videoUrl).match(/vid-(\d{13})-/i);
   if (!match) return undefined;
-
   const timestamp = Number(match[1]);
   if (!Number.isFinite(timestamp)) return undefined;
-
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) return undefined;
-
   return date.toISOString();
 }
 
@@ -138,86 +103,40 @@ async function getProductAvailability(productId: string): Promise<string> {
   const supabase = getSupabaseClient();
   if (!supabase) {
     const fallback = await getStorefrontFallbackProduct(productId);
-    const total = (fallback?.inventory || []).reduce(
-      (sum, row) => sum + Math.max(0, Number(row.available_quantity ?? 0)),
-      0
-    );
-    return total > 0 || Number(fallback?.stock ?? 0) > 0
-      ? 'https://schema.org/InStock'
-      : 'https://schema.org/OutOfStock';
+    const total = (fallback?.inventory || []).reduce((sum, row) => sum + Math.max(0, Number(row.available_quantity ?? 0)), 0);
+    return total > 0 || Number(fallback?.stock ?? 0) > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock';
   }
-
-  const { data, error } = await supabase
-    .from('inventory')
-    .select('available_quantity')
-    .eq('product_id', productId);
-
+  const { data, error } = await supabase.from('inventory').select('available_quantity').eq('product_id', productId);
   if (error) {
-    console.error('Product inventory SEO fetch failed; using cached storefront stock when available:', {
-      message: error.message,
-      productId,
-    });
+    console.error('Product inventory SEO fetch failed; using cached storefront stock when available:', { message: error.message, productId });
     const fallback = await getStorefrontFallbackProduct(productId);
-    const total = (fallback?.inventory || []).reduce(
-      (sum, row) => sum + Math.max(0, Number(row.available_quantity ?? 0)),
-      0
-    );
-    return total > 0 || Number(fallback?.stock ?? 0) > 0
-      ? 'https://schema.org/InStock'
-      : 'https://schema.org/OutOfStock';
+    const total = (fallback?.inventory || []).reduce((sum, row) => sum + Math.max(0, Number(row.available_quantity ?? 0)), 0);
+    return total > 0 || Number(fallback?.stock ?? 0) > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock';
   }
-
   const rows = (data ?? []) as InventoryRow[];
   if (rows.length === 0) return 'https://schema.org/InStock';
-
-  const totalAvailable = rows.reduce(
-    (sum, row) => sum + Math.max(0, Number(row.available_quantity ?? 0)),
-    0
-  );
-
-  return totalAvailable > 0
-    ? 'https://schema.org/InStock'
-    : 'https://schema.org/OutOfStock';
+  const totalAvailable = rows.reduce((sum, row) => sum + Math.max(0, Number(row.available_quantity ?? 0)), 0);
+  return totalAvailable > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock';
 }
 
 function cleanDescription(value?: string | null): string {
-  const text = (value || '')
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-
+  const text = (value || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
   return text || 'Shop this product online at ADHYEY BROTHERS with Pan India delivery.';
 }
 
 function seoDescription(value?: string | null, maxLength = 155): string {
   const text = cleanDescription(value);
   if (text.length <= maxLength) return text;
-
   const withinLimit = text.slice(0, maxLength + 1);
   const lastSpace = withinLimit.lastIndexOf(' ');
   const cutAt = lastSpace >= 80 ? lastSpace : maxLength;
-
-  return `${withinLimit
-    .slice(0, cutAt)
-    .replace(/[,:;\s]+$/, '')
-    .trim()}…`;
+  return `${withinLimit.slice(0, cutAt).replace(/[,:;\s]+$/, '').trim()}…`;
 }
 
-function productCanonical(id: string): string {
-  return `${SITE_URL}/product/${encodeURIComponent(id)}`;
-}
+function productCanonical(id: string): string { return `${SITE_URL}/product/${encodeURIComponent(id)}`; }
 
 function storefrontCategory(product: ProductSeoRecord): string | undefined {
-  return (
-    classifyStorefrontCategory({
-      id: product.id,
-      title: product.title,
-      description: product.description || null,
-      category: product.category || null,
-    }) ||
-    product.category?.trim() ||
-    undefined
-  );
+  return classifyStorefrontCategory({ id: product.id, title: product.title, description: product.description || null, category: product.category || null }) || product.category?.trim() || undefined;
 }
 
 function isDhotiCholiProduct(product: ProductSeoRecord): boolean {
@@ -225,81 +144,26 @@ function isDhotiCholiProduct(product: ProductSeoRecord): boolean {
   return text.includes('dhoti choli') || (text.includes('dhoti') && text.includes('choli'));
 }
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
   const canonical = productCanonical(id);
   const product = await getProduct(id);
-
-  if (!product || product.is_active === false) {
-    return {
-      title: 'Product Not Available',
-      description: 'This product is currently unavailable on ADHYEY BROTHERS.',
-      alternates: { canonical },
-      robots: { index: false, follow: true },
-    };
-  }
-
+  if (!product || product.is_active === false) return { title: 'Product Not Available', description: 'This product is currently unavailable on ADHYEY BROTHERS.', alternates: { canonical }, robots: { index: false, follow: true } };
   const title = product.title.trim();
   const description = seoDescription(product.description);
   const image = getProductImage(product);
-
   return {
-    title,
-    description,
-    alternates: {
-      canonical,
-    },
-    robots: {
-      index: true,
-      follow: true,
-      googleBot: {
-        index: true,
-        follow: true,
-        'max-image-preview': 'large',
-      },
-    },
-    openGraph: {
-      type: 'website',
-      url: canonical,
-      siteName: 'ADHYEY BROTHERS',
-      title: `${title} | ADHYEY BROTHERS`,
-      description,
-      images: image
-        ? [{ url: image, alt: title }]
-        : [
-            {
-              url: '/opengraph-image',
-              width: 1200,
-              height: 630,
-              alt: 'ADHYEY BROTHERS online fashion store',
-            },
-          ],
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title: `${title} | ADHYEY BROTHERS`,
-      description,
-      images: [image || '/opengraph-image'],
-    },
+    title, description, alternates: { canonical },
+    robots: { index: true, follow: true, googleBot: { index: true, follow: true, 'max-image-preview': 'large' } },
+    openGraph: { type: 'website', url: canonical, siteName: 'ADHYEY BROTHERS', title: `${title} | ADHYEY BROTHERS`, description, images: image ? [{ url: image, alt: title }] : [{ url: '/opengraph-image', width: 1200, height: 630, alt: 'ADHYEY BROTHERS online fashion store' }] },
+    twitter: { card: 'summary_large_image', title: `${title} | ADHYEY BROTHERS`, description, images: [image || '/opengraph-image'] },
   };
 }
 
-export default async function ProductLayout({
-  children,
-  params,
-}: {
-  children: React.ReactNode;
-  params: Promise<{ id: string }>;
-}) {
+export default async function ProductLayout({ children, params }: { children: React.ReactNode; params: Promise<{ id: string }> }) {
   const { id } = await params;
   const product = await getProduct(id);
-
   if (!product || product.is_active === false) return children;
-
   const canonical = productCanonical(product.id);
   const description = cleanDescription(product.description);
   const price = Number(product.price ?? 0);
@@ -311,185 +175,53 @@ export default async function ProductLayout({
   const video = getProductVideo(product);
   const videoUploadDate = video ? getVideoUploadDate(video) : undefined;
   const sku = product.id;
-  const ratingValue = approvedReviews.length
-    ? approvedReviews.reduce((sum, row) => sum + Number(row.rating || 0), 0) / approvedReviews.length
-    : 0;
+  const ratingValue = approvedReviews.length ? approvedReviews.reduce((sum, row) => sum + Number(row.rating || 0), 0) / approvedReviews.length : 0;
 
   const productJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'Product',
-    '@id': `${canonical}#product`,
-    name: product.title,
-    brand: {
-      '@type': 'Brand',
-      name: 'ADHYEY BROTHERS',
-    },
-    description,
-    sku,
-    url: canonical,
+    '@context': 'https://schema.org', '@type': 'Product', '@id': `${canonical}#product`, name: product.title,
+    brand: { '@type': 'Brand', name: 'ADHYEY BROTHERS' }, description, sku, url: canonical,
     ...(image ? { image: [image] } : {}),
-    ...(category
-      ? { category: isDhotiCholi ? `${category} > Dhoti Choli` : category }
-      : {}),
-    ...(approvedReviews.length > 0
-      ? {
-          aggregateRating: {
-            '@type': 'AggregateRating',
-            ratingValue: Number(ratingValue.toFixed(2)),
-            reviewCount: approvedReviews.length,
-            bestRating: 5,
-            worstRating: 1,
+    ...(category ? { category: isDhotiCholi ? `${category} > Dhoti Choli` : category } : {}),
+    ...(approvedReviews.length > 0 ? {
+      aggregateRating: { '@type': 'AggregateRating', ratingValue: Number(ratingValue.toFixed(2)), reviewCount: approvedReviews.length, bestRating: 5, worstRating: 1 },
+      review: approvedReviews.map((row) => ({ '@type': 'Review', author: { '@type': 'Person', name: row.customer_name || 'Verified Customer' }, datePublished: row.created_at, reviewBody: row.review_text, reviewRating: { '@type': 'Rating', ratingValue: Number(row.rating), bestRating: 5, worstRating: 1 } })),
+    } : {}),
+    ...(price > 0 ? {
+      offers: {
+        '@type': 'Offer', url: canonical, priceCurrency: 'INR', price: price.toFixed(2), availability, itemCondition: 'https://schema.org/NewCondition',
+        seller: { '@type': 'Organization', '@id': `${SITE_URL}/#organization`, name: 'ADHYEY BROTHERS' },
+        shippingDetails: {
+          '@type': 'OfferShippingDetails',
+          shippingRate: { '@type': 'MonetaryAmount', maxValue: CUSTOMER_SHIPPING_MAX_INR, currency: 'INR' },
+          shippingDestination: { '@type': 'DefinedRegion', addressCountry: 'IN' },
+          deliveryTime: {
+            '@type': 'ShippingDeliveryTime',
+            handlingTime: { '@type': 'QuantitativeValue', minValue: SHIPPING_HANDLING_MIN_DAYS, maxValue: SHIPPING_HANDLING_MAX_DAYS, unitCode: 'DAY' },
+            transitTime: { '@type': 'QuantitativeValue', minValue: SHIPPING_TRANSIT_MIN_DAYS, maxValue: SHIPPING_TRANSIT_MAX_DAYS, unitCode: 'DAY' },
           },
-          review: approvedReviews.map((row) => ({
-            '@type': 'Review',
-            author: {
-              '@type': 'Person',
-              name: row.customer_name || 'Verified Customer',
-            },
-            datePublished: row.created_at,
-            reviewBody: row.review_text,
-            reviewRating: {
-              '@type': 'Rating',
-              ratingValue: Number(row.rating),
-              bestRating: 5,
-              worstRating: 1,
-            },
-          })),
-        }
-      : {}),
-    ...(price > 0
-      ? {
-          offers: {
-            '@type': 'Offer',
-            url: canonical,
-            priceCurrency: 'INR',
-            price: price.toFixed(2),
-            availability,
-            itemCondition: 'https://schema.org/NewCondition',
-            seller: {
-              '@type': 'Organization',
-              '@id': `${SITE_URL}/#organization`,
-              name: 'ADHYEY BROTHERS',
-            },
-            shippingDetails: {
-              '@type': 'OfferShippingDetails',
-              shippingRate: {
-                '@type': 'MonetaryAmount',
-                maxValue: CUSTOMER_SHIPPING_MAX_INR,
-                currency: 'INR',
-              },
-              shippingDestination: {
-                '@type': 'DefinedRegion',
-                addressCountry: 'IN',
-              },
-              deliveryTime: {
-                '@type': 'ShippingDeliveryTime',
-                handlingTime: {
-                  '@type': 'QuantitativeValue',
-                  minValue: SHIPPING_HANDLING_MIN_DAYS,
-                  maxValue: SHIPPING_HANDLING_MAX_DAYS,
-                  unitCode: 'DAY',
-                },
-              },
-            },
-            hasMerchantReturnPolicy: {
-              '@type': 'MerchantReturnPolicy',
-              applicableCountry: 'IN',
-              returnPolicyCategory:
-                'https://schema.org/MerchantReturnFiniteReturnWindow',
-              merchantReturnDays: 7,
-              returnMethod: 'https://schema.org/ReturnByMail',
-              returnFees: 'https://schema.org/FreeReturn',
-              merchantReturnLink: `${SITE_URL}/return-policy`,
-            },
-          },
-        }
-      : {}),
+        },
+        hasMerchantReturnPolicy: { '@type': 'MerchantReturnPolicy', applicableCountry: 'IN', returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow', merchantReturnDays: 7, returnMethod: 'https://schema.org/ReturnByMail', returnFees: 'https://schema.org/FreeReturn', merchantReturnLink: `${SITE_URL}/return-policy` },
+      },
+    } : {}),
   };
 
   const breadcrumbItems = [
-    {
-      '@type': 'ListItem',
-      position: 1,
-      name: 'Home',
-      item: SITE_URL,
-    },
-    ...(category
-      ? [
-          {
-            '@type': 'ListItem',
-            position: 2,
-            name: category,
-            item: `${SITE_URL}/category/${encodeURIComponent(category)}`,
-          },
-        ]
-      : []),
-    ...(isDhotiCholi
-      ? [
-          {
-            '@type': 'ListItem',
-            position: category ? 3 : 2,
-            name: 'Dhoti Choli',
-            item: DHOTI_CHOLI_COLLECTION_URL,
-          },
-        ]
-      : []),
-    {
-      '@type': 'ListItem',
-      position: category ? (isDhotiCholi ? 4 : 3) : (isDhotiCholi ? 3 : 2),
-      name: product.title,
-      item: canonical,
-    },
+    { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
+    ...(category ? [{ '@type': 'ListItem', position: 2, name: category, item: `${SITE_URL}/category/${encodeURIComponent(category)}` }] : []),
+    ...(isDhotiCholi ? [{ '@type': 'ListItem', position: category ? 3 : 2, name: 'Dhoti Choli', item: DHOTI_CHOLI_COLLECTION_URL }] : []),
+    { '@type': 'ListItem', position: category ? (isDhotiCholi ? 4 : 3) : (isDhotiCholi ? 3 : 2), name: product.title, item: canonical },
   ];
-
-  const breadcrumbJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: breadcrumbItems,
-  };
-
-  const videoJsonLd =
-    video && image && videoUploadDate
-      ? {
-          '@context': 'https://schema.org',
-          '@type': 'VideoObject',
-          '@id': `${canonical}#video`,
-          name: `${product.title} product video`,
-          description,
-          thumbnailUrl: [image],
-          uploadDate: videoUploadDate,
-          contentUrl: video,
-          mainEntityOfPage: canonical,
-          publisher: {
-            '@type': 'Organization',
-            '@id': `${SITE_URL}/#organization`,
-            name: 'ADHYEY BROTHERS',
-          },
-        }
-      : null;
-
+  const breadcrumbJsonLd = { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: breadcrumbItems };
+  const videoJsonLd = video && image && videoUploadDate ? { '@context': 'https://schema.org', '@type': 'VideoObject', '@id': `${canonical}#video`, name: `${product.title} product video`, description, thumbnailUrl: [image], uploadDate: videoUploadDate, contentUrl: video, mainEntityOfPage: canonical, publisher: { '@type': 'Organization', '@id': `${SITE_URL}/#organization`, name: 'ADHYEY BROTHERS' } } : null;
   const productJson = JSON.stringify(productJsonLd).replace(/</g, '\\u003c');
   const breadcrumbJson = JSON.stringify(breadcrumbJsonLd).replace(/</g, '\\u003c');
-  const videoJson = videoJsonLd
-    ? JSON.stringify(videoJsonLd).replace(/</g, '\\u003c')
-    : null;
+  const videoJson = videoJsonLd ? JSON.stringify(videoJsonLd).replace(/</g, '\\u003c') : null;
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: productJson }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: breadcrumbJson }}
-      />
-      {videoJson ? (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: videoJson }}
-        />
-      ) : null}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: productJson }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbJson }} />
+      {videoJson ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: videoJson }} /> : null}
       {children}
       <ProductReviews productId={product.id} />
     </>
