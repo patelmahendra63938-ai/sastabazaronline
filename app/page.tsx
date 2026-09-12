@@ -21,6 +21,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import Pagination from '@/components/Pagination';
 import { getHomepageDisplaySettings } from '@/lib/settings/homepage-display';
+import { getStorefrontFallbackProducts } from '@/lib/storefront/catalog-fallback';
 import { ArrowRight, ShoppingBag } from 'lucide-react';
 
 export const metadata: Metadata = {
@@ -422,13 +423,15 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
     p_categories: activeMainCategories.length > 0 ? activeMainCategories : null,
   });
 
-  let [productResult, featuredResult, facetResult] = await Promise.all([
-    query,
-    featuredQuery,
-    facetQuery,
-  ]);
+  let [productResult, featuredResult, facetResult, cachedFallbackProducts] =
+    await Promise.all([
+      query,
+      featuredQuery,
+      facetQuery,
+      getStorefrontFallbackProducts(),
+    ]);
 
-  // P1 storefront resilience: transient data errors must not look like an empty store.
+  // P0 storefront resilience: transient data errors must not look like an empty store.
   if (productResult.error) {
     console.error('Homepage product query failed; retrying once:', productResult.error);
     productResult = await applyFilters(
@@ -449,20 +452,42 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
     ).limit(8);
   }
 
-  const featuredProducts = (featuredResult.data || []) as any[];
+  const liveFeaturedProducts = (featuredResult.data || []) as any[];
+  const featuredProducts = (
+    liveFeaturedProducts.length > 0
+      ? liveFeaturedProducts
+      : cachedFallbackProducts.slice(0, 8)
+  ) as any[];
+  const hasCatalogFilters = Object.entries(effectiveSearchParams).some(
+    ([key, value]) => key !== 'page' && Boolean(value)
+  );
+  const canUseCachedFallback =
+    currentPage === 1 &&
+    !hasCatalogFilters &&
+    !productResult.data?.length &&
+    Boolean(productResult.error) &&
+    cachedFallbackProducts.length > 0;
   const canUseFeaturedFallback =
     currentPage === 1 &&
     selectedCollections.length === 0 &&
+    !hasCatalogFilters &&
     !productResult.data?.length &&
     Boolean(productResult.error) &&
-    featuredProducts.length > 0;
-  const products = (canUseFeaturedFallback
-    ? featuredProducts
-    : productResult.data || []) as any[];
-  const productQueryFailed = Boolean(productResult.error) && !canUseFeaturedFallback;
-  const totalProducts = canUseFeaturedFallback
-    ? featuredProducts.length
-    : productResult.count || 0;
+    liveFeaturedProducts.length > 0;
+  const products = (canUseCachedFallback
+    ? cachedFallbackProducts
+    : canUseFeaturedFallback
+      ? liveFeaturedProducts
+      : productResult.data || []) as any[];
+  const productQueryFailed =
+    Boolean(productResult.error) &&
+    !canUseCachedFallback &&
+    !canUseFeaturedFallback;
+  const totalProducts = canUseCachedFallback
+    ? cachedFallbackProducts.length
+    : canUseFeaturedFallback
+      ? liveFeaturedProducts.length
+      : productResult.count || 0;
   const facets = (facetResult.data || {}) as StorefrontFacets;
 
   if (productResult.error) {
