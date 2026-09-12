@@ -2,15 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ExternalLink, Star, ShieldCheck } from 'lucide-react';
+import { ExternalLink, ShieldCheck } from 'lucide-react';
 
-type MeeshoReviewPreviewConfig = {
+type MeeshoReviewSource = {
   productId: string;
   meeshoUrl: string;
   sourceTitle: string;
 };
 
-const PRODUCT_REVIEW_SOURCES: MeeshoReviewPreviewConfig[] = [
+const PRODUCT_REVIEW_SOURCES: MeeshoReviewSource[] = [
   {
     productId: '2c17feb3-11c8-406f-96b7-282aeb3935bc',
     meeshoUrl: 'https://www.meesho.com/shop-a-vichitra-silk-indo-western-dhoti-set-for-women-with-sequin-bustier-crop-top-draped-bottom-and-long-cape-shrug-ideal-for-garba-weddings-sangeet-and-festive-occasions/p/b3cd0e?ms=2&source=Meri+Shop',
@@ -33,41 +33,6 @@ const PRODUCT_REVIEW_SOURCES: MeeshoReviewPreviewConfig[] = [
   },
 ];
 
-const SAMPLE_REVIEWS = [
-  {
-    name: 'Sample reviewer',
-    rating: 5,
-    text: 'Preview review card. Real Meesho review text will replace this before production.',
-    date: 'Meesho review date',
-  },
-  {
-    name: 'Sample reviewer',
-    rating: 4,
-    text: 'This preview shows the final layout only. No sample review will be published to customers.',
-    date: 'Meesho review date',
-  },
-  {
-    name: 'Sample reviewer',
-    rating: 5,
-    text: 'Each final card will keep clear Meesho attribution and a link customers can use to verify the source.',
-    date: 'Meesho review date',
-  },
-];
-
-function Stars({ rating }: { rating: number }) {
-  return (
-    <span className="inline-flex items-center gap-0.5" aria-label={`${rating} out of 5 stars`}>
-      {[1, 2, 3, 4, 5].map((value) => (
-        <Star
-          key={value}
-          size={14}
-          className={value <= rating ? 'fill-amber-400 text-amber-400' : 'text-gray-300'}
-        />
-      ))}
-    </span>
-  );
-}
-
 export default function MeeshoReviewsPreview({ productId }: { productId: string }) {
   const source = PRODUCT_REVIEW_SOURCES.find((item) => item.productId === productId);
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
@@ -76,9 +41,9 @@ export default function MeeshoReviewsPreview({ productId }: { productId: string 
     if (!source) return;
 
     const mount = document.createElement('div');
-    mount.setAttribute('data-meesho-reviews-preview-mount', 'true');
+    mount.setAttribute('data-meesho-reviews-mount', 'true');
 
-    const placePreview = () => {
+    const placeSection = () => {
       const headings = Array.from(document.querySelectorAll('h3'));
       const detailsHeading = headings.find((heading) =>
         heading.textContent?.trim().includes('Product Specifications & Details')
@@ -96,9 +61,9 @@ export default function MeeshoReviewsPreview({ productId }: { productId: string 
       return true;
     };
 
-    if (!placePreview()) {
+    if (!placeSection()) {
       const observer = new MutationObserver(() => {
-        if (placePreview()) observer.disconnect();
+        if (placeSection()) observer.disconnect();
       });
       observer.observe(document.body, { childList: true, subtree: true });
 
@@ -115,17 +80,15 @@ export default function MeeshoReviewsPreview({ productId }: { productId: string 
 
   if (!source || !portalTarget) return null;
 
-  const reviews = (
+  const section = (
     <section className="mt-10 overflow-hidden rounded-3xl border border-[#ead8b8] bg-white shadow-xs">
       <div className="border-b border-[#f0e3cf] bg-[#fffaf5] px-5 py-4 sm:px-7">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#f43397] text-sm font-black text-white">m</div>
-              <div>
-                <h2 className="text-lg font-black text-[#741f23]">Customer Reviews from Meesho</h2>
-                <p className="text-xs text-gray-500">Marketplace reviews stay clearly separate from reviews placed on adhyeybrothers.in.</p>
-              </div>
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f43397] text-base font-black text-white">m</div>
+            <div>
+              <h2 className="text-lg font-black text-[#741f23]">Customer Reviews on Meesho</h2>
+              <p className="text-xs text-gray-500">Check genuine marketplace ratings and reviews for this matching product on Meesho.</p>
             </div>
           </div>
           <a
@@ -134,80 +97,35 @@ export default function MeeshoReviewsPreview({ productId }: { productId: string 
             rel="noopener noreferrer"
             className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl border border-[#f43397]/30 bg-[#fff0f7] px-4 text-xs font-black text-[#c32274] transition hover:bg-[#ffe2f0]"
           >
-            View on Meesho <ExternalLink size={13} />
+            View Reviews on Meesho <ExternalLink size={13} />
           </a>
         </div>
       </div>
 
       <div className="px-5 py-5 sm:px-7 sm:py-6">
-        <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold leading-relaxed text-amber-900">
-          Preview only — the layout is real, but the rating, review count and review text below are sample content. We will replace them with genuine Meesho data before any production deployment.
-        </div>
-
-        <div className="grid gap-5 lg:grid-cols-[260px_1fr]">
-          <div className="rounded-2xl border border-[#ead8b8] bg-[#fffdf9] p-5">
-            <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[#b5843d]">Preview rating</p>
-            <div className="mt-2 flex items-end gap-2">
-              <span className="text-4xl font-black text-gray-900">4.5</span>
-              <span className="pb-1 text-sm font-bold text-gray-500">/ 5</span>
-            </div>
-            <div className="mt-2"><Stars rating={5} /></div>
-            <p className="mt-2 text-xs text-gray-500">Sample count: 100+ Meesho reviews</p>
-            <div className="mt-4 flex items-start gap-2 rounded-xl bg-green-50 px-3 py-2 text-[11px] font-semibold text-green-800">
-              <ShieldCheck size={15} className="mt-0.5 shrink-0" />
-              <span>Final reviews will be labelled as Meesho reviews and will not be presented as verified purchases on this website.</span>
-            </div>
-          </div>
-
+        <div className="grid gap-4 md:grid-cols-[1fr_auto] md:items-center">
           <div>
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <h3 className="text-sm font-black text-gray-900">What customers say on Meesho</h3>
-                <p className="mt-0.5 text-[11px] text-gray-500">Source product: {source.sourceTitle}</p>
-              </div>
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-3">
-              {SAMPLE_REVIEWS.map((review, index) => (
-                <article key={index} className="flex min-h-[190px] flex-col rounded-2xl border border-[#ead8b8] bg-white p-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="text-xs font-black text-gray-900">{review.name}</p>
-                      <div className="mt-1"><Stars rating={review.rating} /></div>
-                    </div>
-                    <span className="rounded-full bg-[#fff0f7] px-2 py-1 text-[9px] font-black uppercase tracking-wide text-[#c32274]">Meesho</span>
-                  </div>
-                  <p className="mt-3 flex-1 text-xs leading-relaxed text-gray-600">{review.text}</p>
-                  <div className="mt-4 flex items-center justify-between gap-2 border-t border-[#f0e3cf] pt-3">
-                    <span className="text-[10px] text-gray-400">{review.date}</span>
-                    <a
-                      href={source.meeshoUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-[10px] font-black text-[#c32274] hover:underline"
-                    >
-                      View on Meesho <ExternalLink size={11} />
-                    </a>
-                  </div>
-                </article>
-              ))}
-            </div>
-
-            <div className="mt-4 text-center">
-              <a
-                href={source.meeshoUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-[#fff0f7] px-5 text-xs font-black text-[#c32274] transition hover:bg-[#ffe2f0]"
-              >
-                View all reviews on Meesho <ExternalLink size={13} />
-              </a>
+            <p className="text-sm font-black text-gray-900">{source.sourceTitle}</p>
+            <p className="mt-1 text-xs leading-relaxed text-gray-600">
+              These reviews are hosted on Meesho and are separate from reviews submitted on adhyeybrothers.in. Open the source page to see the current rating, review count, customer comments and review photos directly on Meesho.
+            </p>
+            <div className="mt-3 inline-flex items-start gap-2 rounded-xl bg-green-50 px-3 py-2 text-[11px] font-semibold text-green-800">
+              <ShieldCheck size={15} className="mt-0.5 shrink-0" />
+              <span>Marketplace source is clearly identified so buyers can verify the reviews themselves.</span>
             </div>
           </div>
+          <a
+            href={source.meeshoUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-[#f43397] px-5 text-xs font-black text-white transition hover:bg-[#d52b83]"
+          >
+            Check on Meesho <ExternalLink size={13} />
+          </a>
         </div>
       </div>
     </section>
   );
 
-  return createPortal(reviews, portalTarget);
+  return createPortal(section, portalTarget);
 }
