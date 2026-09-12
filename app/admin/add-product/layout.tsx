@@ -23,7 +23,9 @@ export default function AddProductLayout({ children }: { children: React.ReactNo
         </div>
       </div>
 
-      {children}
+      <div className="[&>main>header:first-child]:hidden">
+        {children}
+      </div>
     </>
   );
 }
