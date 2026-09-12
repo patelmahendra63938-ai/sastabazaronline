@@ -101,8 +101,8 @@ export default function ProductCard({ product, activeCampaigns = [], priorityIma
   };
 
   return (
-    <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-[#ead8b8] bg-white transition-all duration-300 hover:-translate-y-0.5 hover:border-[#d7aa5b] hover:shadow-xl">
-      <div>
+    <div className="group relative flex h-full min-w-0 flex-col justify-between overflow-hidden rounded-2xl border border-[#ead8b8] bg-white transition-all duration-300 hover:-translate-y-0.5 hover:border-[#d7aa5b] hover:shadow-xl">
+      <div className="min-w-0">
         <Link href={`/product/${product.id}`} className="relative block cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d7aa5b]" aria-label={`View ${product.title}`}>
           <div className="relative aspect-square overflow-hidden bg-[#fffaf5]">
             <Image src={imageUrl} alt={product.title} fill sizes="(max-width: 640px) calc(50vw - 24px), (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 288px" loading={priorityImage ? 'eager' : 'lazy'} fetchPriority={priorityImage ? 'high' : 'auto'} quality={70} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
@@ -112,27 +112,29 @@ export default function ProductCard({ product, activeCampaigns = [], priorityIma
           </div>
         </Link>
 
-        <div className="space-y-2 p-3.5">
-          <Link href={`/product/${product.id}`} className="block rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d7aa5b]">
-            {product.category && <p className="text-[10px] font-bold uppercase tracking-wider text-[#b5843d]">{product.category}</p>}
-            <h3 className="mt-1 line-clamp-2 min-h-[2.5rem] text-xs font-bold leading-5 text-stone-900 transition group-hover:text-[#741f23] sm:text-sm">{product.title}</h3>
+        <div className="min-w-0 space-y-2 p-3 sm:p-3.5">
+          <Link href={`/product/${product.id}`} className="block min-w-0 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d7aa5b]">
+            {product.category && <p className="truncate text-[10px] font-bold uppercase tracking-wider text-[#b5843d]">{product.category}</p>}
+            <h3 className="mt-1 line-clamp-2 min-h-[2.5rem] break-words text-xs font-bold leading-5 text-stone-900 transition group-hover:text-[#741f23] sm:text-sm">{product.title}</h3>
           </Link>
 
-          <div className="pt-0.5">
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                <span className="text-base font-black text-[#741f23]">₹{finalPrice.toLocaleString('en-IN')}</span>
-                {hasRealMrp && <span className="text-[11px] text-stone-500 line-through">₹{mrpValue.toLocaleString('en-IN')}</span>}
+          <div className="min-w-0 pt-0.5">
+            <div className="flex min-w-0 flex-col items-start gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
+              <div className="flex min-w-0 max-w-full flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                <span className="whitespace-nowrap text-base font-black text-[#741f23]">₹{finalPrice.toLocaleString('en-IN')}</span>
+                {hasRealMrp && <span className="whitespace-nowrap text-[11px] text-stone-500 line-through">₹{mrpValue.toLocaleString('en-IN')}</span>}
               </div>
-              <ProductRatingTag productId={product.id} />
+              <div className="max-w-full min-w-0">
+                <ProductRatingTag productId={product.id} />
+              </div>
             </div>
-            <p className="mt-1 text-[10px] font-semibold text-stone-500">Inclusive of applicable GST</p>
+            <p className="mt-1 break-words text-[10px] font-semibold text-stone-500">Inclusive of applicable GST</p>
           </div>
 
           {hasInventoryVariants && (
-            <div className="pt-1">
+            <div className="min-w-0 pt-1">
               {availableSizes.length > 0 ? (
-                <div className="flex flex-nowrap items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
+                <div className="flex max-w-full flex-nowrap items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
                   {availableSizes.slice(0, 6).map(size => <span key={size} className="shrink-0 rounded-md border border-[#ead8b8] bg-[#fffaf5] px-2 py-1 text-[10px] font-bold text-stone-700">{size}</span>)}
                   {availableSizes.length > 6 && <span className="shrink-0 text-[10px] font-bold text-[#741f23]">+{availableSizes.length - 6}</span>}
                 </div>
@@ -142,7 +144,7 @@ export default function ProductCard({ product, activeCampaigns = [], priorityIma
         </div>
       </div>
 
-      <div className="p-3.5 pt-0">
+      <div className="min-w-0 p-3 pt-0 sm:p-3.5 sm:pt-0">
         {isOutOfStock ? (
           <button type="button" disabled className="flex min-h-11 w-full cursor-not-allowed items-center justify-center rounded-xl bg-stone-200 px-3 text-xs font-bold text-stone-500">Out of Stock</button>
         ) : hasInventoryVariants ? (
