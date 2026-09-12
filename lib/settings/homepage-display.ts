@@ -1,7 +1,7 @@
 import 'server-only';
 
-import { unstable_rethrow } from 'next/navigation';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { unstable_cache } from 'next/cache';
+import { createClient } from '@supabase/supabase-js';
 
 export interface HomepageDisplaySettings {
   show_filter_panel: boolean;
@@ -34,9 +34,22 @@ export function parseHomepageDisplay(value: unknown): HomepageDisplaySettings {
   };
 }
 
-export async function getHomepageDisplaySettings(): Promise<HomepageDisplaySettings> {
-  try {
-    const supabase = await createServerSupabaseClient();
+const getCachedHomepageDisplaySettings = unstable_cache(
+  async (): Promise<HomepageDisplaySettings> => {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !anonKey) {
+      throw new Error('Homepage display settings: Supabase environment variables missing');
+    }
+
+    const supabase = createClient(supabaseUrl, anonKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    });
+
     const { data, error } = await supabase
       .from('store_settings')
       .select('value')
@@ -44,13 +57,22 @@ export async function getHomepageDisplaySettings(): Promise<HomepageDisplaySetti
       .maybeSingle();
 
     if (error) {
-      console.error('[HOMEPAGE_DISPLAY_READ_ERROR]', error.message);
-      return DEFAULT_HOMEPAGE_DISPLAY;
+      throw new Error(error.message);
     }
 
     return data ? parseHomepageDisplay(data.value) : DEFAULT_HOMEPAGE_DISPLAY;
+  },
+  ['homepage-display-settings-v1'],
+  {
+    revalidate: 300,
+    tags: ['homepage-display-settings'],
+  }
+);
+
+export async function getHomepageDisplaySettings(): Promise<HomepageDisplaySettings> {
+  try {
+    return await getCachedHomepageDisplaySettings();
   } catch (error) {
-    unstable_rethrow(error);
     console.error('[HOMEPAGE_DISPLAY_READ_ERROR]', error);
     return DEFAULT_HOMEPAGE_DISPLAY;
   }
