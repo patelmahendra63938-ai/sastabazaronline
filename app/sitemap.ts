@@ -1,12 +1,13 @@
 import type { MetadataRoute } from 'next';
 import { createClient } from '@supabase/supabase-js';
 import { getActiveStorefrontCategories } from '@/lib/catalog/storefront-categories';
+import { getStorefrontFallbackProducts } from '@/lib/storefront/catalog-fallback';
 
 const BASE_URL = 'https://www.adhyeybrothers.in';
 
-// The catalog changes from the admin panel without a new Next.js build.
-// Keep the sitemap request-time fresh so newly activated products are exposed
-// to search-engine crawlers immediately instead of being held in a cached route.
+// Keep the sitemap request-time fresh for newly activated products, while also
+// maintaining a short-lived cached catalog snapshot so a transient Supabase
+// outage does not make product URLs disappear from the sitemap.
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
@@ -34,18 +35,27 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const [{ data: products, error }, activeCategories] = await Promise.all([
+  const [productResult, activeCategories, fallbackProducts] = await Promise.all([
     supabase
       .from('products')
       .select('id')
       .eq('is_active', true)
       .order('id', { ascending: true }),
     getActiveStorefrontCategories(),
+    getStorefrontFallbackProducts(),
   ]);
 
-  if (error || !products) {
-    console.error('Sitemap product fetch failed:', error?.message ?? 'Unknown error');
-    return staticRoutes;
+  let products = productResult.data || [];
+
+  if (productResult.error || products.length === 0) {
+    console.error(
+      'Sitemap product fetch failed; using cached fallback when available:',
+      productResult.error?.message ?? 'No products returned'
+    );
+
+    if (fallbackProducts.length > 0) {
+      products = fallbackProducts.map((product) => ({ id: product.id }));
+    }
   }
 
   const productRoutes: MetadataRoute.Sitemap = products.map(product => ({
