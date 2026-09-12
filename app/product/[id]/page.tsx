@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 
-import MeeshoReviewsProductInjector from '@/components/MeeshoReviewsProductInjector';
+import MeeshoReviewsPreview from '@/components/MeeshoReviewsPreview';
 import ProductDetailPageClient, { type ProductDetailType } from './ProductPageClient';
 
 // Product records can be changed from the admin panel without a new build.
@@ -57,7 +57,7 @@ export default async function ProductDetailPage({
         productId={id}
         initialProduct={initialProduct}
       />
-      <MeeshoReviewsProductInjector productId={id} />
+      <MeeshoReviewsPreview productId={id} />
     </>
   );
 }
