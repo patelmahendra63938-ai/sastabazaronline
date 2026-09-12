@@ -2,189 +2,46 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, CheckCircle2, FileSpreadsheet, Loader2, UploadCloud } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, ExternalLink, FileSpreadsheet, Loader2, Search, UploadCloud } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { normalizeProductPackage } from '@/lib/catalog/product-package';
 
-type Row = {
-  id: string; selected: boolean; title: string; sourceTitle: string; description: string;
-  brand: string; category: string; sku: string; size: string; stock: string;
-  mrp: string; price: string; hsn: string; gst: string; weight: string;
-  length: string; width: string; height: string; image: string; asin: string;
-  seoTitle: string; seoDescription: string;
-};
+type Row={id:string;source:string;relation:string;parentSku:string;productType:string;title:string;sourceTitle:string;description:string;sourceBrand:string;brand:string;category:string;sku:string;asin:string;size:string;color:string;stock:string;mrp:string;price:string;hsn:string;gst:string;weight:string;length:string;width:string;height:string;image:string;seoTitle:string;seoDescription:string};
+type ProductGroup={key:string;parent?:Row;variants:Row[];standalone?:Row};
+type Filter='all'|'ready'|'review'|'live';
+type LiveState={loading?:boolean;productId?:string;error?:string};
+const clean=(v:unknown)=>String(v??'').replace(/\s+/g,' ').trim();
+const norm=(v:string)=>v.toLowerCase().trim().replace(/[_\s]+/g,'-');
+const num=(v:unknown)=>clean(v).replace(/,/g,'').match(/\d+(?:\.\d+)?/)?.[0]||'';
+const banned=/\bamazon(?:\.in|\.com)?\b/gi;
+const storefront=(v:string)=>clean(v.replace(banned,'').replace(/\s{2,}/g,' '));
+const titleCase=(v:string)=>v.replace(/[_-]+/g,' ').toLowerCase().replace(/\b\w/g,c=>c.toUpperCase()).trim();
+const description=(title:string,type:string,color:string)=>storefront(`${title}. ${type?`${titleCase(type)}. `:''}${color?`Color: ${color}. `:''}Available in the listed size and color options.`).slice(0,700);
+const seo=(t:string)=>storefront(`${t} | ADHYEY BROTHERS`).slice(0,60);
+const seoDesc=(t:string,d:string)=>storefront(d||`Shop ${t} from ADHYEY BROTHERS.`).slice(0,155);
+const validUrl=(v:string)=>{try{return ['http:','https:'].includes(new URL(v).protocol)}catch{return false}};
+const SIZE_ORDER=['XXS','XS','S','M','L','XL','XXL','2XL','3XL','4XL','5XL','6XL','7XL','8XL','FREE SIZE'];
+function sizeRank(v:string){const s=clean(v).toUpperCase().replace(/\s+/g,' ');const alias=s==='XXXL'?'3XL':s==='XXXXL'?'4XL':s;const i=SIZE_ORDER.indexOf(alias);if(i>=0)return i;const n=Number(s.match(/\d+/)?.[0]);return Number.isFinite(n)&&n>0?100+n:1000}
+function sortVariants(v:Row[]){return [...v].sort((a,b)=>sizeRank(a.size)-sizeRank(b.size)||a.size.localeCompare(b.size)||a.color.localeCompare(b.color))}
+function unit(v:string,u:string,kind:'weight'|'length'){const n=Number(num(v));if(!n)return'';const x=clean(u).toLowerCase();if(kind==='weight'){if(x.includes('kg'))return String(n*1000);if(x.includes('lb')||x.includes('pound'))return String(Math.round(n*453.592*100)/100);return String(n)}if(x.includes('mm'))return String(n/10);if(x.includes('inch'))return String(Math.round(n*2.54*100)/100);return String(n)}
+function smartCategory(type:string,title:string,cats:string[]){const words=new Set(`${type} ${title}`.toLowerCase().replace(/[_-]/g,' ').split(/\W+/).filter(x=>x.length>2));let best='',score=0;for(const c of cats){const s=c.toLowerCase().split(/\W+/).filter(x=>x.length>2).filter(x=>words.has(x)).length;if(s>score){score=s;best=c}}return score?best:''}
+function rowProblem(r:Row){if(!r.title)return'Product name required';if(!r.category)return'Category needs review';if(r.sourceBrand&&norm(r.sourceBrand)!==norm('ADHYEY BROTHERS')&&!r.brand)return'Brand conflict needs review';if(!(Number(r.price)>0))return'Selling price required';if(Number(r.mrp||r.price)<Number(r.price))return'MRP must be ≥ price';if(!/^\d{4,8}$/.test(r.hsn))return'Verified numeric HSN required';if(r.gst===''||Number.isNaN(Number(r.gst)))return'Verified GST required';if(!validUrl(r.image))return'Image required';if(!(Number(r.weight)>0&&Number(r.length)>0&&Number(r.width)>0&&Number(r.height)>0))return'Weight + L/W/H required';if(!r.sku.trim())return'SKU required';return''}
 
-const aliases: Record<string, string[]> = {
-  title: ['item-name','product-name','title','item_name'], description: ['product-description','description','product_description'],
-  brand: ['brand-name','brand','brand_name'], sku: ['seller-sku','sku','seller_sku'], size: ['size-name','size','size_name'],
-  stock: ['quantity','stock','fulfillable-quantity','fulfillable_quantity'], price: ['price','standard-price','standard_price','your-price'],
-  mrp: ['mrp','list-price','list_price','maximum-retail-price'], image: ['main-image-url','main_image_url','image-url','image_url'],
-  asin: ['asin','asin1','external-product-id','external_product_id'], category: ['category','product-type','product_type','item-type','item_type'],
-  weight: ['item-weight','item_weight','package-weight','package_weight'], length: ['package-length','package_length'],
-  width: ['package-width','package_width'], height: ['package-height','package_height']
-};
+export default function CatalogImporter(){
+ const[rows,setRows]=useState<Row[]>([]),[files,setFiles]=useState<string[]>([]),[categories,setCategories]=useState<string[]>([]),[states,setStates]=useState<Record<string,LiveState>>({});
+ const[parsing,setParsing]=useState(false),[error,setError]=useState(''),[filter,setFilter]=useState<Filter>('all'),[query,setQuery]=useState('');
+ useEffect(()=>{supabase.from('categories').select('name').eq('is_active',true).order('display_order').then(({data})=>setCategories(data?.map(x=>x.name)||[]))},[]);
+ const update=(id:string,field:keyof Row,value:string)=>setRows(p=>p.map(r=>r.id===id?{...r,[field]:value}:r));
+ async function parseFiles(list:FileList|null){if(!list?.length)return;setParsing(true);setError('');setStates({});try{const XLSX=await import('xlsx');const next:Row[]=[];for(const file of Array.from(list)){const wb=XLSX.read(await file.arrayBuffer(),{type:'array'});const tn=wb.SheetNames.find(n=>norm(n)==='template');if(tn){const matrix=XLSX.utils.sheet_to_json<unknown[]>(wb.Sheets[tn],{header:1,defval:'',raw:false});const hi=matrix.findIndex(r=>{const a=(r||[]).map(x=>norm(clean(x)));return a.includes('title')&&a.includes('sku')});if(hi<0)throw new Error(`${file.name}: listing headers not found.`);const h=(matrix[hi]||[]).map(clean);const ix=(...names:string[])=>h.findIndex(x=>names.map(norm).includes(norm(x)));const at=(r:unknown[],...names:string[])=>{const i=ix(...names);return i>=0?clean(r[i]):''};for(let ri=hi+3;ri<matrix.length;ri++){const r=matrix[ri]||[],sourceTitle=at(r,'Title','Item Name'),sku=at(r,'SKU');if(!sourceTitle&&!sku)continue;const productType=at(r,'Product Type'),relation=at(r,'Parentage Level')||'Standalone',parentSku=at(r,'Parent SKU'),sourceBrand=at(r,'Brand Name'),title=storefront(sourceTitle||sku).slice(0,180),color=at(r,'Color','Color Name'),size=at(r,'Size','Size Name'),price=num(at(r,'Your Price INR','Your Price','Price')),mrp=num(at(r,'Maximum Retail Price','MRP','List Price'))||price,d=description(title,productType,color);next.push({id:`${file.name}-${ri}-${sku}`,source:file.name,relation,parentSku,productType,title,sourceTitle,description:d,sourceBrand,brand:sourceBrand&&norm(sourceBrand)!==norm('ADHYEY BROTHERS')?'':'ADHYEY BROTHERS',category:smartCategory(productType,title,categories),sku,asin:at(r,'Product Id','ASIN'),size,color,stock:num(at(r,'Quantity','Stock'))||'0',mrp,price,hsn:'',gst:'',weight:unit(at(r,'Package Weight','Item Package Weight'),at(r,'Package Weight Unit','Item Package Weight Unit'),'weight'),length:unit(at(r,'Item Package Length','Package Length'),at(r,'Package Length Unit'),'length'),width:unit(at(r,'Item Package Width','Package Width'),at(r,'Package Width Unit'),'length'),height:unit(at(r,'Item Package Height','Package Height'),at(r,'Package Height Unit'),'length'),image:at(r,'Main Image URL','Image URL'),seoTitle:seo(title),seoDescription:seoDesc(title,d)})}}
+ else{const raw=XLSX.utils.sheet_to_json<Record<string,unknown>>(wb.Sheets[wb.SheetNames[0]],{defval:''});for(let ri=0;ri<raw.length;ri++){const m=new Map(Object.entries(raw[ri]).map(([a,b])=>[norm(a),clean(b)]));const pick=(...a:string[])=>a.map(norm).map(x=>m.get(x)).find(Boolean)||'';const sourceTitle=pick('item-name','title','product-name'),sku=pick('seller-sku','sku');if(!sourceTitle&&!sku)continue;const title=storefront(sourceTitle||sku).slice(0,180),color=pick('color'),size=pick('size-name','size'),d=description(title,'',color),price=num(pick('price','your-price')),sourceBrand=pick('brand-name','brand');next.push({id:`${file.name}-${ri}-${sku}`,source:file.name,relation:'Standalone',parentSku:'',productType:'',title,sourceTitle,description:d,sourceBrand,brand:sourceBrand&&norm(sourceBrand)!==norm('ADHYEY BROTHERS')?'':'ADHYEY BROTHERS',category:smartCategory('',title,categories),sku,asin:pick('asin1','asin'),size,color,stock:num(pick('quantity','stock'))||'0',mrp:num(pick('mrp','maximum-retail-price','list-price'))||price,price,hsn:'',gst:'',weight:'',length:'',width:'',height:'',image:pick('image-url','main-image-url'),seoTitle:seo(title),seoDescription:seoDesc(title,d)})}}}setRows(next);setFiles(Array.from(list).map(f=>f.name))}catch(e:any){setError(e?.message||'Could not read report files.')}finally{setParsing(false)}}
+ const products=useMemo(()=>{const parents=new Map<string,Row>(),children=new Map<string,Row[]>(),standalone:ProductGroup[]=[];for(const r of rows){const rel=r.relation.toLowerCase();if(rel==='parent')parents.set(r.sku,r);else if(rel==='child'&&r.parentSku)children.set(r.parentSku,[...(children.get(r.parentSku)||[]),r]);else standalone.push({key:r.id,standalone:r,variants:[r]})}const grouped:ProductGroup[]=[];for(const[key,p]of parents)grouped.push({key,parent:p,variants:sortVariants(children.get(key)||[])});for(const[key,v]of children)if(!parents.has(key))grouped.push({key,variants:sortVariants(v)});return[...grouped,...standalone]},[rows]);
+ const productProblem=(g:ProductGroup)=>{const b=g.parent||g.standalone||g.variants[0];if(!b)return'Invalid product';if(!g.variants.length)return'At least one sellable variant required';const first=g.variants[0];const baseIssue=rowProblem({...b,sku:first.sku,price:first.price,mrp:first.mrp,stock:first.stock,weight:first.weight,length:first.length,width:first.width,height:first.height,image:b.image||first.image});if(baseIssue)return baseIssue;for(const v of g.variants){const p=rowProblem({...v,title:b.title,category:b.category,brand:b.brand,sourceBrand:b.sourceBrand,hsn:b.hsn,gst:b.gst,image:v.image||b.image});if(p)return`${v.size||v.sku}: ${p}`}const prices=new Set(g.variants.map(v=>`${Number(v.price)}|${Number(v.mrp||v.price)}`));if(prices.size>1)return'Variant prices differ; website currently uses one product price';const sizes=new Set<string>();for(const v of g.variants){const k=norm(v.size||'Free Size');if(sizes.has(k))return`Duplicate size ${v.size||'Free Size'}; inventory requires unique size`;sizes.add(k)}return''};
+ async function ownImage(url:string,key:string){const res=await fetch(url);if(!res.ok)throw new Error('Could not download source image');const blob=await res.blob();if(!blob.type.startsWith('image/'))throw new Error('Source image is not a valid image');const ext=blob.type.includes('png')?'png':blob.type.includes('webp')?'webp':'jpg';const name=`catalog-${Date.now()}-${key.replace(/[^a-z0-9]/gi,'').slice(-20)||'product'}.${ext}`;const{error:e}=await supabase.storage.from('product-images').upload(name,blob,{contentType:blob.type,upsert:false});if(e)throw e;return supabase.storage.from('product-images').getPublicUrl(name).data.publicUrl}
+ async function goLive(g:ProductGroup){const issue=productProblem(g);if(issue)return;const b=g.parent||g.standalone||g.variants[0];if(!b)return;setStates(s=>({...s,[g.key]:{loading:true}}));let productId='';try{const variants=sortVariants(g.variants);const first=variants[0];const image=await ownImage(b.image||first.image,g.key);const totalStock=variants.reduce((n,v)=>n+(Number(v.stock)||0),0);const payload={title:storefront(b.title),description:storefront(b.description),category:b.category,brand:b.brand||null,price:Number(first.price),mrp:Number(first.mrp||first.price),stock:totalStock,hsn_code:b.hsn,gst_rate:Number(b.gst),net_weight_grams:Number(first.weight),package_length_cm:Number(first.length),package_width_cm:Number(first.width),package_height_cm:Number(first.height),images:[image],is_active:false};const created=await supabase.from('products').insert([payload]).select('id').single();if(created.error||!created.data)throw created.error||new Error('Product create failed');productId=created.data.id;const inv=variants.map(v=>({product_id:productId,size:v.size.trim()||'Free Size',sku:v.sku.trim(),weight_kg:Number(v.weight)/1000,available_quantity:Number(v.stock)||0,reserved_quantity:0,sold_quantity:0,reorder_level:5}));const saved=await supabase.from('inventory').upsert(inv,{onConflict:'product_id,size'});if(saved.error)throw saved.error;const active=await supabase.from('products').update({is_active:true}).eq('id',productId);if(active.error)throw active.error;setStates(s=>({...s,[g.key]:{productId}}))}catch(e:any){if(productId)await supabase.from('products').delete().eq('id',productId);setStates(s=>({...s,[g.key]:{error:e?.message||'Go Live failed'}}))}}
+ const shown=useMemo(()=>products.filter(g=>{const b=g.parent||g.standalone||g.variants[0],q=query.toLowerCase(),live=!!states[g.key]?.productId,issue=productProblem(g);if(!b)return false;const match=!q||`${b.title} ${b.sku} ${b.asin} ${g.variants.map(v=>`${v.sku} ${v.size} ${v.color}`).join(' ')}`.toLowerCase().includes(q);return match&&(filter==='all'||filter==='ready'&&!issue&&!live||filter==='review'&&!!issue||filter==='live'&&live)}),[products,query,filter,states]);
+ const input='w-full rounded-lg border border-blue-200 bg-blue-50 px-2 py-1.5 text-xs focus:border-blue-500 focus:outline-none',required='w-full rounded-lg border border-amber-300 bg-amber-50 px-2 py-1.5 text-xs focus:border-amber-500 focus:outline-none';
+ return <main className="min-h-screen bg-[#F8F9FB] px-4 py-8 sm:px-6 lg:px-8"><div className="mx-auto max-w-[1600px] space-y-5"><div className="flex items-center gap-3"><Link href="/admin/add-product" className="flex h-10 w-10 items-center justify-center rounded-xl border bg-white"><ArrowLeft size={18}/></Link><div><h1 className="text-2xl font-black text-indigo-950">Catalog Import</h1><p className="text-sm text-gray-500">EDIT → CHECK → GO LIVE. Each product publishes separately.</p></div></div>
+ <section className="rounded-3xl border bg-white p-6 shadow-sm"><div className="mb-4 flex items-center gap-3"><FileSpreadsheet className="text-indigo-800"/><div><b>Upload source reports</b><p className="text-xs text-gray-500">Product content is cleaned before publishing.</p></div></div><label className="flex min-h-28 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed bg-gray-50"><UploadCloud className="mb-2 text-indigo-800"/><b>{parsing?'Reading files…':files.length?`${files.length} files loaded`:'Choose report files'}</b><input type="file" multiple accept=".xlsx,.xlsm" className="hidden" onChange={e=>parseFiles(e.target.files)}/></label>{error&&<p className="mt-3 rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">{error}</p>}</section>
+ {rows.length>0&&<><section className="rounded-3xl border bg-white p-4"><div className="flex flex-wrap gap-2"><div className="relative min-w-64 flex-1"><Search size={15} className="absolute left-3 top-3 text-gray-400"/><input className="w-full rounded-xl border py-2 pl-9 pr-3 text-sm" placeholder="Search product, SKU, ASIN…" value={query} onChange={e=>setQuery(e.target.value)}/></div>{(['all','ready','review','live'] as Filter[]).map(f=><button key={f} onClick={()=>setFilter(f)} className={`rounded-xl px-3 py-2 text-xs font-black ${filter===f?'bg-indigo-950 text-white':'bg-gray-100'}`}>{f==='all'?'All':f==='ready'?'Ready':f==='review'?'Needs Review':'Live'}</button>)}</div></section>{shown.map(g=><ProductCard key={g.key} g={g} update={update} categories={categories} input={input} required={required} status={productProblem(g)} live={states[g.key]} goLive={()=>goLive(g)}/>)}</>}</div></main>}
 
-function norm(v: unknown) { return String(v ?? '').trim(); }
-function key(v: string) { return v.toLowerCase().trim().replace(/\s+/g, '-'); }
-function pick(record: Record<string, unknown>, field: string) {
-  const map = new Map(Object.entries(record).map(([k, v]) => [key(k), v]));
-  for (const a of aliases[field] || []) if (map.has(a)) return norm(map.get(a));
-  return '';
-}
-function cleanTitle(value: string) {
-  return value.replace(/\s+/g, ' ').replace(/\s*[|,-]\s*Amazon\s*$/i, '').trim().slice(0, 180);
-}
-function seoDescription(title: string, description: string) {
-  const base = description.replace(/\s+/g, ' ').trim() || `Shop ${title} from ADHYEY BROTHERS.`;
-  return base.slice(0, 155);
-}
-function numeric(value: string) {
-  const match = value.replace(/,/g, '').match(/\d+(?:\.\d+)?/);
-  return match?.[0] || '';
-}
-function validHttp(value: string) {
-  try { const u = new URL(value); return u.protocol === 'https:' || u.protocol === 'http:'; } catch { return false; }
-}
-
-export default function AmazonExcelImportPage() {
-  const [fileName, setFileName] = useState('');
-  const [rows, setRows] = useState<Row[]>([]);
-  const [categories, setCategories] = useState<string[]>(['Fashion & Apparel']);
-  const [parsing, setParsing] = useState(false);
-  const [importing, setImporting] = useState(false);
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    supabase.from('categories').select('name').eq('is_active', true).order('display_order')
-      .then(({ data }) => { if (data?.length) setCategories(data.map(x => x.name)); });
-  }, []);
-
-  const selectedCount = useMemo(() => rows.filter(r => r.selected).length, [rows]);
-  const update = (id: string, field: keyof Row, value: string | boolean) =>
-    setRows(prev => prev.map(r => r.id === id ? { ...r, [field]: value } : r));
-
-  async function parseFile(file?: File) {
-    if (!file) return;
-    setFileName(file.name); setRows([]); setMessage(''); setError(''); setParsing(true);
-    try {
-      const XLSX = await import('xlsx');
-      const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' });
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' });
-      if (!raw.length) throw new Error('No product rows found in this Excel sheet.');
-      const fallbackCategory = categories[0] || 'Fashion & Apparel';
-      const parsed = raw.map((record, index): Row | null => {
-        const sourceTitle = pick(record, 'title');
-        const sku = pick(record, 'sku');
-        if (!sourceTitle && !sku) return null;
-        const title = cleanTitle(sourceTitle || sku);
-        const description = pick(record, 'description');
-        const sourceCategory = pick(record, 'category');
-        const category = categories.find(c => key(c) === key(sourceCategory)) || fallbackCategory;
-        const sourcePrice = numeric(pick(record, 'price'));
-        const sourceMrp = numeric(pick(record, 'mrp')) || sourcePrice;
-        return {
-          id: `${index}-${sku || title}`, selected: true, title, sourceTitle, description,
-          brand: pick(record, 'brand') || 'ADHYEY BROTHERS', category, sku,
-          size: pick(record, 'size') || 'Free Size', stock: numeric(pick(record, 'stock')) || '0',
-          mrp: sourceMrp, price: sourcePrice, hsn: '6204', gst: '5',
-          weight: numeric(pick(record, 'weight')), length: numeric(pick(record, 'length')),
-          width: numeric(pick(record, 'width')), height: numeric(pick(record, 'height')),
-          image: pick(record, 'image'), asin: pick(record, 'asin'),
-          seoTitle: `${title} | ADHYEY BROTHERS`.slice(0, 60), seoDescription: seoDescription(title, description)
-        };
-      }).filter((r): r is Row => Boolean(r));
-      if (!parsed.length) throw new Error('Could not find product title/SKU columns. Check that this is an Amazon Listings report.');
-      setRows(parsed);
-      setMessage(`${parsed.length} product rows loaded. Review them before import.`);
-    } catch (e: any) { setError(e?.message || 'Could not read this Excel file.'); }
-    finally { setParsing(false); }
-  }
-
-  function validate(r: Row) {
-    if (!r.title.trim()) return 'Title required';
-    if (!r.category) return 'Category required';
-    const price = Number(r.price), mrp = Number(r.mrp || r.price), stock = Number(r.stock);
-    if (!(price > 0)) return 'Selling price required';
-    if (mrp < price) return 'MRP must be ≥ price';
-    if (!Number.isInteger(stock) || stock < 0) return 'Stock must be 0 or more';
-    if (!r.hsn.trim() || !(Number(r.gst) >= 0)) return 'HSN/GST required';
-    if (!validHttp(r.image)) return 'Valid image URL required';
-    try { normalizeProductPackage({ net_weight_grams: r.weight, package_length_cm: r.length, package_width_cm: r.width, package_height_cm: r.height }); }
-    catch (e: any) { return e?.message || 'Package details required'; }
-    return '';
-  }
-
-  async function importSelected() {
-    const selected = rows.filter(r => r.selected);
-    if (!selected.length) { setError('Select at least one product.'); return; }
-    const invalid = selected.map(r => ({ r, reason: validate(r) })).find(x => x.reason);
-    if (invalid) { setError(`${invalid.r.title}: ${invalid.reason}`); return; }
-    setImporting(true); setError(''); setMessage('');
-    let success = 0; const failures: string[] = [];
-    for (const r of selected) {
-      try {
-        const pkg = normalizeProductPackage({ net_weight_grams: r.weight, package_length_cm: r.length, package_width_cm: r.width, package_height_cm: r.height });
-        const { data: product, error: productError } = await supabase.from('products').insert([{
-          title: r.title.trim(), description: r.description.trim() || r.seoDescription, category: r.category,
-          brand: r.brand.trim() || 'ADHYEY BROTHERS', price: Number(r.price), mrp: Number(r.mrp || r.price),
-          stock: Number(r.stock), hsn_code: r.hsn.trim(), gst_rate: Number(r.gst), net_weight_grams: pkg.weight,
-          package_length_cm: pkg.length, package_width_cm: pkg.width, package_height_cm: pkg.height,
-          images: [r.image.trim()], is_active: true
-        }]).select('id').single();
-        if (productError || !product) throw productError || new Error('Product insert failed');
-        const { error: inventoryError } = await supabase.from('inventory').upsert([{
-          product_id: product.id, size: r.size.trim() || 'Free Size', sku: r.sku.trim() || `AMZ-${Date.now()}-${success + 1}`,
-          weight_kg: pkg.weight / 1000, available_quantity: Number(r.stock), reserved_quantity: 0,
-          sold_quantity: 0, reorder_level: 5
-        }], { onConflict: 'product_id,size' });
-        if (inventoryError) { await supabase.from('products').delete().eq('id', product.id); throw inventoryError; }
-        success++;
-      } catch (e: any) { failures.push(`${r.title}: ${e?.message || 'Import failed'}`); }
-    }
-    setImporting(false);
-    if (success) setMessage(`${success} product${success === 1 ? '' : 's'} imported successfully.`);
-    if (failures.length) setError(`${failures.length} failed. ${failures.slice(0, 2).join(' | ')}`);
-    if (success) setRows(prev => prev.map(r => r.selected && !failures.some(f => f.startsWith(`${r.title}:`)) ? { ...r, selected: false } : r));
-  }
-
-  const input = 'w-full rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-indigo-500 focus:outline-none';
-
-  return (
-    <main className="min-h-screen bg-[#F8F9FB] px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl space-y-6">
-        <div className="flex items-center gap-3">
-          <Link href="/admin/add-product" className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-700 shadow-sm"><ArrowLeft size={18}/></Link>
-          <div><h1 className="text-xl font-black text-indigo-950 sm:text-2xl">Amazon Excel Import</h1><p className="mt-1 text-xs text-gray-500 sm:text-sm">Upload → preview → edit → validate → import selected products.</p></div>
-        </div>
-
-        <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:p-7">
-          <div className="mb-5 flex items-start gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-50 text-amber-800"><FileSpreadsheet size={22}/></div><div><h2 className="text-sm font-black text-gray-900">Amazon Seller Central report</h2><p className="mt-1 text-xs text-gray-500">.xlsx and .xlsm supported. Macros are never executed.</p></div></div>
-          <label className="flex min-h-36 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 px-5 text-center hover:border-amber-400">
-            {parsing ? <Loader2 className="mb-3 animate-spin text-amber-700"/> : <UploadCloud size={30} className="mb-3 text-amber-700"/>}
-            <span className="text-sm font-black text-gray-900">{fileName || 'Choose Amazon Excel file'}</span><span className="mt-1 text-xs text-gray-500">Nothing is imported until you press Import Selected</span>
-            <input type="file" accept=".xlsx,.xlsm" className="hidden" disabled={parsing || importing} onChange={e => parseFile(e.target.files?.[0])}/>
-          </label>
-          {message && <div className="mt-4 rounded-xl border border-green-200 bg-green-50 p-3 text-sm font-semibold text-green-800">{message}</div>}
-          {error && <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-800">{error}</div>}
-        </section>
-
-        {rows.length > 0 && <section className="rounded-3xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4 sm:p-5"><div><h2 className="font-black text-gray-900">Staging Preview</h2><p className="text-xs text-gray-500">{selectedCount} of {rows.length} selected. Confirm physical package details before import.</p></div><button onClick={importSelected} disabled={importing || !selectedCount} className="inline-flex items-center gap-2 rounded-xl bg-indigo-950 px-4 py-2.5 text-sm font-black text-white disabled:opacity-50">{importing ? <Loader2 size={16} className="animate-spin"/> : <CheckCircle2 size={16}/>} Import Selected</button></div>
-          <div className="overflow-x-auto"><table className="min-w-[1800px] w-full text-left text-xs"><thead className="bg-gray-50 text-gray-600"><tr>{['Use','Product / SEO','Category','Size / SKU','Stock','MRP','Sell Price','HSN','GST %','Weight g','L cm','W cm','H cm','Image URL','Status'].map(h => <th key={h} className="px-3 py-3 font-black">{h}</th>)}</tr></thead><tbody className="divide-y">
-            {rows.map(r => { const issue = validate(r); return <tr key={r.id} className={r.selected ? 'bg-white' : 'bg-gray-50 opacity-60'}>
-              <td className="px-3 py-3 align-top"><input type="checkbox" checked={r.selected} onChange={e => update(r.id,'selected',e.target.checked)}/></td>
-              <td className="px-3 py-3 align-top w-80"><input className={input} value={r.title} onChange={e => { update(r.id,'title',e.target.value); }}/><textarea className={`${input} mt-2 min-h-16`} value={r.description} placeholder="Description" onChange={e => update(r.id,'description',e.target.value)}/><div className="mt-2 text-[10px] text-indigo-700"><b>Auto SEO:</b> {r.seoTitle}<br/>{r.seoDescription}</div></td>
-              <td className="px-3 py-3 align-top"><select className={input} value={r.category} onChange={e => update(r.id,'category',e.target.value)}>{categories.map(c => <option key={c}>{c}</option>)}</select></td>
-              <td className="px-3 py-3 align-top w-44"><input className={input} value={r.size} placeholder="Size" onChange={e => update(r.id,'size',e.target.value)}/><input className={`${input} mt-2`} value={r.sku} placeholder="SKU" onChange={e => update(r.id,'sku',e.target.value)}/></td>
-              {(['stock','mrp','price','hsn','gst','weight','length','width','height'] as (keyof Row)[]).map(f => <td key={f} className="px-3 py-3 align-top"><input className={`${input} w-24`} value={String(r[f])} onChange={e => update(r.id,f,e.target.value)}/></td>)}
-              <td className="px-3 py-3 align-top"><input className={`${input} w-72`} value={r.image} placeholder="https://..." onChange={e => update(r.id,'image',e.target.value)}/></td>
-              <td className="px-3 py-3 align-top w-44">{issue ? <span className="font-bold text-red-600">⚠ {issue}</span> : <span className="font-bold text-green-700">✓ Ready</span>}</td>
-            </tr>})}
-          </tbody></table></div>
-        </section>}
-      </div>
-    </main>
-  );
-}
+function ProductCard({g,update,categories,input,required,status,live,goLive}:{g:ProductGroup;update:(id:string,f:keyof Row,v:string)=>void;categories:string[];input:string;required:string;status:string;live?:LiveState;goLive:()=>void}){const base=g.parent||g.standalone||g.variants[0];if(!base)return null;const variants=sortVariants(g.variants);return <article className="overflow-hidden rounded-3xl border bg-white shadow-sm"><div className="grid gap-4 p-5 lg:grid-cols-[120px_1fr_300px]"><div className="flex h-28 items-center justify-center overflow-hidden rounded-2xl border bg-gray-50">{validUrl(base.image||variants[0]?.image||'')?<img src={base.image||variants[0]?.image} alt="Product preview" className="h-full w-full object-contain"/>:<span className="text-xs text-gray-400">No image</span>}</div><div><div className="mb-2 text-xs text-gray-500">{g.parent?`Grouped product • ${variants.length} variants`:'Standalone product'}</div><input className={input} value={base.title} onChange={e=>update(base.id,'title',e.target.value)}/><textarea className={`${input} mt-2 min-h-20`} value={base.description} onChange={e=>update(base.id,'description',e.target.value)}/><p className="mt-2 text-[10px] font-bold text-indigo-600">SEO: {base.seoTitle}</p></div><div className="grid grid-cols-2 gap-2"><label className="text-[10px] font-bold">Brand<input className={base.brand?input:required} value={base.brand} onChange={e=>update(base.id,'brand',e.target.value)}/></label><label className="text-[10px] font-bold">Category<select className={base.category?input:required} value={base.category} onChange={e=>update(base.id,'category',e.target.value)}><option value="">Review</option>{categories.map(c=><option key={c}>{c}</option>)}</select></label><label className="text-[10px] font-bold">HSN<input className={required} value={base.hsn} onChange={e=>update(base.id,'hsn',e.target.value)}/></label><label className="text-[10px] font-bold">GST %<input className={required} value={base.gst} onChange={e=>update(base.id,'gst',e.target.value)}/></label><div className="col-span-2 mt-1">{live?.productId?<div className="space-y-2"><span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-xs font-black text-green-800"><CheckCircle2 size={14}/> LIVE</span><div className="flex gap-2"><Link className="rounded-lg bg-indigo-950 px-3 py-2 text-xs font-bold text-white" href={`/product/${live.productId}`}>View Product <ExternalLink className="inline" size={12}/></Link><Link className="rounded-lg border px-3 py-2 text-xs font-bold" href="/admin/products">Products Page</Link></div></div>:<><div className={`mb-2 rounded-lg px-3 py-2 text-xs font-bold ${status?'bg-amber-100 text-amber-800':'bg-green-100 text-green-800'}`}>{status||'CHECK PASSED'}</div><button onClick={goLive} disabled={!!status||live?.loading} className="w-full rounded-xl bg-green-600 px-4 py-2.5 text-xs font-black text-white disabled:cursor-not-allowed disabled:bg-gray-300">{live?.loading?<><Loader2 className="mr-1 inline animate-spin" size={14}/>GOING LIVE…</>:'GO LIVE'}</button>{live?.error&&<p className="mt-2 text-xs font-bold text-red-600">{live.error}</p>}</>}</div></div></div>
+ <div className="border-t bg-slate-50/50 p-4"><div className="mb-3 flex items-center justify-between"><b>Variants ({variants.length})</b><span className="text-xs text-gray-500">Auto order: S → M → L → XL → XXL → 3XL…</span></div><div className="overflow-x-auto"><table className="min-w-[1350px] w-full text-left text-xs"><thead><tr>{['Size','Color','SKU','Stock','Price ₹','MRP ₹','Weight g','L cm','W cm','H cm','Image'].map(x=><th key={x} className="px-2 py-2">{x}</th>)}</tr></thead><tbody>{variants.map(v=><tr key={v.id} className="border-t"><td className="p-2"><input className={input} value={v.size} onChange={e=>update(v.id,'size',e.target.value)}/></td><td className="p-2"><input className={input} value={v.color} onChange={e=>update(v.id,'color',e.target.value)}/></td><td className="p-2"><input className={v.sku?input:required} value={v.sku} onChange={e=>update(v.id,'sku',e.target.value)}/></td><td className="p-2"><input className={input} value={v.stock} onChange={e=>update(v.id,'stock',e.target.value)}/></td><td className="p-2"><input className={v.price?input:required} value={v.price} onChange={e=>update(v.id,'price',e.target.value)}/></td><td className="p-2"><input className={v.mrp?input:required} value={v.mrp} onChange={e=>update(v.id,'mrp',e.target.value)}/></td>{(['weight','length','width','height'] as (keyof Row)[]).map(f=><td className="p-2" key={f}><input className={v[f]?input:required} value={String(v[f])} onChange={e=>update(v.id,f,e.target.value)}/></td>)}<td className="p-2"><input className={v.image||base.image?input:required} value={v.image} placeholder={base.image?'Uses product image':''} onChange={e=>update(v.id,'image',e.target.value)}/></td></tr>)}</tbody></table></div></div></article>}
