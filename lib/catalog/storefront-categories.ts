@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { CATEGORY_ENGINE } from '@/lib/category-attributes';
+import { getStorefrontFallbackProducts } from '@/lib/storefront/catalog-fallback';
 
 export interface StorefrontCategoryProduct {
   id: string;
@@ -144,7 +145,7 @@ export async function getActiveStorefrontCategories() {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const [productsResult, categoriesResult] = await Promise.all([
+  const [productsResult, categoriesResult, fallbackProducts] = await Promise.all([
     supabase
       .from('products')
       .select('id, title, description, category')
@@ -154,15 +155,37 @@ export async function getActiveStorefrontCategories() {
       .select('id, name, homepage_featured, homepage_display_order, homepage_image_url, display_order')
       .eq('is_active', true)
       .order('display_order', { ascending: true }),
+    getStorefrontFallbackProducts(),
   ]);
 
-  if (productsResult.error) {
-    console.error('Active storefront category product lookup failed:', productsResult.error.message);
-    return [] as ActiveStorefrontCategory[];
+  let products = (productsResult.data || []) as StorefrontCategoryProduct[];
+  if (productsResult.error || products.length === 0) {
+    console.error(
+      'Active storefront category product lookup failed; using cached catalog when available:',
+      productsResult.error?.message ?? 'No products returned'
+    );
+
+    if (fallbackProducts.length > 0) {
+      products = fallbackProducts.map(product => ({
+        id: product.id,
+        title: product.title || null,
+        description: product.description || null,
+        category: product.category || null,
+      }));
+    }
+  }
+
+  if (products.length === 0) return [] as ActiveStorefrontCategory[];
+
+  if (categoriesResult.error) {
+    console.error(
+      'Active storefront category merchandising lookup failed; using derived category ordering:',
+      categoriesResult.error.message
+    );
   }
 
   return buildActiveStorefrontCategories(
-    (productsResult.data || []) as StorefrontCategoryProduct[],
+    products,
     (categoriesResult.data || []) as StorefrontCategoryRow[]
   );
 }

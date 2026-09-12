@@ -6,10 +6,13 @@ import { createClient } from '@supabase/supabase-js';
 export interface StorefrontFallbackProduct {
   id: string;
   title: string;
+  description?: string | null;
   price: number | string | null;
   mrp?: number | string | null;
   category?: string | null;
   images?: string[] | null;
+  video?: string | null;
+  is_active?: boolean | null;
   stock?: number | null;
   inventory?: Array<{
     size?: string | null;
@@ -36,11 +39,11 @@ const getCachedStorefrontFallbackProducts = unstable_cache(
     const { data, error } = await supabase
       .from('products')
       .select(
-        'id, title, price, mrp, category, images, stock, inventory(size, available_quantity)'
+        'id, title, description, price, mrp, category, images, video, is_active, stock, inventory(size, available_quantity)'
       )
       .eq('is_active', true)
       .order('created_at', { ascending: false })
-      .limit(16);
+      .limit(100);
 
     if (error) {
       throw new Error(`Storefront fallback cache refresh failed: ${error.message}`);
@@ -48,7 +51,7 @@ const getCachedStorefrontFallbackProducts = unstable_cache(
 
     return (data || []) as StorefrontFallbackProduct[];
   },
-  ['storefront-fallback-products-v1'],
+  ['storefront-fallback-products-v2'],
   {
     revalidate: 300,
     tags: ['storefront-products'],
@@ -62,4 +65,10 @@ export async function getStorefrontFallbackProducts(): Promise<StorefrontFallbac
     console.error('[STOREFRONT_FALLBACK_CACHE_ERROR]', error);
     return [];
   }
+}
+
+export async function getStorefrontFallbackProduct(id: string) {
+  if (!id) return null;
+  const products = await getStorefrontFallbackProducts();
+  return products.find(product => product.id === id) || null;
 }

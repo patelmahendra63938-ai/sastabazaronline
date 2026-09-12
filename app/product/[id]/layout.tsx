@@ -5,6 +5,7 @@ import { cache } from 'react';
 import ProductReviews from '@/components/ProductReviews';
 import { resolveStorefrontImageSrc } from '@/lib/storefront-image';
 import { classifyStorefrontCategory } from '@/lib/catalog/storefront-categories';
+import { getStorefrontFallbackProduct } from '@/lib/storefront/catalog-fallback';
 import {
   CUSTOMER_SHIPPING_MAX_INR,
   SHIPPING_HANDLING_MAX_DAYS,
@@ -56,7 +57,8 @@ const getProduct = cache(async (id: string): Promise<ProductSeoRecord | null> =>
   const supabase = getSupabaseClient();
   if (!supabase) {
     console.error('Product SEO: Supabase environment variables missing');
-    return null;
+    const fallback = await getStorefrontFallbackProduct(id);
+    return fallback as ProductSeoRecord | null;
   }
 
   const { data, error } = await supabase
@@ -66,12 +68,13 @@ const getProduct = cache(async (id: string): Promise<ProductSeoRecord | null> =>
     .maybeSingle();
 
   if (error) {
-    console.error('Product SEO fetch failed:', {
+    console.error('Product SEO fetch failed; using cached storefront record when available:', {
       message: error.message,
       code: error.code,
       productId: id,
     });
-    return null;
+    const fallback = await getStorefrontFallbackProduct(id);
+    return fallback as ProductSeoRecord | null;
   }
 
   return (data as ProductSeoRecord | null) || null;
@@ -133,7 +136,16 @@ function getVideoUploadDate(videoUrl: string): string | undefined {
 
 async function getProductAvailability(productId: string): Promise<string> {
   const supabase = getSupabaseClient();
-  if (!supabase) return 'https://schema.org/InStock';
+  if (!supabase) {
+    const fallback = await getStorefrontFallbackProduct(productId);
+    const total = (fallback?.inventory || []).reduce(
+      (sum, row) => sum + Math.max(0, Number(row.available_quantity ?? 0)),
+      0
+    );
+    return total > 0 || Number(fallback?.stock ?? 0) > 0
+      ? 'https://schema.org/InStock'
+      : 'https://schema.org/OutOfStock';
+  }
 
   const { data, error } = await supabase
     .from('inventory')
@@ -141,11 +153,18 @@ async function getProductAvailability(productId: string): Promise<string> {
     .eq('product_id', productId);
 
   if (error) {
-    console.error('Product inventory SEO fetch failed:', {
+    console.error('Product inventory SEO fetch failed; using cached storefront stock when available:', {
       message: error.message,
       productId,
     });
-    return 'https://schema.org/InStock';
+    const fallback = await getStorefrontFallbackProduct(productId);
+    const total = (fallback?.inventory || []).reduce(
+      (sum, row) => sum + Math.max(0, Number(row.available_quantity ?? 0)),
+      0
+    );
+    return total > 0 || Number(fallback?.stock ?? 0) > 0
+      ? 'https://schema.org/InStock'
+      : 'https://schema.org/OutOfStock';
   }
 
   const rows = (data ?? []) as InventoryRow[];
