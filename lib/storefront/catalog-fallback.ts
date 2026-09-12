@@ -1,0 +1,65 @@
+import 'server-only';
+
+import { unstable_cache } from 'next/cache';
+import { createClient } from '@supabase/supabase-js';
+
+export interface StorefrontFallbackProduct {
+  id: string;
+  title: string;
+  price: number | string | null;
+  mrp?: number | string | null;
+  category?: string | null;
+  images?: string[] | null;
+  stock?: number | null;
+  inventory?: Array<{
+    size?: string | null;
+    available_quantity?: number | null;
+  }> | null;
+}
+
+const getCachedStorefrontFallbackProducts = unstable_cache(
+  async (): Promise<StorefrontFallbackProduct[]> => {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !anonKey) {
+      throw new Error('Storefront fallback cache: Supabase environment variables missing');
+    }
+
+    const supabase = createClient(supabaseUrl, anonKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    });
+
+    const { data, error } = await supabase
+      .from('products')
+      .select(
+        'id, title, price, mrp, category, images, stock, inventory(size, available_quantity)'
+      )
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(16);
+
+    if (error) {
+      throw new Error(`Storefront fallback cache refresh failed: ${error.message}`);
+    }
+
+    return (data || []) as StorefrontFallbackProduct[];
+  },
+  ['storefront-fallback-products-v1'],
+  {
+    revalidate: 300,
+    tags: ['storefront-products'],
+  }
+);
+
+export async function getStorefrontFallbackProducts(): Promise<StorefrontFallbackProduct[]> {
+  try {
+    return await getCachedStorefrontFallbackProducts();
+  } catch (error) {
+    console.error('[STOREFRONT_FALLBACK_CACHE_ERROR]', error);
+    return [];
+  }
+}
