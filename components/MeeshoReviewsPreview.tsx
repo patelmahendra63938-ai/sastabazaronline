@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ExternalLink, Star, ShieldCheck } from 'lucide-react';
 
 type MeeshoReviewPreviewConfig = {
@@ -68,9 +70,52 @@ function Stars({ rating }: { rating: number }) {
 
 export default function MeeshoReviewsPreview({ productId }: { productId: string }) {
   const source = PRODUCT_REVIEW_SOURCES.find((item) => item.productId === productId);
-  if (!source) return null;
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
 
-  return (
+  useEffect(() => {
+    if (!source) return;
+
+    const mount = document.createElement('div');
+    mount.setAttribute('data-meesho-reviews-preview-mount', 'true');
+
+    const placePreview = () => {
+      const headings = Array.from(document.querySelectorAll('h3'));
+      const detailsHeading = headings.find((heading) =>
+        heading.textContent?.trim().includes('Product Specifications & Details')
+      );
+
+      const detailsCard = detailsHeading?.parentElement?.parentElement;
+      const marketplaceCard = document.querySelector('.marketplace-trust-container');
+      const anchor = detailsCard || marketplaceCard;
+      const parent = anchor?.parentElement;
+
+      if (!anchor || !parent) return false;
+
+      parent.insertBefore(mount, anchor);
+      setPortalTarget(mount);
+      return true;
+    };
+
+    if (!placePreview()) {
+      const observer = new MutationObserver(() => {
+        if (placePreview()) observer.disconnect();
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+
+      const timeout = window.setTimeout(() => observer.disconnect(), 5000);
+      return () => {
+        window.clearTimeout(timeout);
+        observer.disconnect();
+        mount.remove();
+      };
+    }
+
+    return () => mount.remove();
+  }, [source]);
+
+  if (!source || !portalTarget) return null;
+
+  const reviews = (
     <section className="mt-10 overflow-hidden rounded-3xl border border-[#ead8b8] bg-white shadow-xs">
       <div className="border-b border-[#f0e3cf] bg-[#fffaf5] px-5 py-4 sm:px-7">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -163,4 +208,6 @@ export default function MeeshoReviewsPreview({ productId }: { productId: string 
       </div>
     </section>
   );
+
+  return createPortal(reviews, portalTarget);
 }
