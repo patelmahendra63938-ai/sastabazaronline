@@ -65,6 +65,114 @@ a {
   -webkit-tap-highlight-color: transparent;
 }
 
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/*
+ * Mobile homepage conversion layout:
+ * - The Header renders a compact mobile-only hero + quick shopping pills.
+ * - The larger desktop intro/campaign/category blocks remain untouched for md+.
+ * - Featured products move immediately after the compact mobile discovery area.
+ * - Trust content stays available, but is compressed and placed after products.
+ */
+@media (max-width: 767px) {
+  [data-mobile-home-discovery] + .max-w-7xl {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding-top: 0.75rem;
+    padding-bottom: 1rem;
+  }
+
+  [data-mobile-home-discovery] + .max-w-7xl > * {
+    order: 3;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+  }
+
+  /* The mobile-only discovery block replaces these large first-screen blocks. */
+  [data-mobile-home-discovery] + .max-w-7xl > section:first-child,
+  [data-mobile-home-discovery] + .max-w-7xl > a[aria-label^="View "],
+  [data-mobile-home-discovery] + .max-w-7xl > section:has(#shop-by-category-heading) {
+    display: none !important;
+  }
+
+  /* Products become the first storefront content after the compact mobile hero. */
+  [data-mobile-home-discovery] + .max-w-7xl > section:has(#featured-products-heading) {
+    order: 1;
+    border-radius: 1rem;
+    padding: 0.875rem 0.75rem 1rem;
+  }
+
+  [data-mobile-home-discovery] + .max-w-7xl > section:has(#featured-products-heading) > div:first-child {
+    gap: 0.25rem;
+  }
+
+  [data-mobile-home-discovery] + .max-w-7xl #featured-products-heading {
+    margin-top: 0;
+    font-size: 1.125rem;
+    line-height: 1.4;
+  }
+
+  [data-mobile-home-discovery] + .max-w-7xl #featured-products-heading + p {
+    display: none;
+  }
+
+  [data-mobile-home-discovery] + .max-w-7xl > section:has(#featured-products-heading) .grid {
+    gap: 0.5rem;
+  }
+
+  /* Keep trust proof, but move it below products and make it horizontally compact. */
+  [data-mobile-home-discovery] + .max-w-7xl > section[aria-labelledby="top-trust-heading"] {
+    order: 2;
+    border-radius: 1rem;
+  }
+
+  [data-mobile-home-discovery] + .max-w-7xl > section[aria-labelledby="top-trust-heading"] > div:first-child {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+
+  [data-mobile-home-discovery] + .max-w-7xl #top-trust-heading {
+    font-size: 0.625rem;
+    letter-spacing: 0.08em;
+  }
+
+  [data-mobile-home-discovery] + .max-w-7xl > section[aria-labelledby="top-trust-heading"] > div:last-child {
+    display: flex;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: none;
+  }
+
+  [data-mobile-home-discovery] + .max-w-7xl > section[aria-labelledby="top-trust-heading"] > div:last-child::-webkit-scrollbar {
+    display: none;
+  }
+
+  [data-mobile-home-discovery] + .max-w-7xl > section[aria-labelledby="top-trust-heading"] > div:last-child > a {
+    flex: 0 0 7.5rem;
+    border-right: 1px solid #eee7df;
+  }
+
+  [data-mobile-home-discovery] + .max-w-7xl > section[aria-labelledby="top-trust-heading"] > div:last-child > a:last-child {
+    border-right: 0;
+  }
+
+  [data-mobile-home-discovery] + .max-w-7xl > section[aria-labelledby="top-trust-heading"] > div:last-child > a > div {
+    padding: 0.625rem 0.5rem;
+  }
+
+  [data-mobile-home-discovery] + .max-w-7xl > section[aria-labelledby="top-trust-heading"] > div:last-child > a p {
+    display: none;
+  }
+}
+
 /* =========================================================
    GOOGLE TRANSLATE UI CLEANUP
 ========================================================= */
