@@ -25,9 +25,9 @@ import { getStorefrontFallbackProducts } from '@/lib/storefront/catalog-fallback
 import { ArrowRight, ShoppingBag } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'Clothing, Home & Kitchen Online Shopping',
+  title: 'Online Shopping for Clothing, Home & Kitchen & Everyday Essentials',
   description:
-    'Shop women’s ethnic wear, Dhoti Choli, girls fashion, kitchen, dining, cleaning and home utility products at ADHYEY BROTHERS with Pan India delivery.',
+    'Shop clothing, Home & Kitchen essentials and useful everyday products at competitive prices from ADHYEY BROTHERS, with secure payments, GST invoices and Pan India delivery.',
   alternates: {
     canonical: 'https://www.adhyeybrothers.in/',
   },
@@ -35,9 +35,9 @@ export const metadata: Metadata = {
     type: 'website',
     url: 'https://www.adhyeybrothers.in/',
     siteName: 'ADHYEY BROTHERS',
-    title: 'Clothing, Home & Kitchen Online Shopping | ADHYEY BROTHERS',
+    title: 'Online Shopping for Clothing, Home & Kitchen & Everyday Essentials | ADHYEY BROTHERS',
     description:
-      'Shop women’s ethnic wear, Dhoti Choli, girls fashion, kitchen, dining, cleaning and home utility products at ADHYEY BROTHERS with Pan India delivery.',
+      'Shop clothing, Home & Kitchen essentials and useful everyday products at competitive prices from ADHYEY BROTHERS, with secure payments, GST invoices and Pan India delivery.',
     images: [
       {
         url: '/opengraph-image',
@@ -49,9 +49,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Clothing, Home & Kitchen Online Shopping | ADHYEY BROTHERS',
+    title: 'Online Shopping for Clothing, Home & Kitchen & Everyday Essentials | ADHYEY BROTHERS',
     description:
-      'Shop women’s ethnic wear, Dhoti Choli, girls fashion, kitchen, dining, cleaning and home utility products at ADHYEY BROTHERS with Pan India delivery.',
+      'Shop clothing, Home & Kitchen essentials and useful everyday products at competitive prices from ADHYEY BROTHERS, with secure payments, GST invoices and Pan India delivery.',
     images: ['/opengraph-image'],
   },
 };
@@ -520,13 +520,13 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-8 sm:space-y-10">
           <section className="rounded-3xl border border-[#ead8b8] bg-[#fffdf9] px-5 py-5 shadow-xs sm:px-7">
             <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#b5843d]">
-              ADHYEY BROTHERS
+              ADHYEY BROTHERS™
             </p>
             <h1 className="mt-1 text-2xl font-black tracking-tight text-[#741f23] sm:text-3xl">
-              Clothing, Home & Kitchen Online Shopping
+              Shop Clothing, Home & Kitchen & Everyday Essentials Online
             </h1>
             <p className="mt-2 max-w-3xl text-xs leading-relaxed text-stone-600 sm:text-sm">
-              Explore women’s ethnic wear, Dhoti Choli, girls fashion, kitchen, dining, cleaning and practical home essentials with Pan India delivery.
+              Discover clothing, Home & Kitchen essentials and useful everyday products at competitive prices, with secure payments, GST invoices and Pan India delivery.
             </p>
           </section>
 
