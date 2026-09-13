@@ -109,6 +109,85 @@ a {
     max-width: 100%;
   }
 
+  /* Checkout mobile compaction: keep touch targets readable, reduce only excess card height/spacing. */
+  main:has(#checkout-form) > div > .max-w-7xl {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    padding-top: 1rem;
+    padding-bottom: 1.25rem;
+  }
+
+  main:has(#checkout-form) > div > .max-w-7xl > a {
+    margin-bottom: 1rem;
+    padding: 0.45rem 0.75rem;
+  }
+
+  main:has(#checkout-form) > div > .max-w-7xl > h1 {
+    margin-bottom: 1rem;
+    font-size: 1.35rem;
+    line-height: 1.25;
+  }
+
+  main:has(#checkout-form) [class*="lg:col-span-7"] > .rounded-3xl,
+  main:has(#checkout-form) [class*="lg:col-span-5"] > .rounded-3xl {
+    border-radius: 1rem;
+    padding: 1rem;
+  }
+
+  main:has(#checkout-form) [class*="lg:col-span-7"],
+  main:has(#checkout-form) [class*="lg:col-span-5"] {
+    gap: 0.75rem;
+  }
+
+  main:has(#checkout-form) #checkout-form {
+    row-gap: 0.65rem;
+  }
+
+  main:has(#checkout-form) #checkout-form > div,
+  main:has(#checkout-form) #checkout-form > section {
+    margin-top: 0.65rem;
+  }
+
+  main:has(#checkout-form) #checkout-form input,
+  main:has(#checkout-form) #checkout-form textarea {
+    padding-top: 0.58rem;
+    padding-bottom: 0.58rem;
+  }
+
+  main:has(#checkout-form) #checkout-form textarea {
+    min-height: 4.5rem;
+  }
+
+  main:has(#checkout-form) #checkout-form label[class*="p-4"] {
+    padding: 0.75rem;
+    border-radius: 0.9rem;
+  }
+
+  main:has(#checkout-form) #checkout-form .rounded-2xl {
+    border-radius: 0.9rem;
+  }
+
+  main:has(#checkout-form) [class*="lg:col-span-5"] .space-y-4 {
+    row-gap: 0.65rem;
+  }
+
+  main:has(#checkout-form) [class*="lg:col-span-5"] .py-3 {
+    padding-top: 0.55rem;
+    padding-bottom: 0.55rem;
+  }
+
+  main:has(#checkout-form) [class*="lg:col-span-5"] .pt-4 {
+    padding-top: 0.75rem;
+  }
+
+  main:has(#checkout-form) [class*="lg:col-span-5"] .pb-3 {
+    padding-bottom: 0.65rem;
+  }
+
+  main:has(#checkout-form) [class*="lg:col-span-5"] button[type="submit"] {
+    min-height: 2.75rem;
+  }
+
   /* The old marketplace block remains for desktop only. */
   section[aria-labelledby="seller-trust-heading"] {
     display: none !important;
