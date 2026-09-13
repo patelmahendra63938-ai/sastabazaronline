@@ -27,7 +27,7 @@ async function getProduct(productId: string) {
 
   const { data, error } = await supabase
     .from('products')
-    .select('id,title,description,price,mrp,images,image,category,is_active')
+    .select('id,title,description,price,mrp,images,category,is_active')
     .eq('id', productId)
     .eq('is_active', true)
     .maybeSingle();
@@ -98,7 +98,7 @@ export default async function MeeshoReviewsPreviewPage({
 }
 
 function ProductPreview({ product }: { product: any }) {
-  const imageSrc = resolveStorefrontImageSrc(product.images?.[0] || product.image);
+  const imageSrc = resolveStorefrontImageSrc(product.images?.[0]);
   const price = Number(product.price || 0);
   const mrp = Number(product.mrp || price);
   const discount = mrp > price ? Math.round(((mrp - price) / mrp) * 100) : 0;
