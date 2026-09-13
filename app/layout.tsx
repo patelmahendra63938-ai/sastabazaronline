@@ -9,9 +9,9 @@ import MobileBottomNav from '@/components/MobileBottomNav';
 
 const SITE_URL = 'https://www.adhyeybrothers.in';
 const SITE_NAME = 'ADHYEY BROTHERS';
-const DEFAULT_TITLE = 'Women’s Ethnic Wear, Girls Fashion & Online Shopping | ADHYEY BROTHERS';
+const DEFAULT_TITLE = 'Clothing, Home & Kitchen Online Shopping | ADHYEY BROTHERS';
 const DEFAULT_DESCRIPTION =
-  'Shop women’s ethnic wear, Dhoti Choli, Lehenga Choli, festive styles and girls fashion online at ADHYEY BROTHERS. Pan India delivery from Surat, Gujarat.';
+  'Shop clothing, women’s ethnic wear, girls fashion, kitchen, dining, cleaning and home utility products at ADHYEY BROTHERS with Pan India delivery.';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -38,12 +38,15 @@ export const metadata: Metadata = {
 
   keywords: [
     'ADHYEY BROTHERS',
+    'online shopping India',
     'women ethnic wear online India',
     'dhoti choli for women',
     'lehenga choli online',
     'girls nightwear online',
-    'festive wear women India',
-    'Surat fashion online',
+    'home and kitchen products online',
+    'kitchen accessories online India',
+    'cleaning products online India',
+    'Surat online shopping',
   ],
 
   openGraph: {
@@ -58,7 +61,7 @@ export const metadata: Metadata = {
         url: '/opengraph-image',
         width: 1200,
         height: 630,
-        alt: 'ADHYEY BROTHERS online fashion store',
+        alt: 'ADHYEY BROTHERS online shopping store',
       },
     ],
   },
