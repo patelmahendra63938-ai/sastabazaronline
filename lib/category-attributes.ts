@@ -72,30 +72,48 @@ export const CATEGORY_ENGINE: Record<string, CategoryConfig> = {
   'Home & Kitchen': {
     id: 'home_kitchen',
     name: 'Home & Kitchen',
-    defaultHsn: '7323',
-    defaultGst: 12,
+    defaultHsn: '',
+    defaultGst: 18,
     generalAttributes: [
-      { key: 'Material', label: 'Primary Material', type: 'text', placeholder: 'e.g. Food-Grade Stainless Steel, BPA-Free Plastic', level: 'required' },
-      { key: 'Color', label: 'Color / Finish', type: 'text', placeholder: 'e.g. Mirror Polish Silver, Matte Black', level: 'recommended' },
-      { key: 'Capacity / Volume', label: 'Capacity / Size', type: 'text', placeholder: 'e.g. 1 Litre, 5 Litres, 28 cm', level: 'recommended' },
-      { key: 'Number of Pieces', label: 'Pack Size / Set Count', type: 'text', placeholder: 'e.g. Pack of 3, 12 Pcs Set', level: 'recommended' },
-      { key: 'Dishwasher Safe', label: 'Dishwasher Safe', type: 'select', options: ['Yes', 'No', 'Hand Wash Recommended'], level: 'optional' },
+      { key: 'Material', label: 'Primary Material', type: 'text', placeholder: 'e.g. Plastic, Stainless Steel, Silicone, Glass', level: 'required' },
       { key: 'Country of Origin', label: 'Country of Origin', type: 'text', placeholder: 'India', level: 'recommended' }
     ],
     subcategories: [
       {
+        name: 'Sink, Drain & Cleaning Accessories',
+        productTypes: ['Drain & Sink Accessories', 'Draining Trays & Sink Organizers', 'Cleaning Accessories'],
+        attributes: [
+          { key: 'Compatible Size', label: 'Compatible Drain / Pipe Size', type: 'text', placeholder: 'e.g. 1.5 inch', level: 'recommended', productTypes: ['Drain & Sink Accessories'] },
+          { key: 'Installation Type', label: 'Installation Type', type: 'text', placeholder: 'e.g. Push Fit / Insert Fit', level: 'optional', productTypes: ['Drain & Sink Accessories'] },
+          { key: 'Tray Type', label: 'Tray Type / Usage', type: 'text', placeholder: 'e.g. Over-Sink Draining Tray', level: 'recommended', productTypes: ['Draining Trays & Sink Organizers'] },
+          { key: 'Tray Length', label: 'Tray Length', type: 'text', placeholder: 'e.g. 42 cm', level: 'optional', productTypes: ['Draining Trays & Sink Organizers'] },
+          { key: 'Tray Width', label: 'Tray Width', type: 'text', placeholder: 'e.g. 18 cm', level: 'optional', productTypes: ['Draining Trays & Sink Organizers'] },
+          { key: 'Primary Use', label: 'Primary Use', type: 'text', placeholder: 'e.g. Kitchen sink, bathroom drain, laundry area', level: 'recommended' }
+        ]
+      },
+      {
         name: 'Cookware & Kitchen Utensils',
         productTypes: ['Cookware Sets', 'Fry Pans & Tawas', 'Pressure Cookers', 'Kitchen Tools & Cutlery'],
         attributes: [
-          { key: 'Induction Compatible', label: 'Induction Base Compatibility', type: 'select', options: ['Induction & Gas Compatible', 'Gas Stove Only'], level: 'recommended' },
-          { key: 'Coating Type', label: 'Coating / Finish', type: 'select', options: ['Non-Stick 3-Layer', 'Triply Stainless Steel', 'Hard Anodized', 'Uncoated Raw Steel'], level: 'recommended' }
+          { key: 'Capacity / Size', label: 'Capacity / Size', type: 'text', placeholder: 'e.g. 1 Litre, 28 cm', level: 'recommended' },
+          { key: 'Induction Compatible', label: 'Induction Base Compatibility', type: 'select', options: ['Induction & Gas Compatible', 'Gas Stove Only', 'Not Applicable'], level: 'recommended' },
+          { key: 'Coating Type', label: 'Coating / Finish', type: 'select', options: ['Non-Stick', 'Triply Stainless Steel', 'Hard Anodized', 'Uncoated', 'Not Applicable'], level: 'optional' }
         ]
       },
       {
         name: 'Storage & Organization',
-        productTypes: ['Airtight Container Sets', 'Spice Racks', 'Fridge Storage Jars'],
+        productTypes: ['Airtight Container Sets', 'Spice Racks', 'Fridge Storage Jars', 'Storage Boxes'],
         attributes: [
-          { key: 'Airtight / Leak-proof', label: 'Airtight Lid Seal', type: 'select', options: ['100% Airtight & Leak-Proof', 'Standard Lid'], level: 'recommended' }
+          { key: 'Capacity / Size', label: 'Capacity / Size', type: 'text', placeholder: 'e.g. 500 ml each, 1 Litre', level: 'recommended' },
+          { key: 'Lid / Seal Type', label: 'Lid / Seal Type', type: 'text', placeholder: 'e.g. Airtight Lid, Snap Lock', level: 'recommended' }
+        ]
+      },
+      {
+        name: 'Dining & Serving',
+        productTypes: ['Bowl Sets', 'Plate & Dish Sets', 'Spoon & Cutlery Sets', 'Dinner Sets', 'Serving Sets'],
+        attributes: [
+          { key: 'Capacity / Size', label: 'Capacity / Size', type: 'text', placeholder: 'e.g. 300 ml bowl, 10 inch plate', level: 'recommended' },
+          { key: 'Primary Use', label: 'Primary Use', type: 'text', placeholder: 'e.g. Serving, dining, snacks', level: 'recommended' }
         ]
       }
     ]
