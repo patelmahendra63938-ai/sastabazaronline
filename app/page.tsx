@@ -25,9 +25,9 @@ import { getStorefrontFallbackProducts } from '@/lib/storefront/catalog-fallback
 import { ArrowRight, ShoppingBag } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'Women’s Ethnic Wear, Dhoti Choli & Girls Fashion Online',
+  title: 'Clothing, Home & Kitchen Online Shopping',
   description:
-    'Shop women’s ethnic wear, Dhoti Choli, Lehenga Choli, festive styles and girls fashion online at ADHYEY BROTHERS with Pan India delivery.',
+    'Shop women’s ethnic wear, Dhoti Choli, girls fashion, kitchen, dining, cleaning and home utility products at ADHYEY BROTHERS with Pan India delivery.',
   alternates: {
     canonical: 'https://www.adhyeybrothers.in/',
   },
@@ -35,23 +35,23 @@ export const metadata: Metadata = {
     type: 'website',
     url: 'https://www.adhyeybrothers.in/',
     siteName: 'ADHYEY BROTHERS',
-    title: 'Women’s Ethnic Wear, Dhoti Choli & Girls Fashion Online | ADHYEY BROTHERS',
+    title: 'Clothing, Home & Kitchen Online Shopping | ADHYEY BROTHERS',
     description:
-      'Shop women’s ethnic wear, Dhoti Choli, Lehenga Choli, festive styles and girls fashion online at ADHYEY BROTHERS with Pan India delivery.',
+      'Shop women’s ethnic wear, Dhoti Choli, girls fashion, kitchen, dining, cleaning and home utility products at ADHYEY BROTHERS with Pan India delivery.',
     images: [
       {
         url: '/opengraph-image',
         width: 1200,
         height: 630,
-        alt: 'ADHYEY BROTHERS online fashion store',
+        alt: 'ADHYEY BROTHERS online shopping store',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Women’s Ethnic Wear, Dhoti Choli & Girls Fashion Online | ADHYEY BROTHERS',
+    title: 'Clothing, Home & Kitchen Online Shopping | ADHYEY BROTHERS',
     description:
-      'Shop women’s ethnic wear, Dhoti Choli, Lehenga Choli, festive styles and girls fashion online at ADHYEY BROTHERS with Pan India delivery.',
+      'Shop women’s ethnic wear, Dhoti Choli, girls fashion, kitchen, dining, cleaning and home utility products at ADHYEY BROTHERS with Pan India delivery.',
     images: ['/opengraph-image'],
   },
 };
@@ -523,10 +523,10 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
               ADHYEY BROTHERS
             </p>
             <h1 className="mt-1 text-2xl font-black tracking-tight text-[#741f23] sm:text-3xl">
-              Women’s Ethnic Wear, Dhoti Choli & Girls Fashion Online
+              Clothing, Home & Kitchen Online Shopping
             </h1>
             <p className="mt-2 max-w-3xl text-xs leading-relaxed text-stone-600 sm:text-sm">
-              Explore women’s ethnic wear, Dhoti Choli, Lehenga Choli, festive styles and girls fashion with Pan India delivery.
+              Explore women’s ethnic wear, Dhoti Choli, girls fashion, kitchen, dining, cleaning and practical home essentials with Pan India delivery.
             </p>
           </section>
 
