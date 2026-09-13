@@ -106,56 +106,62 @@ export default function ProductCard({ product, activeCampaigns = [], priorityIma
         <Link href={`/product/${product.id}`} className="relative block cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d7aa5b]" aria-label={`View ${product.title}`}>
           <div className="relative aspect-square overflow-hidden bg-[#fffaf5]">
             <Image src={imageUrl} alt={product.title} fill sizes="(max-width: 640px) calc(50vw - 24px), (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 288px" loading={priorityImage ? 'eager' : 'lazy'} fetchPriority={priorityImage ? 'high' : 'auto'} quality={70} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
-            {appliedOffer && !isOutOfStock && <span className="absolute left-2.5 top-2.5 rounded-md bg-[#741f23] px-2 py-0.5 text-[10px] font-black text-white shadow-sm">{appliedOffer.offerLabel}</span>}
-            {isOutOfStock && <span className="absolute left-2.5 top-2.5 rounded-md bg-stone-800 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-white shadow-sm">Out of Stock</span>}
-            {discountPercent > 0 && !isOutOfStock && <span className="absolute right-2.5 top-2.5 rounded-md bg-[#fff7e8] px-2 py-0.5 text-[10px] font-black text-[#741f23] shadow-sm">{discountPercent}% OFF</span>}
+            {appliedOffer && !isOutOfStock && <span className="absolute left-2 top-2 rounded-md bg-[#741f23] px-1.5 py-0.5 text-[9px] font-black text-white shadow-sm md:left-2.5 md:top-2.5 md:px-2 md:text-[10px]">{appliedOffer.offerLabel}</span>}
+            {isOutOfStock && <span className="absolute left-2 top-2 rounded-md bg-stone-800 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-white shadow-sm md:left-2.5 md:top-2.5 md:px-2 md:text-[10px]">Out of Stock</span>}
+            {discountPercent > 0 && !isOutOfStock && <span className="absolute right-2 top-2 rounded-md bg-[#fff7e8] px-1.5 py-0.5 text-[9px] font-black text-[#741f23] shadow-sm md:right-2.5 md:top-2.5 md:px-2 md:text-[10px]">{discountPercent}% OFF</span>}
           </div>
         </Link>
 
-        <div className="min-w-0 space-y-2 p-3 sm:p-3.5">
+        <div className="min-w-0 space-y-1.5 p-2.5 md:space-y-2 md:p-3.5">
           <Link href={`/product/${product.id}`} className="block min-w-0 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d7aa5b]">
-            {product.category && <p className="truncate text-[10px] font-bold uppercase tracking-wider text-[#b5843d]">{product.category}</p>}
-            <h3 className="mt-1 line-clamp-2 min-h-[2.5rem] break-words text-xs font-bold leading-5 text-stone-900 transition group-hover:text-[#741f23] sm:text-sm">{product.title}</h3>
+            {product.category && <p className="truncate text-[9px] font-bold uppercase tracking-wider text-[#b5843d] md:text-[10px]">{product.category}</p>}
+            <h3 className="mt-0.5 line-clamp-2 min-h-[2.25rem] break-words text-[11px] font-bold leading-[1.125rem] text-stone-900 transition group-hover:text-[#741f23] md:mt-1 md:min-h-[2.5rem] md:text-sm md:leading-5">{product.title}</h3>
           </Link>
 
           <div className="min-w-0 pt-0.5">
-            <div className="flex min-w-0 flex-col items-start gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
-              <div className="flex min-w-0 max-w-full flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                <span className="whitespace-nowrap text-base font-black text-[#741f23]">₹{finalPrice.toLocaleString('en-IN')}</span>
-                {hasRealMrp && <span className="whitespace-nowrap text-[11px] text-stone-500 line-through">₹{mrpValue.toLocaleString('en-IN')}</span>}
+            <div className="flex min-w-0 flex-col items-start gap-1 md:flex-row md:items-center md:justify-between md:gap-2">
+              <div className="flex min-w-0 max-w-full flex-wrap items-baseline gap-x-1.5 gap-y-0.5 md:gap-x-2">
+                <span className="whitespace-nowrap text-[15px] font-black text-[#741f23] md:text-base">₹{finalPrice.toLocaleString('en-IN')}</span>
+                {hasRealMrp && <span className="whitespace-nowrap text-[10px] text-stone-500 line-through md:text-[11px]">₹{mrpValue.toLocaleString('en-IN')}</span>}
               </div>
               <div className="max-w-full min-w-0">
                 <ProductRatingTag productId={product.id} />
               </div>
             </div>
-            <p className="mt-1 break-words text-[10px] font-semibold text-stone-500">Inclusive of applicable GST</p>
+            <p className="mt-0.5 truncate text-[9px] font-semibold text-stone-500 md:mt-1 md:break-words md:text-[10px]">Inclusive of applicable GST</p>
           </div>
 
           {hasInventoryVariants && (
-            <div className="min-w-0 pt-1">
+            <div className="min-w-0 pt-0.5 md:pt-1">
               {availableSizes.length > 0 ? (
-                <div className="flex max-w-full flex-nowrap items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
-                  {availableSizes.slice(0, 6).map(size => <span key={size} className="shrink-0 rounded-md border border-[#ead8b8] bg-[#fffaf5] px-2 py-1 text-[10px] font-bold text-stone-700">{size}</span>)}
-                  {availableSizes.length > 6 && <span className="shrink-0 text-[10px] font-bold text-[#741f23]">+{availableSizes.length - 6}</span>}
-                </div>
-              ) : <p className="text-[10px] font-bold text-red-600">No size currently available</p>}
+                <>
+                  <div className="grid max-w-full grid-cols-5 gap-1 md:hidden">
+                    {availableSizes.slice(0, 5).map(size => <span key={size} className="min-w-0 truncate rounded-md border border-[#ead8b8] bg-[#fffaf5] px-1 py-1 text-center text-[9px] font-bold text-stone-700">{size}</span>)}
+                    {availableSizes.length > 5 && <span className="col-span-5 text-right text-[9px] font-bold text-[#741f23]">+{availableSizes.length - 5} more</span>}
+                  </div>
+                  <div className="hidden max-w-full flex-nowrap items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none md:flex">
+                    {availableSizes.slice(0, 6).map(size => <span key={size} className="shrink-0 rounded-md border border-[#ead8b8] bg-[#fffaf5] px-2 py-1 text-[10px] font-bold text-stone-700">{size}</span>)}
+                    {availableSizes.length > 6 && <span className="shrink-0 text-[10px] font-bold text-[#741f23]">+{availableSizes.length - 6}</span>}
+                  </div>
+                </>
+              ) : <p className="text-[9px] font-bold text-red-600 md:text-[10px]">No size currently available</p>}
             </div>
           )}
         </div>
       </div>
 
-      <div className="min-w-0 p-3 pt-0 sm:p-3.5 sm:pt-0">
+      <div className="min-w-0 p-2.5 pt-0 md:p-3.5 md:pt-0">
         {isOutOfStock ? (
-          <button type="button" disabled className="flex min-h-11 w-full cursor-not-allowed items-center justify-center rounded-xl bg-stone-200 px-3 text-xs font-bold text-stone-500">Out of Stock</button>
+          <button type="button" disabled className="flex min-h-10 w-full cursor-not-allowed items-center justify-center rounded-xl bg-stone-200 px-2 text-[11px] font-bold text-stone-500 md:min-h-11 md:px-3 md:text-xs">Out of Stock</button>
         ) : hasInventoryVariants ? (
-          <Link href={`/product/${product.id}`} className="flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl bg-[#741f23] px-3 text-xs font-bold text-white shadow-sm transition hover:bg-[#5e171b] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d7aa5b] focus-visible:ring-offset-2"><span>Select Size</span><ArrowRight size={14} aria-hidden="true" /></Link>
+          <Link href={`/product/${product.id}`} className="flex min-h-10 w-full items-center justify-center gap-1 rounded-xl bg-[#741f23] px-2 text-[11px] font-bold text-white shadow-sm transition hover:bg-[#5e171b] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d7aa5b] focus-visible:ring-offset-2 md:min-h-11 md:gap-1.5 md:px-3 md:text-xs"><span>Select Size</span><ArrowRight size={13} aria-hidden="true" className="md:h-3.5 md:w-3.5" /></Link>
         ) : canDirectAddToCart ? (
-          <button type="button" onClick={handleAddToCart} aria-label={`${added ? 'Added' : 'Add'} ${product.title} to cart`} className={`flex min-h-11 w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl px-3 text-xs font-bold text-white shadow-sm transition active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d7aa5b] focus-visible:ring-offset-2 ${added ? 'bg-green-700 hover:bg-green-800' : 'bg-[#741f23] hover:bg-[#5e171b]'}`}>
-            {added ? <Check size={14} className="text-white" aria-hidden="true" /> : <ShoppingCart size={14} aria-hidden="true" />}
+          <button type="button" onClick={handleAddToCart} aria-label={`${added ? 'Added' : 'Add'} ${product.title} to cart`} className={`flex min-h-10 w-full cursor-pointer items-center justify-center gap-1 rounded-xl px-2 text-[11px] font-bold text-white shadow-sm transition active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d7aa5b] focus-visible:ring-offset-2 md:min-h-11 md:gap-1.5 md:px-3 md:text-xs ${added ? 'bg-green-700 hover:bg-green-800' : 'bg-[#741f23] hover:bg-[#5e171b]'}`}>
+            {added ? <Check size={13} className="text-white md:h-3.5 md:w-3.5" aria-hidden="true" /> : <ShoppingCart size={13} className="md:h-3.5 md:w-3.5" aria-hidden="true" />}
             <span>{added ? 'Added!' : 'Add to Cart'}</span>
           </button>
         ) : (
-          <Link href={`/product/${product.id}`} className="flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-[#d7aa5b] bg-[#fff7e8] px-3 text-xs font-bold text-[#741f23] shadow-sm transition hover:bg-[#fff2dc] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d7aa5b] focus-visible:ring-offset-2"><span>View Product</span><ArrowRight size={14} aria-hidden="true" /></Link>
+          <Link href={`/product/${product.id}`} className="flex min-h-10 w-full items-center justify-center gap-1 rounded-xl border border-[#d7aa5b] bg-[#fff7e8] px-2 text-[11px] font-bold text-[#741f23] shadow-sm transition hover:bg-[#fff2dc] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d7aa5b] focus-visible:ring-offset-2 md:min-h-11 md:gap-1.5 md:px-3 md:text-xs"><span>View Product</span><ArrowRight size={13} aria-hidden="true" className="md:h-3.5 md:w-3.5" /></Link>
         )}
       </div>
     </div>
