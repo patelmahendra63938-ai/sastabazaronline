@@ -5,6 +5,7 @@ import Script from 'next/script';
 import GA4EcommerceTracker from '@/components/GA4EcommerceTracker';
 import RetailQuantityGuard from '@/components/commerce/RetailQuantityGuard';
 import WhatsAppHelpButton from '@/components/WhatsAppHelpButton';
+import MobileBottomNav from '@/components/MobileBottomNav';
 
 const SITE_URL = 'https://www.adhyeybrothers.in';
 const SITE_NAME = 'ADHYEY BROTHERS';
@@ -161,6 +162,7 @@ export default function RootLayout({
 
         <RetailQuantityGuard />
         {children}
+        <MobileBottomNav />
         <WhatsAppHelpButton />
 
         <GA4EcommerceTracker />

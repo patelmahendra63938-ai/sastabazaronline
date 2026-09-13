@@ -27,7 +27,7 @@ export default function WhatsAppHelpButton() {
       onClick={openWhatsApp}
       aria-label="Chat with ADHYEY BROTHERS on WhatsApp"
       title="Need Help? Chat on WhatsApp"
-      className="fixed bottom-5 right-4 z-40 flex min-h-12 items-center gap-2 rounded-full bg-[#25D366] px-3.5 py-3 text-sm font-bold text-white shadow-lg transition hover:scale-[1.03] hover:bg-[#1ebe5d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25D366] focus-visible:ring-offset-2 sm:bottom-6 sm:right-6 sm:px-4"
+      className="whatsapp-help-button fixed right-4 z-40 flex min-h-12 items-center gap-2 rounded-full bg-[#25D366] px-3.5 py-3 text-sm font-bold text-white shadow-lg transition hover:scale-[1.03] hover:bg-[#1ebe5d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25D366] focus-visible:ring-offset-2 sm:right-6 sm:px-4"
     >
       <svg
         viewBox="0 0 32 32"
