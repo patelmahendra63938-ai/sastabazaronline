@@ -2,14 +2,12 @@ import { createClient } from '@supabase/supabase-js';
 
 import MeeshoReviewsPreview from '@/components/MeeshoReviewsPreview';
 import ProductDetailPageClient, { type ProductDetailType } from './ProductPageClient';
+import SharedPackProductPageClient from './SharedPackProductPageClient';
 
-// Product records can be changed from the admin panel without a new build.
-// Render each request with current catalog data so crawlers receive the real
-// product content in the initial HTML instead of a loading-only shell.
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-async function getInitialProduct(productId: string): Promise<ProductDetailType | null> {
+async function getInitialProduct(productId: string): Promise<(ProductDetailType & { selling_mode?: string | null }) | null> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -19,10 +17,7 @@ async function getInitialProduct(productId: string): Promise<ProductDetailType |
   }
 
   const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
+    auth: { persistSession: false, autoRefreshToken: false },
   });
 
   const { data, error } = await supabase
@@ -32,31 +27,25 @@ async function getInitialProduct(productId: string): Promise<ProductDetailType |
     .maybeSingle();
 
   if (error) {
-    console.error('Product page SSR fetch failed:', {
-      productId,
-      message: error.message,
-      code: error.code,
-    });
+    console.error('Product page SSR fetch failed:', { productId, message: error.message, code: error.code });
     return null;
   }
 
-  return (data as ProductDetailType | null) || null;
+  return (data as (ProductDetailType & { selling_mode?: string | null }) | null) || null;
 }
 
-export default async function ProductDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const initialProduct = await getInitialProduct(id);
+  const isSharedPackProduct = initialProduct?.selling_mode === 'shared_pack';
 
   return (
     <>
-      <ProductDetailPageClient
-        productId={id}
-        initialProduct={initialProduct}
-      />
+      {isSharedPackProduct && initialProduct ? (
+        <SharedPackProductPageClient productId={id} initialProduct={initialProduct as any} />
+      ) : (
+        <ProductDetailPageClient productId={id} initialProduct={initialProduct} />
+      )}
       <MeeshoReviewsPreview productId={id} />
     </>
   );
