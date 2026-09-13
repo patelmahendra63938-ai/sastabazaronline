@@ -3,10 +3,35 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { Campaign, calculateDiscountedPrice, getActiveCampaigns } from '@/lib/promotions';
 import { WELCOME50_OFFER, isSystemOfferActive } from '@/lib/promotions/system-offers';
 import { checkPincodeShippingRate, type ShippingPackageInput } from '@/lib/shipping/serviceability';
+import { SHARED_STOCK_SIZE } from '@/lib/catalog/pack-options';
 
 export type PricingPaymentMethod = 'COD' | 'ONLINE' | 'UPI_QR';
-export interface PricingCartItem { id?: string; product_id?: string; size?: string; quantity: number; selected_campaign_id?: string; }
-export interface VerifiedPricingItem { product_id: string; product_title: string; size: string; sku: string; hsn_code: string; gst_rate: number; unit_price: number; original_price: number; applied_offer_label: string | null; discount_reduction: number; weight_kg: number; quantity: number; line_total: number; }
+export interface PricingCartItem {
+  id?: string;
+  product_id?: string;
+  size?: string;
+  quantity: number;
+  selected_campaign_id?: string;
+  pack_option_id?: string;
+}
+export interface VerifiedPricingItem {
+  product_id: string;
+  product_title: string;
+  size: string;
+  sku: string;
+  hsn_code: string;
+  gst_rate: number;
+  unit_price: number;
+  original_price: number;
+  applied_offer_label: string | null;
+  discount_reduction: number;
+  weight_kg: number;
+  quantity: number;
+  line_total: number;
+  pack_option_id: string | null;
+  pieces_per_unit: number;
+  physical_quantity: number;
+}
 export interface PricingBreakdown { pricingMode: 'nimbuspost_live'; originalProductPriceTotal: number; discountDeductionAmount: number; primaryOfferName: string | null; discountedSubtotal: number; totalTaxAmount: number; actualWeightGrams: number; chargeableWeightGrams: number; shippingCharge: number; codCharge: number; totalPayable: number; freeShippingApplied: boolean; serviceable: boolean; message: string; verifiedItems: VerifiedPricingItem[]; ruleVersion: number; }
 
 const MAX_RETAIL_QTY_PER_PRODUCT_SIZE = 5;
@@ -16,35 +41,39 @@ export async function calculateAuthoritativeOrderPricing(input: { db: SupabaseCl
   if (!/^\d{6}$/.test(cleanPin)) throw new Error('Please enter a valid 6-digit delivery PIN code.');
   if (!Array.isArray(input.cart) || !input.cart.length) throw new Error('Cart cannot be empty.');
 
-  const retailQuantityByProductSize = new Map<string, number>();
+  const retailQuantityByProductVariant = new Map<string, number>();
   for (const item of input.cart) {
     const productId = item.product_id || item.id;
-    const size = String(item.size || 'Free Size').trim().toLowerCase();
+    const variantKey = item.pack_option_id
+      ? `pack:${String(item.pack_option_id).trim()}`
+      : `size:${String(item.size || 'Free Size').trim().toLowerCase()}`;
     const quantity = Number(item.quantity);
 
     if (!productId || !Number.isInteger(quantity) || quantity <= 0) {
       throw new Error('Invalid retail cart quantity.');
     }
 
-    const key = `${productId}::${size}`;
-    const totalForProductSize = (retailQuantityByProductSize.get(key) || 0) + quantity;
-    if (totalForProductSize > MAX_RETAIL_QTY_PER_PRODUCT_SIZE) {
-      throw new Error('Retail orders allow a maximum of 5 pcs of the same Product + Size. Please use Bulk Order / Contact Us for larger quantities.');
+    const key = `${productId}::${variantKey}`;
+    const totalForProductVariant = (retailQuantityByProductVariant.get(key) || 0) + quantity;
+    if (totalForProductVariant > MAX_RETAIL_QTY_PER_PRODUCT_SIZE) {
+      throw new Error('Retail orders allow a maximum of 5 units of the same product option. Please use Bulk Order / Contact Us for larger quantities.');
     }
-    retailQuantityByProductSize.set(key, totalForProductSize);
+    retailQuantityByProductVariant.set(key, totalForProductVariant);
   }
 
   const productIds = [...new Set(input.cart.map((item) => item.product_id || item.id).filter((id): id is string => Boolean(id)))];
   if (!productIds.length) throw new Error('No valid product references were found in the cart.');
 
-  const [productsResult, inventoryResult, promotionsResult] = await Promise.all([
-    input.db.from('products').select('id, title, price, mrp, category, hsn_code, gst_rate, net_weight_grams, package_length_cm, package_width_cm, package_height_cm').in('id', productIds),
+  const [productsResult, inventoryResult, packOptionsResult, promotionsResult] = await Promise.all([
+    input.db.from('products').select('id, title, price, mrp, category, hsn_code, gst_rate, net_weight_grams, package_length_cm, package_width_cm, package_height_cm, selling_mode').in('id', productIds),
     input.db.from('inventory').select('product_id, size, sku, available_quantity').in('product_id', productIds),
+    input.db.from('product_pack_options').select('id, product_id, label, pieces_per_unit, price, mrp, sku, is_active').in('product_id', productIds).eq('is_active', true),
     input.db.from('promotions').select('*').eq('is_enabled', true),
   ]);
 
   if (productsResult.error || !productsResult.data) throw new Error('Catalog verification failed.');
   if (inventoryResult.error || !inventoryResult.data) throw new Error('Inventory verification failed.');
+  if (packOptionsResult.error || !packOptionsResult.data) throw new Error('Pack option verification failed.');
   if (promotionsResult.error) throw new Error('Promotion pricing could not be verified.');
 
   const campaigns = getActiveCampaigns((promotionsResult.data as Campaign[]) || []);
@@ -61,33 +90,52 @@ export async function calculateAuthoritativeOrderPricing(input: { db: SupabaseCl
 
   for (const item of input.cart) {
     const productId = item.product_id || item.id;
-    const size = item.size || 'Free Size';
     const quantity = Number(item.quantity);
     const product = productsResult.data.find((row) => row.id === productId);
-    const inventory = inventoryResult.data.find((row) => row.product_id === productId && row.size === size);
 
     if (!product) throw new Error(`Product reference (${productId || 'missing'}) is unavailable.`);
-    if (!inventory) throw new Error(`Size "${size}" for "${product.title}" is unavailable.`);
     if (!Number.isInteger(quantity) || quantity <= 0) throw new Error(`Invalid quantity for "${product.title}".`);
-    if (Number(inventory.available_quantity) < quantity) throw new Error(`Insufficient stock for "${product.title}" (${size}).`);
 
-    const exactWeight = Number(product.net_weight_grams);
-    if (!Number.isInteger(exactWeight) || exactWeight <= 0) {
+    const exactPieceWeight = Number(product.net_weight_grams);
+    if (!Number.isInteger(exactPieceWeight) || exactPieceWeight <= 0) {
       throw new Error(`Exact physical weight is missing for "${product.title}". Please update products.net_weight_grams in Admin.`);
     }
 
-    const packageLength = Number(product.package_length_cm);
-    const packageWidth = Number(product.package_width_cm);
-    const packageHeight = Number(product.package_height_cm);
+    const basePackageLength = Number(product.package_length_cm);
+    const basePackageWidth = Number(product.package_width_cm);
+    const basePackageHeight = Number(product.package_height_cm);
     if (
-      !Number.isFinite(packageLength) || packageLength <= 0 ||
-      !Number.isFinite(packageWidth) || packageWidth <= 0 ||
-      !Number.isFinite(packageHeight) || packageHeight <= 0
+      !Number.isFinite(basePackageLength) || basePackageLength <= 0 ||
+      !Number.isFinite(basePackageWidth) || basePackageWidth <= 0 ||
+      !Number.isFinite(basePackageHeight) || basePackageHeight <= 0
     ) {
       throw new Error(`Package dimensions are missing for "${product.title}". Please update length, width and height in Admin.`);
     }
 
-    const originalPrice = Number(product.price);
+    const requestedPackOptionId = String(item.pack_option_id || '').trim();
+    const packOption = requestedPackOptionId
+      ? packOptionsResult.data.find((row) => row.id === requestedPackOptionId && row.product_id === product.id)
+      : null;
+
+    if (product.selling_mode === 'shared_pack' && !packOption) {
+      throw new Error(`Please select a valid pack size for "${product.title}".`);
+    }
+    if (requestedPackOptionId && !packOption) {
+      throw new Error(`The selected pack size for "${product.title}" is no longer available.`);
+    }
+
+    const piecesPerUnit = packOption ? Math.max(1, Number(packOption.pieces_per_unit) || 1) : 1;
+    const physicalQuantity = quantity * piecesPerUnit;
+    const size = packOption ? String(packOption.label) : String(item.size || 'Free Size');
+    const inventorySize = packOption ? SHARED_STOCK_SIZE : size;
+    const inventory = inventoryResult.data.find((row) => row.product_id === productId && row.size === inventorySize);
+
+    if (!inventory) throw new Error(`Inventory for "${product.title}" (${size}) is unavailable.`);
+    if (Number(inventory.available_quantity) < physicalQuantity) {
+      throw new Error(`Insufficient stock for "${product.title}" (${size}).`);
+    }
+
+    const originalPrice = packOption ? Number(packOption.price) : Number(product.price);
     if (!Number.isFinite(originalPrice) || originalPrice < 0) throw new Error(`Invalid server price for "${product.title}".`);
 
     const { finalPrice, appliedOffer } = calculateDiscountedPrice(
@@ -102,17 +150,19 @@ export async function calculateAuthoritativeOrderPricing(input: { db: SupabaseCl
     const lineTotal = Number(finalPrice) * quantity;
     const originalLineTotal = originalPrice * quantity;
     const gstRate = Number(product.gst_rate || 5);
+    const weightPerSellingUnitGrams = exactPieceWeight * piecesPerUnit;
+    const packageHeightPerSellingUnit = basePackageHeight * piecesPerUnit;
 
     originalProductPriceTotal += originalLineTotal;
     discountedSubtotal += lineTotal;
     totalTaxAmount += lineTotal - lineTotal / (1 + gstRate / 100);
-    actualWeightGrams += exactWeight * quantity;
+    actualWeightGrams += weightPerSellingUnitGrams * quantity;
 
-    // One customer order is shipped as one combined parcel.
-    // Keep the largest footprint and stack each item's packed height.
-    combinedPackageLength = Math.max(combinedPackageLength, packageLength);
-    combinedPackageWidth = Math.max(combinedPackageWidth, packageWidth);
-    combinedPackageHeight += packageHeight * quantity;
+    // Shared-pack measurements entered in Admin are for one physical piece.
+    // A selected pack keeps the same footprint and stacks the piece height.
+    combinedPackageLength = Math.max(combinedPackageLength, basePackageLength);
+    combinedPackageWidth = Math.max(combinedPackageWidth, basePackageWidth);
+    combinedPackageHeight += packageHeightPerSellingUnit * quantity;
 
     if (appliedOffer && !primaryOfferName) primaryOfferName = appliedOffer.offerLabel;
 
@@ -120,16 +170,19 @@ export async function calculateAuthoritativeOrderPricing(input: { db: SupabaseCl
       product_id: product.id,
       product_title: product.title,
       size,
-      sku: inventory.sku || `SKU-${product.id.slice(0, 4)}-${size}`,
+      sku: (packOption?.sku || inventory.sku || `SKU-${product.id.slice(0, 4)}-${size}`),
       hsn_code: product.hsn_code || '6204',
       gst_rate: gstRate,
       unit_price: Number(finalPrice),
       original_price: originalPrice,
       applied_offer_label: appliedOffer?.offerLabel || null,
       discount_reduction: Math.max(0, originalLineTotal - lineTotal),
-      weight_kg: exactWeight / 1000,
+      weight_kg: weightPerSellingUnitGrams / 1000,
       quantity,
       line_total: lineTotal,
+      pack_option_id: packOption?.id || null,
+      pieces_per_unit: piecesPerUnit,
+      physical_quantity: physicalQuantity,
     });
   }
 
@@ -156,8 +209,6 @@ export async function calculateAuthoritativeOrderPricing(input: { db: SupabaseCl
     );
     let remainingCouponCents = couponCents;
 
-    // Allocate the single order-level discount across item lines. This keeps
-    // order_items, subtotal, GST and invoice accounting internally consistent.
     verifiedItems.forEach((item, index) => {
       const lineCents = Math.round(item.line_total * 100);
       const isLastItem = index === verifiedItems.length - 1;
@@ -182,8 +233,6 @@ export async function calculateAuthoritativeOrderPricing(input: { db: SupabaseCl
     discountedSubtotal = verifiedItems.reduce((sum, item) => sum + item.line_total, 0);
     discountedSubtotal = Math.round(discountedSubtotal * 100) / 100;
 
-    // Prices are GST-inclusive. Treat the order-level coupon as a proportional
-    // reduction across the basket so the included tax reduces consistently.
     if (subtotalBeforeCoupon > 0) {
       totalTaxAmount *= discountedSubtotal / subtotalBeforeCoupon;
     }
@@ -232,6 +281,6 @@ export async function calculateAuthoritativeOrderPricing(input: { db: SupabaseCl
       ? 'Delivery is available. WELCOME50 launch offer applied.'
       : 'Delivery is available for this PIN code.',
     verifiedItems,
-    ruleVersion: 2,
+    ruleVersion: 3,
   };
 }
