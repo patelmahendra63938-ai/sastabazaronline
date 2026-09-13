@@ -1,0 +1,281 @@
+name: Apply Add Product Catalog Template
+
+on:
+  push:
+    branches: [add-product-catalog-template]
+    paths:
+      - .github/workflows/apply-add-product-catalog-template.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch-add-product:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch Add Product catalog controls
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          page_path = Path('app/admin/add-product/page.tsx')
+          page = page_path.read_text(encoding='utf-8')
+
+          def replace_once(old: str, new: str, label: str):
+              global page
+              if old not in page:
+                  raise SystemExit(f'Missing page anchor: {label}')
+              page = page.replace(old, new, 1)
+
+          replace_once(
+          """interface VariantRow {\n  size: string;\n  sku: string;\n  weight_kg: number;\n  stock: number;\n}\n""",
+          """interface VariantRow {\n  size: string;\n  sku: string;\n  weight_kg: number;\n  stock: number;\n}\n\ntype SellingFormat = 'single' | 'multiple' | 'set';\ntype ColourSelectionMode = 'none' | 'customer' | 'assorted';\n\ninterface SetContentRow {\n  name: string;\n  quantity: number;\n}\n""",
+          'variant interfaces')
+
+          replace_once("    gst_rate: '5',", "    gst_rate: '',", 'GST default')
+
+          replace_once(
+          """  const [variants, setVariants] = useState<VariantRow[]>([\n    { size: 'Free Size', sku: '', weight_kg: 0.5, stock: 10 }\n  ]);\n\n  // 5. Lightbox & Preview Modals\n""",
+          """  const [variants, setVariants] = useState<VariantRow[]>([\n    { size: 'Free Size', sku: '', weight_kg: 0.5, stock: 10 }\n  ]);\n\n  // Structured selling unit + colour configuration\n  const [sellingFormat, setSellingFormat] = useState<SellingFormat>('single');\n  const [sellingQuantity, setSellingQuantity] = useState<number>(1);\n  const [setContents, setSetContents] = useState<SetContentRow[]>([]);\n  const [colourSelectionMode, setColourSelectionMode] = useState<ColourSelectionMode>('none');\n  const [availableColours, setAvailableColours] = useState<string[]>([]);\n  const [newColour, setNewColour] = useState('');\n\n  // 5. Lightbox & Preview Modals\n""",
+          'structured catalog state')
+
+          replace_once(
+          """      setFormData(prev => ({\n        ...prev,\n        hsn_code: config.defaultHsn,\n        gst_rate: String(config.defaultGst)\n      }));\n    }\n    setDynamicAttrs({});\n    setShowCategoryChangeConfirm(null);\n""",
+          """      setFormData(prev => ({\n        ...prev,\n        hsn_code: newCat === 'Home & Kitchen' ? '' : config.defaultHsn,\n        gst_rate: ''\n      }));\n    }\n    setVariants(prev => {\n      if (prev.length !== 1) return prev;\n      const onlyRow = prev[0];\n      if (newCat === 'Fashion & Apparel' && onlyRow.size === 'Standard') {\n        return [{ ...onlyRow, size: 'Free Size' }];\n      }\n      if (newCat !== 'Fashion & Apparel' && onlyRow.size === 'Free Size') {\n        return [{ ...onlyRow, size: 'Standard' }];\n      }\n      return prev;\n    });\n    setDynamicAttrs({});\n    setShowCategoryChangeConfirm(null);\n""",
+          'category change defaults')
+
+          replace_once(
+          """  const handleDynamicAttrChange = (key: string, value: string) => {\n    setDynamicAttrs(prev => ({ ...prev, [key]: value }));\n  };\n\n  // -------------------------------------------------------------\n  // 🚨 SUPABASE STORAGE DIRECT IMAGE UPLOADER\n""",
+          """  const handleDynamicAttrChange = (key: string, value: string) => {\n    setDynamicAttrs(prev => ({ ...prev, [key]: value }));\n  };\n\n  const isApparelCategory = selectedCategory === 'Fashion & Apparel';\n  const sellingUnitLabel = sellingFormat === 'set'\n    ? `1 Set of ${sellingQuantity} ${sellingQuantity === 1 ? 'Piece' : 'Pieces'}`\n    : sellingFormat === 'multiple'\n      ? `${sellingQuantity} ${sellingQuantity === 1 ? 'Piece' : 'Pieces'}`\n      : '1 Piece';\n\n  const addColour = () => {\n    const colour = newColour.trim();\n    if (!colour) return;\n    if (!availableColours.some(existing => existing.toLowerCase() === colour.toLowerCase())) {\n      setAvailableColours(prev => [...prev, colour]);\n    }\n    setNewColour('');\n  };\n\n  const removeColour = (colour: string) => {\n    setAvailableColours(prev => prev.filter(item => item !== colour));\n  };\n\n  const addSetContentRow = () => {\n    setSetContents(prev => [...prev, { name: '', quantity: 1 }]);\n  };\n\n  const updateSetContentRow = (index: number, field: keyof SetContentRow, value: string | number) => {\n    setSetContents(prev => prev.map((row, rowIndex) => rowIndex === index ? { ...row, [field]: value } : row));\n  };\n\n  const removeSetContentRow = (index: number) => {\n    setSetContents(prev => prev.filter((_, rowIndex) => rowIndex !== index));\n  };\n\n  // -------------------------------------------------------------\n  // 🚨 SUPABASE STORAGE DIRECT IMAGE UPLOADER\n""",
+          'catalog helper functions')
+
+          replace_once(
+          """    if (!formData.price || isNaN(priceNum) || priceNum <= 0) {\n      setErrorMsg('Valid selling price is required.');\n      window.scrollTo({ top: 0, behavior: 'smooth' });\n      return;\n    }\n\n    let productPackage;\n""",
+          """    if (!formData.price || isNaN(priceNum) || priceNum <= 0) {\n      setErrorMsg('Valid selling price is required.');\n      window.scrollTo({ top: 0, behavior: 'smooth' });\n      return;\n    }\n    if (!formData.hsn_code.trim()) {\n      setErrorMsg('Verified HSN code is required. Please use the supplier/source sheet value.');\n      window.scrollTo({ top: 0, behavior: 'smooth' });\n      return;\n    }\n    if (!formData.gst_rate) {\n      setErrorMsg('Select the verified GST rate before publishing.');\n      window.scrollTo({ top: 0, behavior: 'smooth' });\n      return;\n    }\n    if (!Number.isFinite(sellingQuantity) || sellingQuantity < 1) {\n      setErrorMsg('Selling unit quantity must be at least 1 piece.');\n      window.scrollTo({ top: 0, behavior: 'smooth' });\n      return;\n    }\n    if (colourSelectionMode !== 'none' && availableColours.length === 0) {\n      setErrorMsg('Add at least one available colour or set Colour Mode to Not Applicable.');\n      window.scrollTo({ top: 0, behavior: 'smooth' });\n      return;\n    }\n\n    const validSetContents = setContents.filter(row => row.name.trim() && Number(row.quantity) > 0);\n    if (sellingFormat === 'set' && validSetContents.length > 0) {\n      const contentsTotal = validSetContents.reduce((total, row) => total + Number(row.quantity || 0), 0);\n      if (contentsTotal !== sellingQuantity) {\n        setErrorMsg(`Set contents total (${contentsTotal}) must match Pieces in Set (${sellingQuantity}).`);\n        window.scrollTo({ top: 0, behavior: 'smooth' });\n        return;\n      }\n    }\n\n    let productPackage;\n""",
+          'publish validations')
+
+          replace_once(
+          """    if (attrEntries.length > 0) {\n      const formattedSpecs = attrEntries.map(([k, v]) => `• ${k}: ${v}`).join('\\n');\n      if (!structuredDescription.includes('Product Specifications:')) {\n        structuredDescription += `\\n\\nProduct Specifications:\\n${formattedSpecs}`;\n      }\n    }\n\n    setLoading(true);\n""",
+          """    if (attrEntries.length > 0) {\n      const formattedSpecs = attrEntries.map(([k, v]) => `• ${k}: ${v}`).join('\\n');\n      if (!structuredDescription.includes('Product Specifications:')) {\n        structuredDescription += `\\n\\nProduct Specifications:\\n${formattedSpecs}`;\n      }\n    }\n\n    const validSetContentsForDescription = setContents.filter(row => row.name.trim() && Number(row.quantity) > 0);\n    const sellingDetails: string[] = [\n      `• Selling Unit: ${sellingUnitLabel}`,\n      `• Colour Mode: ${colourSelectionMode === 'customer' ? 'Customer Selects Colour' : colourSelectionMode === 'assorted' ? 'Assorted / Mixed Colours' : 'Not Applicable'}`\n    ];\n    if (availableColours.length > 0) {\n      sellingDetails.push(`• Available Colours: ${availableColours.join(', ')}`);\n    }\n    if (colourSelectionMode === 'assorted') {\n      sellingDetails.push('• Colour Note: Assorted colours are dispatched subject to stock availability; exact colours may vary.');\n    }\n    if (validSetContentsForDescription.length > 0) {\n      sellingDetails.push(`• Set Contents: ${validSetContentsForDescription.map(row => `${row.quantity} × ${row.name.trim()}`).join(' + ')}`);\n    }\n    if (!structuredDescription.includes('Selling Details:')) {\n      structuredDescription += `\\n\\nSelling Details:\\n${sellingDetails.join('\\n')}`;\n    }\n\n    setLoading(true);\n""",
+          'selling details persistence')
+
+          replace_once("        hsn_code: formData.hsn_code.trim() || '6204',", "        hsn_code: formData.hsn_code.trim(),", 'HSN fallback')
+          replace_once("        gst_rate: parseFloat(formData.gst_rate) || 5.00,", "        gst_rate: parseFloat(formData.gst_rate),", 'GST fallback')
+
+          replace_once(
+          """      const inventoryInserts = variants.map(v => ({\n        product_id: newProductId,\n        size: v.size.trim(),\n        sku: v.sku.trim() || `${formData.title.slice(0, 3).toUpperCase()}-${v.size.trim()}-${Math.floor(100 + Math.random() * 900)}`,\n""",
+          """      const inventoryRows = variants.map(v => {\n        const defaultNonApparelLabel = sellingFormat === 'set'\n          ? `Set of ${sellingQuantity}`\n          : sellingFormat === 'multiple'\n            ? `Pack of ${sellingQuantity}`\n            : 'Standard';\n        const currentLabel = v.size.trim();\n        const normalizedLabel = !isApparelCategory && (!currentLabel || currentLabel === 'Free Size' || currentLabel === 'Standard')\n          ? defaultNonApparelLabel\n          : currentLabel;\n        return { ...v, size: normalizedLabel };\n      });\n\n      const inventoryInserts = inventoryRows.map(v => ({\n        product_id: newProductId,\n        size: v.size.trim(),\n        sku: v.sku.trim() || `${formData.title.slice(0, 3).toUpperCase()}-${v.size.trim()}-${Math.floor(100 + Math.random() * 900)}`,\n""",
+          'inventory selling label')
+
+          replace_once("                  placeholder=\"e.g. Women Silk Embroidered Kurti with Bottom Set\"\n", "                  placeholder=\"e.g. Drain Pipe Gutter Seal Ring – Leak & Odor Guard\"\n", 'generic title placeholder')
+          replace_once("                    placeholder=\"e.g. SASTABAZARONLINE / Adhyey\"\n", "                    placeholder=\"e.g. PEPPLO\"\n", 'brand placeholder')
+
+          selling_ui = r'''            {/* STRUCTURED SELLING UNIT & COLOUR CONFIGURATION */}
+            <div className="bg-white rounded-3xl border border-gray-200/80 p-5 sm:p-7 shadow-2xs space-y-5">
+              <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                <div>
+                  <h2 className="text-sm font-black text-gray-900 uppercase tracking-wider">Selling Unit & Colours</h2>
+                  <p className="text-[11px] text-gray-500">Defines exactly what one customer purchase contains. Works for pieces, packs and mixed-item sets.</p>
+                </div>
+                <span className="text-[10px] font-black text-orange-700 bg-orange-50 border border-orange-200 px-2.5 py-1 rounded-lg">Catalog Control</span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Selling Format *</label>
+                  <select value={sellingFormat} onChange={(e) => { const next = e.target.value as SellingFormat; setSellingFormat(next); if (next === 'single') setSellingQuantity(1); }} className="w-full px-3 py-2.5 text-xs font-bold border border-gray-300 rounded-xl bg-gray-50 focus:bg-white">
+                    <option value="single">Single Piece</option>
+                    <option value="multiple">Multiple Pieces / Pack</option>
+                    <option value="set">Set</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase mb-1">{sellingFormat === 'set' ? 'Pieces in Set *' : 'Pieces in Selling Unit *'}</label>
+                  <input type="number" min="1" step="1" value={sellingFormat === 'single' ? 1 : sellingQuantity} disabled={sellingFormat === 'single'} onChange={(e) => setSellingQuantity(Math.max(1, parseInt(e.target.value) || 1))} className="w-full px-3 py-2.5 text-sm font-black border border-gray-300 rounded-xl bg-gray-50 disabled:bg-gray-100 focus:bg-white" />
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-indigo-100 bg-indigo-50/50 px-4 py-3 text-xs"><span className="text-gray-500 font-semibold">Customer receives per unit: </span><span className="font-black text-indigo-950">{sellingUnitLabel}</span></div>
+
+              {sellingFormat === 'set' && (
+                <div className="rounded-2xl border border-gray-200 bg-gray-50/60 p-4 space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div><p className="text-xs font-black text-gray-800 uppercase">Set Contents <span className="font-normal normal-case text-gray-400">(optional)</span></p><p className="text-[10px] text-gray-500">Use this for mixed sets such as bowls + spoons + plates. Leave empty when all pieces are the same product.</p></div>
+                    <button type="button" onClick={addSetContentRow} className="shrink-0 px-3 py-1.5 rounded-xl bg-white border border-gray-300 text-[11px] font-black text-indigo-950 hover:bg-gray-100 flex items-center gap-1"><Plus size={12} /> Add Item</button>
+                  </div>
+                  {setContents.map((row, index) => (
+                    <div key={index} className="grid grid-cols-[1fr_90px_36px] gap-2 items-center">
+                      <input type="text" value={row.name} onChange={(e) => updateSetContentRow(index, 'name', e.target.value)} placeholder="e.g. Bowl, Spoon, Plate" className="px-3 py-2 text-xs border border-gray-300 rounded-xl bg-white" />
+                      <input type="number" min="1" value={row.quantity} onChange={(e) => updateSetContentRow(index, 'quantity', Math.max(1, parseInt(e.target.value) || 1))} className="px-2 py-2 text-xs font-black border border-gray-300 rounded-xl bg-white text-center" />
+                      <button type="button" onClick={() => removeSetContentRow(index)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg" aria-label="Remove set item"><Trash2 size={15} /></button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="space-y-3 pt-1">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Colour Selection Mode *</label>
+                  <select value={colourSelectionMode} onChange={(e) => setColourSelectionMode(e.target.value as ColourSelectionMode)} className="w-full px-3 py-2.5 text-xs font-bold border border-gray-300 rounded-xl bg-gray-50 focus:bg-white">
+                    <option value="none">Not Applicable / No Colour Choice</option>
+                    <option value="customer">Customer Selects Colour</option>
+                    <option value="assorted">Assorted / Mixed Colours</option>
+                  </select>
+                </div>
+
+                {colourSelectionMode !== 'none' && (
+                  <div className="rounded-2xl border border-gray-200 bg-gray-50/60 p-4 space-y-3">
+                    <div><p className="text-xs font-black text-gray-800 uppercase">Available Colours *</p><p className="text-[10px] text-gray-500">Add each available shade as an editable colour chip.</p></div>
+                    <div className="flex flex-wrap gap-2 min-h-8">
+                      {availableColours.map(colour => (
+                        <span key={colour} className="inline-flex items-center gap-1.5 rounded-full border border-gray-300 bg-white px-3 py-1.5 text-[11px] font-bold text-gray-800 shadow-2xs">{colour}<button type="button" onClick={() => removeColour(colour)} className="text-gray-400 hover:text-red-500" aria-label={`Remove ${colour}`}><X size={12} /></button></span>
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <input type="text" value={newColour} onChange={(e) => setNewColour(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addColour(); } }} placeholder="e.g. Black, White, Blue, Green, Pink" className="flex-1 px-3 py-2 text-xs border border-gray-300 rounded-xl bg-white" />
+                      <button type="button" onClick={addColour} className="px-3.5 py-2 rounded-xl bg-indigo-950 text-white text-xs font-black hover:bg-indigo-900 flex items-center gap-1"><Plus size={13} /> Add Colour</button>
+                    </div>
+                    {colourSelectionMode === 'assorted' && (<div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[10px] font-semibold text-amber-900">Storefront note: assorted/mixed colours are dispatched from the available colour pool according to stock. The customer does not select an exact colour.</div>)}
+                  </div>
+                )}
+              </div>
+            </div>
+
+'''
+
+          media_anchor = "            {/* 4. PRODUCT MEDIA SHOWCASE */}\n"
+          if media_anchor not in page:
+              raise SystemExit('Missing page anchor: media section')
+          page = page.replace(media_anchor, selling_ui + media_anchor, 1)
+
+          replace_once("                    <h2 className=\"text-sm font-black text-gray-900 uppercase tracking-wider\">Sizes & Inventory Ledger</h2>\n", "                    <h2 className=\"text-sm font-black text-gray-900 uppercase tracking-wider\">{isApparelCategory ? 'Sizes & Inventory Ledger' : 'Inventory Ledger'}</h2>\n", 'inventory heading')
+          replace_once("""                  <button type=\"button\" onClick={addPresetSizes} className=\"px-2.5 py-1 text-[11px] font-bold bg-indigo-50 text-indigo-900 rounded-lg hover:bg-indigo-100 transition cursor-pointer\">\n                    + Load Preset Sizes\n                  </button>\n""", """                  {isApparelCategory && (\n                    <button type=\"button\" onClick={addPresetSizes} className=\"px-2.5 py-1 text-[11px] font-bold bg-indigo-50 text-indigo-900 rounded-lg hover:bg-indigo-100 transition cursor-pointer\">\n                      + Load Preset Sizes\n                    </button>\n                  )}\n""", 'preset size button')
+          replace_once("                    <Plus size={12} /> Add Size\n", "                    <Plus size={12} /> {isApparelCategory ? 'Add Size' : 'Add Inventory Option'}\n", 'add inventory button')
+          replace_once("                      <th className=\"p-3\">Size Variant *</th>\n", "                      <th className=\"p-3\">{isApparelCategory ? 'Size Variant *' : 'Inventory Option *'}</th>\n", 'inventory table header')
+          replace_once("                            placeholder=\"e.g. M\"\n", "                            placeholder={isApparelCategory ? 'e.g. M' : 'e.g. Set of 3'}\n", 'inventory placeholder')
+
+          gst_old = r'''                <select
+                  name="gst_rate"
+                  value={formData.gst_rate}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 text-xs font-bold border rounded-xl bg-gray-50 focus:bg-white"
+                >
+                  <option value="5">5% (Garments &lt; ₹1000 / Essentials)</option>
+                  <option value="12">12% (Garments &gt; ₹1000 / Home & Kitchen)</option>
+                  <option value="18">18% (Electronics / Accessories)</option>
+                  <option value="0">0% (Exempted)</option>
+                </select>
+'''
+          gst_new = r'''                <select
+                  name="gst_rate"
+                  required
+                  value={formData.gst_rate}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 text-xs font-bold border rounded-xl bg-gray-50 focus:bg-white"
+                >
+                  <option value="">Select verified GST rate...</option>
+                  <option value="0">0% (Exempt / verified)</option>
+                  <option value="5">5%</option>
+                  <option value="12">12%</option>
+                  <option value="18">18%</option>
+                  <option value="28">28%</option>
+                </select>
+                <p className="mt-1 text-[10px] text-amber-700 font-semibold">Do not rely on category defaults. Match GST to the verified HSN/source sheet.</p>
+'''
+          replace_once(gst_old, gst_new, 'GST selector')
+          replace_once("                  <p className=\"text-xs font-bold text-gray-700 uppercase\">Available Sizes:</p>\n", "                  <p className=\"text-xs font-bold text-gray-700 uppercase\">{isApparelCategory ? 'Available Sizes:' : 'Inventory Option:'}</p>\n", 'customer preview inventory label')
+
+          preview_anchor = """                <div className=\"space-y-2\">\n                  <p className=\"text-xs font-bold text-gray-700 uppercase\">{isApparelCategory ? 'Available Sizes:' : 'Inventory Option:'}</p>\n"""
+          preview_insert = """                <div className=\"rounded-xl border border-indigo-100 bg-indigo-50/50 p-3 text-xs space-y-1\">\n                  <p><span className=\"font-semibold text-gray-500\">Selling Unit:</span> <span className=\"font-black text-indigo-950\">{sellingUnitLabel}</span></p>\n                  <p><span className=\"font-semibold text-gray-500\">Colours:</span> <span className=\"font-bold text-gray-800\">{colourSelectionMode === 'assorted' ? `Assorted / Mixed (${availableColours.join(', ') || 'add colours'})` : colourSelectionMode === 'customer' ? (availableColours.join(', ') || 'add colours') : 'Not Applicable'}</span></p>\n                </div>\n\n"""
+          if preview_anchor not in page:
+              raise SystemExit('Missing page anchor: preview inventory block')
+          page = page.replace(preview_anchor, preview_insert + preview_anchor, 1)
+          page_path.write_text(page, encoding='utf-8')
+
+          category_path = Path('lib/category-attributes.ts')
+          categories = category_path.read_text(encoding='utf-8')
+          start = categories.find("  'Home & Kitchen': {")
+          end = categories.find("  'Electronics & Gadgets': {")
+          if start == -1 or end == -1 or end <= start:
+              raise SystemExit('Could not locate Home & Kitchen category block')
+
+          home_kitchen = r'''  'Home & Kitchen': {
+    id: 'home_kitchen',
+    name: 'Home & Kitchen',
+    defaultHsn: '',
+    defaultGst: 18,
+    generalAttributes: [
+      { key: 'Material', label: 'Primary Material', type: 'text', placeholder: 'e.g. Plastic, Stainless Steel, Silicone, Glass', level: 'required' },
+      { key: 'Country of Origin', label: 'Country of Origin', type: 'text', placeholder: 'India', level: 'recommended' }
+    ],
+    subcategories: [
+      {
+        name: 'Sink, Drain & Cleaning Accessories',
+        productTypes: ['Drain & Sink Accessories', 'Draining Trays & Sink Organizers', 'Cleaning Accessories'],
+        attributes: [
+          { key: 'Compatible Size', label: 'Compatible Drain / Pipe Size', type: 'text', placeholder: 'e.g. 1.5 inch', level: 'recommended', productTypes: ['Drain & Sink Accessories'] },
+          { key: 'Installation Type', label: 'Installation Type', type: 'text', placeholder: 'e.g. Push Fit / Insert Fit', level: 'optional', productTypes: ['Drain & Sink Accessories'] },
+          { key: 'Tray Type', label: 'Tray Type / Usage', type: 'text', placeholder: 'e.g. Over-Sink Draining Tray', level: 'recommended', productTypes: ['Draining Trays & Sink Organizers'] },
+          { key: 'Tray Length', label: 'Tray Length', type: 'text', placeholder: 'e.g. 42 cm', level: 'optional', productTypes: ['Draining Trays & Sink Organizers'] },
+          { key: 'Tray Width', label: 'Tray Width', type: 'text', placeholder: 'e.g. 18 cm', level: 'optional', productTypes: ['Draining Trays & Sink Organizers'] },
+          { key: 'Primary Use', label: 'Primary Use', type: 'text', placeholder: 'e.g. Kitchen sink, bathroom drain, laundry area', level: 'recommended' }
+        ]
+      },
+      {
+        name: 'Cookware & Kitchen Utensils',
+        productTypes: ['Cookware Sets', 'Fry Pans & Tawas', 'Pressure Cookers', 'Kitchen Tools & Cutlery'],
+        attributes: [
+          { key: 'Capacity / Size', label: 'Capacity / Size', type: 'text', placeholder: 'e.g. 1 Litre, 28 cm', level: 'recommended' },
+          { key: 'Induction Compatible', label: 'Induction Base Compatibility', type: 'select', options: ['Induction & Gas Compatible', 'Gas Stove Only', 'Not Applicable'], level: 'recommended' },
+          { key: 'Coating Type', label: 'Coating / Finish', type: 'select', options: ['Non-Stick', 'Triply Stainless Steel', 'Hard Anodized', 'Uncoated', 'Not Applicable'], level: 'optional' }
+        ]
+      },
+      {
+        name: 'Storage & Organization',
+        productTypes: ['Airtight Container Sets', 'Spice Racks', 'Fridge Storage Jars', 'Storage Boxes'],
+        attributes: [
+          { key: 'Capacity / Size', label: 'Capacity / Size', type: 'text', placeholder: 'e.g. 500 ml each, 1 Litre', level: 'recommended' },
+          { key: 'Lid / Seal Type', label: 'Lid / Seal Type', type: 'text', placeholder: 'e.g. Airtight Lid, Snap Lock', level: 'recommended' }
+        ]
+      },
+      {
+        name: 'Dining & Serving',
+        productTypes: ['Bowl Sets', 'Plate & Dish Sets', 'Spoon & Cutlery Sets', 'Dinner Sets', 'Serving Sets'],
+        attributes: [
+          { key: 'Capacity / Size', label: 'Capacity / Size', type: 'text', placeholder: 'e.g. 300 ml bowl, 10 inch plate', level: 'recommended' },
+          { key: 'Primary Use', label: 'Primary Use', type: 'text', placeholder: 'e.g. Serving, dining, snacks', level: 'recommended' }
+        ]
+      }
+    ]
+  },
+'''
+          categories = categories[:start] + home_kitchen + categories[end:]
+          category_path.write_text(categories, encoding='utf-8')
+
+          workflow = Path('.github/workflows/apply-add-product-catalog-template.yml')
+          if workflow.exists():
+              workflow.unlink()
+          PY
+
+      - name: Validate TypeScript and lint
+        shell: bash
+        run: |
+          npm ci --ignore-scripts
+          npx tsc --noEmit
+          npm run lint -- app/admin/add-product/page.tsx lib/category-attributes.ts
+
+      - name: Commit applied changes
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/admin/add-product/page.tsx lib/category-attributes.ts .github/workflows/apply-add-product-catalog-template.yml
+          git commit -m "Improve add product selling units and colours"
+          git push origin add-product-catalog-template
