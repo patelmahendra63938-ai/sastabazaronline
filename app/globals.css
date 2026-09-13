@@ -74,6 +74,16 @@ a {
   display: none;
 }
 
+.whatsapp-help-button {
+  bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 640px) {
+  .whatsapp-help-button {
+    bottom: 1.5rem;
+  }
+}
+
 /*
  * Mobile homepage conversion layout:
  * - The Header renders a compact mobile-only hero + quick shopping pills.
