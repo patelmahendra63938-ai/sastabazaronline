@@ -26,6 +26,9 @@ interface ProductSeoRecord {
   category?: string | null;
   images?: string[] | null;
   video?: string | null;
+  sku?: string | null;
+  slug?: string | null;
+  brand?: string | null;
 }
 
 interface InventoryRow {
@@ -54,7 +57,11 @@ const getProduct = cache(async (id: string): Promise<ProductSeoRecord | null> =>
     const fallback = await getStorefrontFallbackProduct(id);
     return fallback as ProductSeoRecord | null;
   }
-  const { data, error } = await supabase.from('products').select('id,title,description,price,is_active,category,images,video').eq('id', id).maybeSingle();
+  const { data, error } = await supabase
+    .from('products')
+    .select('id,title,description,price,is_active,category,images,video,sku,slug,brand')
+    .eq('id', id)
+    .maybeSingle();
   if (error) {
     console.error('Product SEO fetch failed; using cached storefront record when available:', { message: error.message, code: error.code, productId: id });
     const fallback = await getStorefrontFallbackProduct(id);
@@ -155,7 +162,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   return {
     title, description, alternates: { canonical },
     robots: { index: true, follow: true, googleBot: { index: true, follow: true, 'max-image-preview': 'large' } },
-    openGraph: { type: 'website', url: canonical, siteName: 'ADHYEY BROTHERS', title: `${title} | ADHYEY BROTHERS`, description, images: image ? [{ url: image, alt: title }] : [{ url: '/opengraph-image', width: 1200, height: 630, alt: 'ADHYEY BROTHERS online fashion store' }] },
+    openGraph: { type: 'website', url: canonical, siteName: 'ADHYEY BROTHERS', title: `${title} | ADHYEY BROTHERS`, description, images: image ? [{ url: image, alt: title }] : [{ url: '/opengraph-image', width: 1200, height: 630, alt: 'ADHYEY BROTHERS online store' }] },
     twitter: { card: 'summary_large_image', title: `${title} | ADHYEY BROTHERS`, description, images: [image || '/opengraph-image'] },
   };
 }
@@ -174,12 +181,13 @@ export default async function ProductLayout({ children, params }: { children: Re
   const image = getProductImage(product);
   const video = getProductVideo(product);
   const videoUploadDate = video ? getVideoUploadDate(video) : undefined;
-  const sku = product.id;
+  const sku = product.sku?.trim() || product.id;
+  const brand = product.brand?.trim() || 'ADHYEY BROTHERS';
   const ratingValue = approvedReviews.length ? approvedReviews.reduce((sum, row) => sum + Number(row.rating || 0), 0) / approvedReviews.length : 0;
 
   const productJsonLd = {
     '@context': 'https://schema.org', '@type': 'Product', '@id': `${canonical}#product`, name: product.title,
-    brand: { '@type': 'Brand', name: 'ADHYEY BROTHERS' }, description, sku, url: canonical,
+    brand: { '@type': 'Brand', name: brand }, description, sku, url: canonical,
     ...(image ? { image: [image] } : {}),
     ...(category ? { category: isDhotiCholi ? `${category} > Dhoti Choli` : category } : {}),
     ...(approvedReviews.length > 0 ? {
