@@ -110,12 +110,12 @@ export default function ProductRatingTag({ productId }: { productId: string }) {
           ? `Open ${summary.average.toFixed(1)} star product reviews`
           : 'Open product reviews'
       }
-      className="inline-flex min-h-7 max-w-full items-center gap-1 whitespace-nowrap rounded-full border border-[#ead8b8] bg-[#fffaf5] px-2 py-1 text-[10px] font-black leading-none text-[#741f23] shadow-sm transition hover:border-[#d7aa5b] hover:bg-[#fff7e8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d7aa5b]"
+      className="inline-flex min-h-6 max-w-full items-center gap-0.5 whitespace-nowrap rounded-full border border-[#ead8b8] bg-[#fffaf5] px-1.5 py-0.5 text-[9px] font-black leading-none text-[#741f23] shadow-sm transition hover:border-[#d7aa5b] hover:bg-[#fff7e8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d7aa5b] md:min-h-7 md:gap-1 md:px-2 md:py-1 md:text-[10px]"
     >
       <Star
-        size={12}
+        size={11}
         fill={summary.count ? 'currentColor' : 'none'}
-        className="shrink-0 text-[#d7aa5b]"
+        className="shrink-0 text-[#d7aa5b] md:h-3 md:w-3"
         aria-hidden="true"
       />
       <span className="min-w-0 truncate">
