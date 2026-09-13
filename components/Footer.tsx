@@ -34,11 +34,11 @@ export default function Footer() {
             </div>
           </Link>
           <p className="text-[11px] leading-relaxed text-stone-300">
-            Women’s ethnic wear and girls fashion with Pan India delivery from Surat, Gujarat.
+            Clothing, Home & Kitchen essentials and useful everyday products with Pan India delivery from Surat, Gujarat.
           </p>
           <div className="flex flex-wrap gap-x-4 gap-y-2 text-[10px] font-semibold text-stone-300">
             <span className="inline-flex items-center gap-1.5"><ShieldCheck size={14} className="text-[#e7c98d]" aria-hidden="true" />Trusted Shopping</span>
-            <span className="inline-flex items-center gap-1.5"><ShoppingBag size={14} className="text-[#e7c98d]" aria-hidden="true" />Quality • Trust • Style</span>
+            <span className="inline-flex items-center gap-1.5"><ShoppingBag size={14} className="text-[#e7c98d]" aria-hidden="true" />Quality • Trust • Value</span>
           </div>
         </div>
 
@@ -117,8 +117,7 @@ export default function Footer() {
             </div>
           </Link>
           <p className="text-xs leading-relaxed text-stone-300">
-            Shop women’s ethnic wear, Dhoti Choli, Lehenga Choli, festive styles
-            and girls fashion with Pan India delivery from Surat, Gujarat.
+            Shop clothing, Home & Kitchen essentials and useful everyday products at competitive prices with Pan India delivery from Surat, Gujarat.
           </p>
           <div className="flex items-center gap-2 text-xs font-bold text-[#e7c98d]">
             <ShieldCheck size={16} aria-hidden="true" />
@@ -126,7 +125,7 @@ export default function Footer() {
           </div>
           <div className="flex items-center gap-2 text-xs font-semibold text-stone-300">
             <ShoppingBag size={16} className="text-[#e7c98d]" aria-hidden="true" />
-            Quality • Trust • Style
+            Quality • Trust • Value
           </div>
         </div>
 
