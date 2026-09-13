@@ -134,10 +134,16 @@ export default function ProductCard({ product, activeCampaigns = [], priorityIma
           {hasInventoryVariants && (
             <div className="min-w-0 pt-0.5 md:pt-1">
               {availableSizes.length > 0 ? (
-                <div className="grid max-w-full grid-cols-5 gap-1 md:flex md:flex-nowrap md:items-center md:gap-1.5 md:overflow-x-auto md:pb-0.5 md:scrollbar-none">
-                  {availableSizes.slice(0, 5).map(size => <span key={size} className="min-w-0 truncate rounded-md border border-[#ead8b8] bg-[#fffaf5] px-1 py-1 text-center text-[9px] font-bold text-stone-700 md:shrink-0 md:px-2 md:text-[10px]">{size}</span>)}
-                  {availableSizes.length > 5 && <span className="col-span-5 text-right text-[9px] font-bold text-[#741f23] md:col-auto md:shrink-0 md:text-[10px]">+{availableSizes.length - 5} more</span>}
-                </div>
+                <>
+                  <div className="grid max-w-full grid-cols-5 gap-1 md:hidden">
+                    {availableSizes.slice(0, 5).map(size => <span key={size} className="min-w-0 truncate rounded-md border border-[#ead8b8] bg-[#fffaf5] px-1 py-1 text-center text-[9px] font-bold text-stone-700">{size}</span>)}
+                    {availableSizes.length > 5 && <span className="col-span-5 text-right text-[9px] font-bold text-[#741f23]">+{availableSizes.length - 5} more</span>}
+                  </div>
+                  <div className="hidden max-w-full flex-nowrap items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none md:flex">
+                    {availableSizes.slice(0, 6).map(size => <span key={size} className="shrink-0 rounded-md border border-[#ead8b8] bg-[#fffaf5] px-2 py-1 text-[10px] font-bold text-stone-700">{size}</span>)}
+                    {availableSizes.length > 6 && <span className="shrink-0 text-[10px] font-bold text-[#741f23]">+{availableSizes.length - 6}</span>}
+                  </div>
+                </>
               ) : <p className="text-[9px] font-bold text-red-600 md:text-[10px]">No size currently available</p>}
             </div>
           )}
