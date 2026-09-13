@@ -32,18 +32,19 @@ export default function WishlistPage() {
       <div>
         <Header />
 
-        <div className="max-w-7xl mx-auto px-4 py-8">
-          <div className="mb-6 flex items-center justify-between">
-            <Link href="/" className="inline-flex items-center gap-2 text-xs font-bold text-indigo-900 hover:underline bg-white px-4 py-2 rounded-xl border shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 py-6 sm:py-8">
+          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h1 className="order-1 flex items-center gap-2 text-xl font-black text-indigo-950 sm:order-2 sm:text-2xl">
+              <Heart className="shrink-0 text-red-500" size={24} fill="currentColor" />
+              <span className="break-words">My Wishlist ({wishlist.length})</span>
+            </h1>
+            <Link href="/" className="order-2 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border bg-white px-4 py-2 text-xs font-bold text-indigo-900 shadow-sm transition hover:underline sm:order-1 sm:w-auto">
               <ArrowLeft size={16} /> Continue Shopping
             </Link>
-            <h1 className="text-xl sm:text-2xl font-black text-indigo-950 flex items-center gap-2">
-              <Heart className="text-red-500" size={24} fill="currentColor" /> My Wishlist ({wishlist.length})
-            </h1>
           </div>
 
           {wishlist.length === 0 ? (
-            <div className="bg-white rounded-3xl border border-gray-200 p-12 text-center shadow-sm space-y-4 my-12">
+            <div className="my-8 space-y-4 rounded-3xl border border-gray-200 bg-white p-7 text-center shadow-sm sm:my-12 sm:p-12">
               <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto">
                 <Heart size={32} />
               </div>
@@ -51,12 +52,12 @@ export default function WishlistPage() {
               <p className="text-xs text-gray-500 max-w-sm mx-auto">
                 Save your favorite products to your wishlist and shop them anytime!
               </p>
-              <Link href="/" className="inline-block bg-indigo-950 hover:bg-indigo-900 text-white font-bold py-3 px-8 rounded-2xl transition shadow-lg text-xs mt-2">
+              <Link href="/" className="inline-flex min-h-11 w-full items-center justify-center rounded-2xl bg-indigo-950 px-8 py-3 text-xs font-bold text-white shadow-lg transition hover:bg-indigo-900 sm:w-auto">
                 Explore Products
               </Link>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 md:grid-cols-4">
               {wishlist.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}

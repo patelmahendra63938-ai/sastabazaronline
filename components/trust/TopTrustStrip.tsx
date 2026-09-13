@@ -7,6 +7,8 @@ import {
   Truck,
   WalletCards,
 } from 'lucide-react';
+import MobileMarketplaceLinks from '@/components/trust/MobileMarketplaceLinks';
+import { getHomepageDisplaySettings } from '@/lib/settings/homepage-display';
 
 const items = [
   {
@@ -41,7 +43,9 @@ const items = [
   },
 ];
 
-export default function TopTrustStrip() {
+export default async function TopTrustStrip() {
+  const homepageDisplay = await getHomepageDisplaySettings();
+
   return (
     <section
       aria-labelledby="top-trust-heading"
@@ -88,6 +92,12 @@ export default function TopTrustStrip() {
           );
         })}
       </div>
+
+      <MobileMarketplaceLinks
+        showAmazon={homepageDisplay.show_amazon_link}
+        showFlipkart={homepageDisplay.show_flipkart_link}
+        showMeesho={homepageDisplay.show_meesho_link}
+      />
     </section>
   );
 }
