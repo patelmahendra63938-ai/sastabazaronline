@@ -124,6 +124,7 @@ export default function ProductDetailPageClient({
   const [isWishlisted, setIsWishlisted] = useState<boolean>(false);
   const [addedToCart, setAddedToCart] = useState<boolean>(false);
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
+  const [descriptionExpanded, setDescriptionExpanded] = useState<boolean>(false);
 
   // --- Offer & Promotion States ---
   const [couponInput, setCouponInput] = useState<string>('');
@@ -318,6 +319,10 @@ export default function ProductDetailPageClient({
     setDeliveryMessage('');
     setDeliveryQuote(null);
   }, [selectedSize, quantity, appliedCoupon, selectedCampaignId]);
+
+  useEffect(() => {
+    setDescriptionExpanded(false);
+  }, [productId]);
 
   // Lightbox Handlers
   const openLightbox = (url: string) => {
@@ -609,10 +614,10 @@ export default function ProductDetailPageClient({
       <div>
         <Header />
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <div className="max-w-7xl mx-auto px-3 py-3 md:px-6 md:py-8">
 
           {/* Breadcrumb Navigation */}
-          <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs text-gray-500 mb-6 flex-wrap">
+          <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-[11px] text-gray-500 mb-3 flex-wrap md:gap-2 md:text-xs md:mb-6">
             <Link href="/" className="hover:text-[#741f23] font-medium transition">Home</Link>
             <ChevronRight size={12} className="text-gray-400" />
             <Link
@@ -622,23 +627,23 @@ export default function ProductDetailPageClient({
               {product.category || 'Collection'}
             </Link>
             <ChevronRight size={12} className="text-gray-400" />
-            <span className="font-bold text-gray-800 truncate max-w-xs">{product.title}</span>
+            <span className="font-bold text-gray-800 truncate max-w-[44vw] md:max-w-xs">{product.title}</span>
           </nav>
 
           {/* Product Showcase Master Card */}
-          <div className="bg-white rounded-3xl border border-[#ead8b8] p-5 sm:p-8 lg:p-10 shadow-xs grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
+          <div className="bg-white rounded-2xl md:rounded-3xl border border-[#ead8b8] p-3 md:p-8 lg:p-10 shadow-xs grid grid-cols-1 lg:grid-cols-12 gap-5 md:gap-8 lg:gap-12">
 
             {/* LEFT COLUMN: Gallery Viewport & Thumbnails */}
-            <div className="lg:col-span-6 flex flex-col-reverse sm:flex-row gap-4">
+            <div className="lg:col-span-6 flex flex-col-reverse sm:flex-row gap-3 md:gap-4">
 
               {/* Thumbnail Strip */}
               {(imagesList.length > 1 || videoSource) && (
-                <div className="flex sm:flex-col gap-2.5 overflow-x-auto sm:overflow-y-auto max-h-[520px] scrollbar-none py-1">
+                <div className="flex sm:flex-col gap-2 overflow-x-auto sm:overflow-y-auto max-h-[520px] scrollbar-none py-1 md:gap-2.5">
                   {imagesList.map((img, idx) => (
                     <button
                       key={idx}
                       onClick={() => { setSelectedMedia(img); setMediaType('image'); }}
-                      className={`relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden border-2 shrink-0 transition-all duration-200 cursor-pointer ${
+                      className={`relative w-14 h-14 md:w-20 md:h-20 rounded-lg md:rounded-xl overflow-hidden border-2 shrink-0 transition-all duration-200 cursor-pointer ${
                         selectedMedia === img && mediaType === 'image'
                           ? 'border-[#d7aa5b] ring-2 ring-[#f6e0bb] shadow-xs scale-98'
                           : 'border-[#ead8b8] hover:border-gray-300 opacity-80 hover:opacity-100'
@@ -653,7 +658,7 @@ export default function ProductDetailPageClient({
                   {videoSource && (
                     <button
                       onClick={() => { setSelectedMedia(videoSource); setMediaType('video'); }}
-                      className={`w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden border-2 shrink-0 relative bg-gray-900 flex items-center justify-center transition-all cursor-pointer ${
+                      className={`w-14 h-14 md:w-20 md:h-20 rounded-lg md:rounded-xl overflow-hidden border-2 shrink-0 relative bg-gray-900 flex items-center justify-center transition-all cursor-pointer ${
                         mediaType === 'video'
                           ? 'border-[#d7aa5b] ring-2 ring-[#f6e0bb] shadow-xs'
                           : 'border-[#ead8b8] opacity-80 hover:opacity-100'
@@ -668,7 +673,7 @@ export default function ProductDetailPageClient({
 
               {/* Main Viewport Container */}
               <div
-                className="flex-1 bg-[#fffaf5] rounded-2xl overflow-hidden border border-[#ead8b8] relative aspect-square sm:aspect-[4/5] flex items-center justify-center group cursor-zoom-in select-none"
+                className="flex-1 bg-[#fffaf5] rounded-xl md:rounded-2xl overflow-hidden border border-[#ead8b8] relative aspect-square sm:aspect-[4/5] flex items-center justify-center group cursor-zoom-in select-none"
                 onClick={() => {
                   if (mediaType === 'image') {
                     openLightbox(selectedMedia || imagesList[0]);
@@ -685,7 +690,7 @@ export default function ProductDetailPageClient({
                       fetchPriority="high"
                       className="object-cover transition-transform duration-300 group-hover:scale-103"
                     />
-                    <div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-md text-white text-[11px] font-semibold px-3 py-1.5 rounded-xl flex items-center gap-1.5 opacity-90 group-hover:opacity-100 transition shadow-sm">
+                    <div className="absolute bottom-2 right-2 md:bottom-3 md:right-3 bg-black/60 backdrop-blur-md text-white text-[10px] md:text-[11px] font-semibold px-2.5 py-1 md:px-3 md:py-1.5 rounded-lg md:rounded-xl flex items-center gap-1.5 opacity-90 group-hover:opacity-100 transition shadow-sm">
                       <Eye size={13} /> Click to expand
                     </div>
                   </>
@@ -701,8 +706,8 @@ export default function ProductDetailPageClient({
                 )}
 
                 {/* Badges Overlay */}
-                <div className="absolute top-4 left-4 flex flex-col gap-1.5">
-                  <span className="bg-[#741f23]/90 backdrop-blur-xs text-white text-[10px] font-extrabold px-3 py-1 rounded-lg uppercase tracking-wider shadow-xs">
+                <div className="absolute top-3 left-3 md:top-4 md:left-4 flex flex-col gap-1.5">
+                  <span className="bg-[#741f23]/90 backdrop-blur-xs text-white text-[10px] font-extrabold px-2.5 md:px-3 py-1 rounded-lg uppercase tracking-wider shadow-xs">
                     {product.category || 'General'}
                   </span>
                   {appliedOffer && (
@@ -713,7 +718,7 @@ export default function ProductDetailPageClient({
                 </div>
 
                 {/* Wishlist & Share Quick Action Buttons */}
-                <div className="absolute top-4 right-4 flex flex-col gap-2">
+                <div className="absolute top-3 right-3 md:top-4 md:right-4 flex flex-col gap-2">
                   <button
                     type="button"
                     onClick={(e) => {
@@ -746,22 +751,22 @@ export default function ProductDetailPageClient({
             </div>
 
             {/* RIGHT COLUMN: Details, Pricing, Offers & Actions */}
-            <div className="lg:col-span-6 flex flex-col justify-between space-y-6">
+            <div className="lg:col-span-6 flex flex-col justify-between space-y-4 md:space-y-6">
 
-              <div className="space-y-4">
+              <div className="space-y-3 md:space-y-4">
 
                 {/* Brand & Title Header */}
                 <div>
                   {product.brand && (
-                    <span className="text-[11px] font-black uppercase tracking-widest text-[#b5843d]">
+                    <span className="text-[10px] md:text-[11px] font-black uppercase tracking-widest text-[#b5843d]">
                       {product.brand}
                     </span>
                   )}
-                  <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-gray-900 leading-snug mt-0.5">
+                  <h1 className="text-lg md:text-2xl lg:text-3xl font-black text-gray-900 leading-snug mt-0.5">
                     {product.title}
                   </h1>
 
-                  <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 mt-2.5 text-xs">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1.5 text-[10px] md:gap-x-2.5 md:gap-y-1 md:mt-2.5 md:text-xs">
                     <span className="font-semibold text-[#741f23]">
                       GSTIN: 24AKBPD1704F1Z1
                     </span>
@@ -783,7 +788,7 @@ export default function ProductDetailPageClient({
                 </div>
 
                 {/* PRICING PRESENTATION BOX */}
-                <div className="p-5 bg-[#fffdf9] rounded-2xl border border-[#ead8b8] space-y-1.5">
+                <div className="p-3 md:p-5 bg-[#fffdf9] rounded-xl md:rounded-2xl border border-[#ead8b8] space-y-1.5">
                   {appliedOffer ? (
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
@@ -804,19 +809,19 @@ export default function ProductDetailPageClient({
                       </div>
 
                       {/* Final Price After Offer */}
-                      <div className="flex items-baseline justify-between pt-1">
-                        <span className="text-3xl sm:text-4xl font-black text-[#741f23]">
+                      <div className="flex items-baseline justify-between gap-2 pt-0.5 md:pt-1">
+                        <span className="text-2xl md:text-4xl font-black text-[#741f23]">
                           ₹{finalPrice.toLocaleString()}
                         </span>
-                        <span className="text-[11px] font-semibold text-gray-500">
+                        <span className="text-[10px] md:text-[11px] font-semibold text-gray-500 text-right">
                           Inclusive of all GST ({product.gst_rate ?? 5}%)
                         </span>
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-baseline justify-between flex-wrap gap-2">
-                      <div className="flex items-baseline gap-3">
-                        <span className="text-3xl sm:text-4xl font-black text-[#741f23]">
+                    <div className="flex items-baseline justify-between flex-wrap gap-1.5 md:gap-2">
+                      <div className="flex items-baseline gap-2 md:gap-3">
+                        <span className="text-2xl md:text-4xl font-black text-[#741f23]">
                           ₹{originalPrice.toLocaleString()}
                         </span>
                         {mrpVal > originalPrice && (
@@ -825,7 +830,7 @@ export default function ProductDetailPageClient({
                           </span>
                         )}
                       </div>
-                      <span className="text-[11px] font-semibold text-gray-500">
+                      <span className="text-[10px] md:text-[11px] font-semibold text-gray-500">
                         Inclusive of all GST ({product.gst_rate ?? 5}%)
                       </span>
                     </div>
@@ -834,28 +839,28 @@ export default function ProductDetailPageClient({
 
                 {/* AVAILABLE OFFERS SELECTION (Select ONE Offer) */}
                 {availableOffers.length > 0 && (
-                  <div className="p-4 bg-[#fff7e8] rounded-2xl border border-[#ead8b8] space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-[#741f23] uppercase flex items-center gap-1.5">
+                  <div className="p-3 md:p-4 bg-[#fff7e8] rounded-xl md:rounded-2xl border border-[#ead8b8] space-y-2 md:space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[11px] md:text-xs font-bold text-[#741f23] uppercase flex items-center gap-1.5">
                         <Tag size={14} className="text-[#b5843d]" /> Available Offers (Select One)
                       </span>
-                      <span className="text-[10px] text-gray-500 font-semibold">Only one offer applies</span>
+                      <span className="text-[9px] md:text-[10px] text-gray-500 font-semibold text-right">Only one offer applies</span>
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="space-y-1.5 md:space-y-2">
                       {availableOffers.map((offer) => {
                         const isSelected = appliedOffer?.campaignId === offer.campaignId;
                         return (
                           <label
                             key={offer.campaignId}
                             onClick={() => setSelectedCampaignId(offer.campaignId)}
-                            className={`flex items-center justify-between p-3 rounded-xl border text-xs font-bold cursor-pointer transition ${
+                            className={`flex items-center justify-between p-2.5 md:p-3 rounded-xl border text-xs font-bold cursor-pointer transition ${
                               isSelected
                                 ? 'bg-white border-[#741f23] shadow-xs text-[#741f23]'
                                 : 'bg-transparent border-[#ead8b8] text-gray-600 hover:bg-white/50'
                             }`}
                           >
-                            <div className="flex items-center gap-2.5">
+                            <div className="flex items-center gap-2 md:gap-2.5">
                               <input
                                 type="radio"
                                 name="product_offer_choice"
@@ -876,19 +881,19 @@ export default function ProductDetailPageClient({
                 )}
 
                 {/* COUPON CODE INPUT */}
-                <div className="bg-white p-3.5 rounded-2xl border border-[#ead8b8] space-y-2">
-                  <label className="block text-xs font-bold text-gray-700 uppercase">Have a Coupon or Promo Code?</label>
+                <div className="bg-white p-3 md:p-3.5 rounded-xl md:rounded-2xl border border-[#ead8b8] space-y-1.5 md:space-y-2">
+                  <label className="block text-[11px] md:text-xs font-bold text-gray-700 uppercase">Have a Coupon or Promo Code?</label>
                   <form onSubmit={handleApplyCoupon} className="flex gap-2">
                     <input
                       type="text"
                       value={couponInput}
                       onChange={(e) => setCouponInput(e.target.value)}
                       placeholder="e.g. FESTIVE15"
-                      className="flex-1 px-3.5 py-2 text-xs border border-[#ead8b8] rounded-xl font-mono uppercase bg-[#fffaf5] focus:bg-white outline-none focus:border-[#d7aa5b] focus:ring-2 focus:ring-[#f6e0bb]"
+                      className="flex-1 px-3 py-2 text-xs border border-[#ead8b8] rounded-xl font-mono uppercase bg-[#fffaf5] focus:bg-white outline-none focus:border-[#d7aa5b] focus:ring-2 focus:ring-[#f6e0bb]"
                     />
                     <button
                       type="submit"
-                      className="bg-[#741f23] hover:bg-[#5e171b] text-white font-bold px-4 py-2 rounded-xl text-xs transition cursor-pointer"
+                      className="bg-[#741f23] hover:bg-[#5e171b] text-white font-bold px-3.5 md:px-4 py-2 rounded-xl text-xs transition cursor-pointer"
                     >
                       Apply
                     </button>
@@ -910,13 +915,13 @@ export default function ProductDetailPageClient({
 
                 {/* SIZE VARIANTS SELECTOR */}
                 {variants.length > 0 && (
-                  <div className="space-y-2 pt-1">
-                    <div className="flex justify-between items-center">
-                      <label className="text-xs font-bold text-gray-800 uppercase tracking-wider">
+                  <div className="space-y-1.5 md:space-y-2">
+                    <div className="flex justify-between items-center gap-2">
+                      <label className="text-[11px] md:text-xs font-bold text-gray-800 uppercase tracking-wider">
                         Select Variant / Size:
                       </label>
                       {activeVariant && (
-                        <span className={`text-xs font-bold ${activeVariant.available_quantity > 0 ? 'text-green-600' : 'text-red-500'}`}>
+                        <span className={`text-[10px] md:text-xs font-bold text-right ${activeVariant.available_quantity > 0 ? 'text-green-600' : 'text-red-500'}`}>
                           {activeVariant.available_quantity > 0
                             ? `${activeVariant.available_quantity} Units In Stock`
                             : 'Out of Stock'}
@@ -934,7 +939,7 @@ export default function ProductDetailPageClient({
                             type="button"
                             disabled={!isStocked}
                             onClick={() => setSelectedSize(v.size)}
-                            className={`min-w-[52px] shrink-0 px-3 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
+                            className={`min-w-[48px] md:min-w-[52px] shrink-0 px-2.5 md:px-3 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
                               isSelected
                                 ? 'bg-[#741f23] text-white border-[#741f23] shadow-xs ring-2 ring-[#741f23]/15'
                                 : isStocked
@@ -951,8 +956,8 @@ export default function ProductDetailPageClient({
                 )}
 
                 {/* QUANTITY SELECTOR */}
-                <div className="flex items-center gap-4 pt-1">
-                  <span className="text-xs font-bold text-gray-800 uppercase tracking-wider">Quantity:</span>
+                <div className="flex items-center gap-3 md:gap-4">
+                  <span className="text-[11px] md:text-xs font-bold text-gray-800 uppercase tracking-wider">Quantity:</span>
                   <div className="inline-flex items-center border border-[#ead8b8] rounded-xl bg-white shadow-2xs overflow-hidden">
                     <button
                       type="button"
@@ -962,7 +967,7 @@ export default function ProductDetailPageClient({
                     >
                       <Minus size={14} />
                     </button>
-                    <span className="px-4 text-xs font-bold text-gray-900 min-w-[28px] text-center">
+                    <span className="px-3 md:px-4 text-xs font-bold text-gray-900 min-w-[28px] text-center">
                       {quantity}
                     </span>
                     <button
@@ -977,39 +982,39 @@ export default function ProductDetailPageClient({
                 </div>
 
                 {/* ACTION BUTTONS (Add to Cart / Buy Now) */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                <div className="grid grid-cols-2 gap-2 md:gap-3 pt-1 md:pt-2">
                   <button
                     type="button"
                     onClick={handleAddToCart}
                     disabled={isOutOfStock}
-                    className="w-full py-3.5 px-4 bg-[#741f23] hover:bg-[#5e171b] text-white text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 cursor-pointer active:scale-98 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d7aa5b] focus-visible:ring-offset-2"
+                    className="w-full py-3 px-3 md:py-3.5 md:px-4 bg-[#741f23] hover:bg-[#5e171b] text-white text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 md:gap-2 shadow-sm disabled:opacity-50 cursor-pointer active:scale-98 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d7aa5b] focus-visible:ring-offset-2"
                   >
                     {addedToCart ? <Check size={16} className="text-green-400" /> : <ShoppingCart size={16} />}
-                    <span>{addedToCart ? 'Added to Cart!' : 'Add to Cart'}</span>
+                    <span>{addedToCart ? 'Added!' : 'Add to Cart'}</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={handleBuyNow}
                     disabled={isOutOfStock}
-                    className="w-full py-3.5 px-4 bg-[#d7aa5b] hover:bg-[#b5843d] text-[#4a2400] text-xs font-black rounded-xl transition-all flex items-center justify-center gap-2 shadow-md shadow-[#d7aa5b]/20 disabled:opacity-50 cursor-pointer active:scale-98 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#741f23] focus-visible:ring-offset-2"
+                    className="w-full py-3 px-3 md:py-3.5 md:px-4 bg-[#d7aa5b] hover:bg-[#b5843d] text-[#4a2400] text-xs font-black rounded-xl transition-all flex items-center justify-center gap-1.5 md:gap-2 shadow-md shadow-[#d7aa5b]/20 disabled:opacity-50 cursor-pointer active:scale-98 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#741f23] focus-visible:ring-offset-2"
                   >
                     <Zap size={16} />
                     <span>Buy Now</span>
                   </button>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl bg-[#fffaf5] px-3 py-2 text-[10px] font-semibold text-gray-600">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl bg-[#fffaf5] px-2.5 py-1.5 md:px-3 md:py-2 text-[9px] md:text-[10px] font-semibold text-gray-600">
                   <span className="inline-flex items-center gap-1"><ShieldCheck size={13} className="text-green-600" /> Secure payment</span>
                   <span className="inline-flex items-center gap-1"><Truck size={13} className="text-[#741f23]" /> COD where available</span>
                   <span className="inline-flex items-center gap-1"><FileText size={13} className="text-[#b5843d]" /> GST included</span>
                 </div>
 
                 {/* PINCODE & DELIVERY ESTIMATE CHECKER */}
-                <div className="bg-[#fffdf9] p-4 rounded-2xl border border-[#ead8b8] space-y-2.5">
+                <div className="bg-[#fffdf9] p-3 md:p-4 rounded-xl md:rounded-2xl border border-[#ead8b8] space-y-2 md:space-y-2.5">
                   <div className="flex items-center gap-2">
                     <Truck size={16} className="text-[#741f23]" />
-                    <span className="text-xs font-bold text-gray-900 uppercase tracking-wider">Delivery & Pincode Check</span>
+                    <span className="text-[11px] md:text-xs font-bold text-gray-900 uppercase tracking-wider">Delivery & Pincode Check</span>
                   </div>
                   <div className="flex gap-2">
                     <div className="relative flex-1">
@@ -1033,7 +1038,7 @@ export default function ProductDetailPageClient({
                       type="button"
                       onClick={checkDeliveryPincode}
                       disabled={pincodeStatus === 'checking'}
-                      className="px-4 py-2 bg-[#741f23] hover:bg-[#5e171b] text-white text-xs font-bold rounded-xl transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d7aa5b] disabled:cursor-wait disabled:opacity-70"
+                      className="px-3.5 md:px-4 py-2 bg-[#741f23] hover:bg-[#5e171b] text-white text-xs font-bold rounded-xl transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d7aa5b] disabled:cursor-wait disabled:opacity-70"
                     >
                       {pincodeStatus === 'checking' ? 'Checking...' : 'Check'}
                     </button>
@@ -1066,29 +1071,29 @@ export default function ProductDetailPageClient({
                 </div>
 
                 {/* TRUST BADGES */}
-                <div className="grid grid-cols-3 gap-2.5 pt-2 text-center text-xs text-gray-600">
+                <div className="grid grid-cols-3 gap-1.5 md:gap-2.5 pt-1 md:pt-2 text-center text-xs text-gray-600">
                   <Link
                     href="/orders"
-                    className="flex flex-col items-center gap-1 p-2.5 bg-white rounded-xl border border-[#ead8b8] hover:bg-[#fff7e8] hover:border-[#d7aa5b] transition"
+                    className="flex flex-col items-center gap-0.5 md:gap-1 p-2 md:p-2.5 bg-white rounded-lg md:rounded-xl border border-[#ead8b8] hover:bg-[#fff7e8] hover:border-[#d7aa5b] transition"
                   >
-                    <Truck size={18} className="text-[#741f23]" />
-                    <span className="text-[10px] font-bold">Tracked Delivery</span>
+                    <Truck size={16} className="text-[#741f23] md:w-[18px] md:h-[18px]" />
+                    <span className="text-[9px] md:text-[10px] font-bold">Tracked Delivery</span>
                   </Link>
 
                   <Link
                     href="/payment-information"
-                    className="flex flex-col items-center gap-1 p-2.5 bg-white rounded-xl border border-[#ead8b8] hover:bg-[#fff7e8] hover:border-[#d7aa5b] transition"
+                    className="flex flex-col items-center gap-0.5 md:gap-1 p-2 md:p-2.5 bg-white rounded-lg md:rounded-xl border border-[#ead8b8] hover:bg-[#fff7e8] hover:border-[#d7aa5b] transition"
                   >
-                    <ShieldCheck size={18} className="text-green-600" />
-                    <span className="text-[10px] font-bold">Secure Checkout</span>
+                    <ShieldCheck size={16} className="text-green-600 md:w-[18px] md:h-[18px]" />
+                    <span className="text-[9px] md:text-[10px] font-bold">Secure Checkout</span>
                   </Link>
 
                   <Link
                     href="/return-policy"
-                    className="flex flex-col items-center gap-1 p-2.5 bg-white rounded-xl border border-[#ead8b8] hover:bg-[#fff7e8] hover:border-[#d7aa5b] transition"
+                    className="flex flex-col items-center gap-0.5 md:gap-1 p-2 md:p-2.5 bg-white rounded-lg md:rounded-xl border border-[#ead8b8] hover:bg-[#fff7e8] hover:border-[#d7aa5b] transition"
                   >
-                    <RotateCcw size={18} className="text-[#b5843d]" />
-                    <span className="text-[10px] font-bold">7-Day Return</span>
+                    <RotateCcw size={16} className="text-[#b5843d] md:w-[18px] md:h-[18px]" />
+                    <span className="text-[9px] md:text-[10px] font-bold">7-Day Return</span>
                   </Link>
                 </div>
 
@@ -1100,18 +1105,41 @@ export default function ProductDetailPageClient({
 
           {/* PRODUCT SPECIFICATIONS & DESCRIPTION */}
           {product.description && (
-            <div className="mt-10 bg-white rounded-3xl border border-[#ead8b8] p-6 sm:p-8 shadow-xs space-y-4">
-              <div className="flex items-center gap-2 border-b border-[#f0e3cf] pb-3">
-                <FileText size={18} className="text-[#741f23]" />
-                <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">
+            <div className="mt-6 md:mt-10 bg-white rounded-2xl md:rounded-3xl border border-[#ead8b8] p-4 md:p-8 shadow-xs space-y-3 md:space-y-4">
+              <div className="flex items-center gap-2 border-b border-[#f0e3cf] pb-2 md:pb-3">
+                <FileText size={17} className="text-[#741f23] md:w-[18px] md:h-[18px]" />
+                <h3 className="text-xs md:text-sm font-bold text-gray-900 uppercase tracking-wider">
                   Product Specifications & Details
                 </h3>
               </div>
-              <div className="text-xs sm:text-sm text-gray-600 whitespace-pre-line leading-relaxed">
+
+              <div className="md:hidden">
+                <div
+                  className="text-xs text-gray-600 whitespace-pre-line leading-relaxed"
+                  style={descriptionExpanded ? undefined : {
+                    display: '-webkit-box',
+                    WebkitLineClamp: 4,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                  }}
+                >
+                  {product.description}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDescriptionExpanded((expanded) => !expanded)}
+                  className="mt-2 inline-flex min-h-9 items-center rounded-lg border border-[#ead8b8] bg-[#fffaf5] px-3 text-[11px] font-black text-[#741f23] transition active:scale-[0.98]"
+                  aria-expanded={descriptionExpanded}
+                >
+                  {descriptionExpanded ? 'Show less' : 'Show more'}
+                </button>
+              </div>
+
+              <div className="hidden md:block text-sm text-gray-600 whitespace-pre-line leading-relaxed">
                 {product.description}
               </div>
 
-              <div className="pt-3 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs text-gray-500 border-t border-[#f0e3cf]">
+              <div className="pt-2 md:pt-3 grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 text-[11px] md:text-xs text-gray-500 border-t border-[#f0e3cf]">
                 {product.hsn_code && <div><span className="font-bold text-gray-700">HSN Code:</span> {product.hsn_code}</div>}
                 <div><span className="font-bold text-gray-700">GST Rate:</span> {product.gst_rate ?? 5}%</div>
                 {product.net_weight && <div><span className="font-bold text-gray-700">Weight:</span> {product.net_weight} kg</div>}
@@ -1129,21 +1157,21 @@ export default function ProductDetailPageClient({
 
           {/* SIMILAR PRODUCTS */}
           {similarProducts.length > 0 && (
-            <div className="mt-14 space-y-6">
-              <div className="flex items-center justify-between">
+            <div className="mt-8 md:mt-14 space-y-4 md:space-y-6">
+              <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-xl font-black text-[#741f23]">You May Also Like</h3>
-                  <p className="text-xs text-gray-500">Popular items from the {product.category || 'same'} collection</p>
+                  <h3 className="text-lg md:text-xl font-black text-[#741f23]">You May Also Like</h3>
+                  <p className="text-[11px] md:text-xs text-gray-500">Popular items from the {product.category || 'same'} collection</p>
                 </div>
                 <Link
                   href={`/category/${encodeURIComponent(product.category)}`}
-                  className="text-xs font-bold text-[#b5843d] hover:text-[#9a6a2b] flex items-center gap-1"
+                  className="text-[11px] md:text-xs font-bold text-[#b5843d] hover:text-[#9a6a2b] flex items-center gap-1 shrink-0"
                 >
                   View All <ChevronRight size={14} />
                 </Link>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 md:gap-6">
                 {similarProducts.map((item) => (
                   <ProductCard key={item.id} product={item} activeCampaigns={activeCampaigns} />
                 ))}
@@ -1153,13 +1181,13 @@ export default function ProductDetailPageClient({
 
           {/* RECENTLY VIEWED PRODUCTS */}
           {recentlyViewed.length > 0 && (
-            <div className="mt-14 space-y-6 border-t border-[#ead8b8] pt-10">
+            <div className="mt-8 md:mt-14 space-y-4 md:space-y-6 border-t border-[#ead8b8] pt-6 md:pt-10">
               <div className="flex items-center gap-2">
-                <History size={20} className="text-[#741f23]" />
-                <h3 className="text-xl font-black text-[#741f23]">Recently Viewed Items</h3>
+                <History size={18} className="text-[#741f23] md:w-5 md:h-5" />
+                <h3 className="text-lg md:text-xl font-black text-[#741f23]">Recently Viewed Items</h3>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 md:gap-6">
                 {recentlyViewed.map((item) => (
                   <ProductCard key={item.id} product={item} activeCampaigns={activeCampaigns} />
                 ))}
