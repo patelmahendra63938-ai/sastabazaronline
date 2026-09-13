@@ -22,6 +22,8 @@ export interface CheckoutCartItem {
   gst_rate?: number;
   selected_campaign_id?: string;
   applied_offer_label?: string | null;
+  pack_option_id?: string;
+  pieces_per_unit?: number;
 }
 
 export interface CheckoutInput {
@@ -81,121 +83,53 @@ export async function processOrderCheckout(formData: CheckoutInput) {
     const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
     if (!supabaseUrl || !anonKey) {
-      return {
-        success: false,
-        error: 'Store database configuration is unavailable.',
-      };
+      return { success: false, error: 'Store database configuration is unavailable.' };
     }
 
     const authSupabase = createServerClient(supabaseUrl, anonKey, {
-      cookies: {
-        getAll: () => cookieStore.getAll(),
-      },
+      cookies: { getAll: () => cookieStore.getAll() },
     });
 
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
     if (!serviceRoleKey) {
       console.error('[CHECKOUT_CONFIG_ERROR] SUPABASE_SERVICE_ROLE_KEY is missing.');
-      return {
-        success: false,
-        error: 'Secure checkout is temporarily unavailable. Please try again later.',
-      };
+      return { success: false, error: 'Secure checkout is temporarily unavailable. Please try again later.' };
     }
 
     const dbSupabase = createClient(supabaseUrl, serviceRoleKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
-      },
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
     });
 
     const cleanPincode = String(formData.pincode || '').trim();
+    if (!/^\d{6}$/.test(cleanPincode)) return { success: false, error: 'Please enter a valid 6-digit postal PIN code.' };
+    if (!Array.isArray(formData.cart) || formData.cart.length === 0) return { success: false, error: 'Your cart is empty.' };
 
-    if (!/^\d{6}$/.test(cleanPincode)) {
-      return {
-        success: false,
-        error: 'Please enter a valid 6-digit postal PIN code.',
-      };
-    }
-
-    if (!Array.isArray(formData.cart) || formData.cart.length === 0) {
-      return {
-        success: false,
-        error: 'Your cart is empty.',
-      };
-    }
-
-    const customerName = (
-      formData.customer_name ||
-      formData.customerName ||
-      formData.fullName ||
-      ''
-    ).trim();
-
-    const customerEmail = (
-      formData.customer_email ||
-      formData.customerEmail ||
-      formData.email ||
-      ''
-    ).trim();
-
-    const customerPhone = String(
-      formData.customer_phone ||
-      formData.customerPhone ||
-      formData.phone ||
-      ''
-    )
-      .replace(/\D/g, '')
-      .slice(-10);
-
+    const customerName = (formData.customer_name || formData.customerName || formData.fullName || '').trim();
+    const customerEmail = (formData.customer_email || formData.customerEmail || formData.email || '').trim();
+    const customerPhone = String(formData.customer_phone || formData.customerPhone || formData.phone || '').replace(/\D/g, '').slice(-10);
     const deliveryAddress = String(formData.address || '').trim();
     const deliveryCity = String(formData.city || '').trim();
     const deliveryState = String(formData.state || '').trim();
 
-    if (!customerName) {
-      return {
-        success: false,
-        error: 'Customer name is required.',
-      };
-    }
+    if (!customerName) return { success: false, error: 'Customer name is required.' };
+    if (!customerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) return { success: false, error: 'A valid customer email address is required.' };
+    if (!/^\d{10}$/.test(customerPhone)) return { success: false, error: 'A valid 10-digit mobile number is required.' };
+    if (!deliveryAddress || !deliveryCity || !deliveryState) return { success: false, error: 'Complete delivery address, city and state are required.' };
 
-    if (!customerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) {
-      return {
-        success: false,
-        error: 'A valid customer email address is required.',
-      };
-    }
+    const rawPaymentMethod = formData.payment_method || formData.paymentMethod || 'COD';
+    const paymentMethod = rawPaymentMethod.startsWith('ONLINE') || rawPaymentMethod.startsWith('Online UPI')
+      ? 'ONLINE'
+      : rawPaymentMethod === 'UPI_QR' || rawPaymentMethod === 'QR'
+        ? 'UPI_QR'
+        : 'COD';
 
-    if (!/^\d{10}$/.test(customerPhone)) {
-      return {
-        success: false,
-        error: 'A valid 10-digit mobile number is required.',
-      };
-    }
-
-    if (!deliveryAddress || !deliveryCity || !deliveryState) {
-      return {
-        success: false,
-        error: 'Complete delivery address, city and state are required.',
-      };
-    }
-
-    const rawPaymentMethod =
-      formData.payment_method ||
-      formData.paymentMethod ||
-      'COD';
-
-    const paymentMethod =
-      rawPaymentMethod.startsWith('ONLINE') ||
-      rawPaymentMethod.startsWith('Online UPI')
-        ? 'ONLINE'
-        : rawPaymentMethod === 'UPI_QR' || rawPaymentMethod === 'QR'
-          ? 'UPI_QR'
-          : 'COD';
-
-    const pricing = await calculateAuthoritativeOrderPricing({ db: dbSupabase, pincode: cleanPincode, paymentMethod, cart: formData.cart, couponCode: formData.coupon_code });
+    const pricing = await calculateAuthoritativeOrderPricing({
+      db: dbSupabase,
+      pincode: cleanPincode,
+      paymentMethod,
+      cart: formData.cart,
+      couponCode: formData.coupon_code,
+    });
     const serverOriginalTotal = pricing.originalProductPriceTotal;
     const serverSubtotal = pricing.discountedSubtotal;
     const serverTotalDiscount = pricing.discountDeductionAmount;
@@ -208,14 +142,8 @@ export async function processOrderCheckout(formData: CheckoutInput) {
     const grandTotal = pricing.totalPayable;
 
     const currentYear = new Date().getFullYear();
-    const orderNumber =
-      `SBZ-${currentYear}-${Math.floor(
-        100000 + Math.random() * 900000
-      )}`;
-
-    const fullAddress =
-      `${deliveryAddress}, ${deliveryCity}, ${deliveryState} - ${cleanPincode}`;
-
+    const orderNumber = `SBZ-${currentYear}-${Math.floor(100000 + Math.random() * 900000)}`;
+    const fullAddress = `${deliveryAddress}, ${deliveryCity}, ${deliveryState} - ${cleanPincode}`;
     const shippingAddressJson = {
       address: deliveryAddress,
       city: deliveryCity,
@@ -225,75 +153,52 @@ export async function processOrderCheckout(formData: CheckoutInput) {
       ...(checkoutGst ? { gst_invoice: checkoutGst } : {}),
     };
 
-    const {
-      data: { user },
-      error: authUserError,
-    } = await authSupabase.auth.getUser();
-
-    if (authUserError) {
-      console.warn('[CHECKOUT_AUTH_USER_WARNING]', authUserError.message);
-    }
-
+    const { data: { user }, error: authUserError } = await authSupabase.auth.getUser();
+    if (authUserError) console.warn('[CHECKOUT_AUTH_USER_WARNING]', authUserError.message);
     const customerId = user?.id ?? null;
 
-    const { data: rpcResult, error: rpcError } =
-      await dbSupabase.rpc('place_order_atomic_secure', {
-        p_order_number: orderNumber,
-        p_customer_id: customerId,
-        p_customer_name: customerName,
-        p_customer_email: customerEmail,
-        p_customer_phone: customerPhone,
-        p_shipping_address: shippingAddressJson,
-        p_subtotal: serverSubtotal,
-        p_tax_amount: roundedTaxAmount,
-        p_actual_weight_kg: totalActualWeightKg,
-        p_chargeable_weight_kg: pricing.chargeableWeightGrams / 1000,
-        p_actual_courier_cost: 0,
-        p_shipping_charge: customerShippingCharge,
-        p_cod_charge: appliedCodCharge,
-        p_discount_amount: serverTotalDiscount,
-        p_grand_total: grandTotal,
-        p_payment_method: paymentMethod,
-        p_items: verifiedItems.map((item) => ({
-          product_id: item.product_id,
-          product_title: item.product_title,
-          size: item.size,
-          sku: item.sku,
-          hsn_code: item.hsn_code,
-          gst_rate: item.gst_rate,
-          unit_price: item.unit_price,
-          weight_kg: item.weight_kg,
-          quantity: item.quantity,
-          line_total: item.line_total,
-        })),
-      });
+    const { data: rpcResult, error: rpcError } = await dbSupabase.rpc('place_order_atomic_secure', {
+      p_order_number: orderNumber,
+      p_customer_id: customerId,
+      p_customer_name: customerName,
+      p_customer_email: customerEmail,
+      p_customer_phone: customerPhone,
+      p_shipping_address: shippingAddressJson,
+      p_subtotal: serverSubtotal,
+      p_tax_amount: roundedTaxAmount,
+      p_actual_weight_kg: totalActualWeightKg,
+      p_chargeable_weight_kg: pricing.chargeableWeightGrams / 1000,
+      p_actual_courier_cost: 0,
+      p_shipping_charge: customerShippingCharge,
+      p_cod_charge: appliedCodCharge,
+      p_discount_amount: serverTotalDiscount,
+      p_grand_total: grandTotal,
+      p_payment_method: paymentMethod,
+      p_items: verifiedItems.map((item) => ({
+        product_id: item.product_id,
+        product_title: item.product_title,
+        size: item.size,
+        sku: item.sku,
+        hsn_code: item.hsn_code,
+        gst_rate: item.gst_rate,
+        unit_price: item.unit_price,
+        weight_kg: item.weight_kg,
+        quantity: item.quantity,
+        line_total: item.line_total,
+        pack_option_id: item.pack_option_id,
+        pieces_per_unit: item.pieces_per_unit,
+        physical_quantity: item.physical_quantity,
+      })),
+    });
 
     if (rpcError) {
       console.error('[PLACE_ORDER_ATOMIC_ERROR]', rpcError);
-
-      return {
-        success: false,
-        error:
-          rpcError.message ||
-          'Order could not be completed safely.',
-      };
+      return { success: false, error: rpcError.message || 'Order could not be completed safely.' };
     }
 
-    if (
-      !rpcResult ||
-      rpcResult.success !== true ||
-      !rpcResult.order_number
-    ) {
-      console.error(
-        '[PLACE_ORDER_ATOMIC_INVALID_RESULT]',
-        rpcResult
-      );
-
-      return {
-        success: false,
-        error:
-          'Order transaction returned an invalid response.',
-      };
+    if (!rpcResult || rpcResult.success !== true || !rpcResult.order_number) {
+      console.error('[PLACE_ORDER_ATOMIC_INVALID_RESULT]', rpcResult);
+      return { success: false, error: 'Order transaction returned an invalid response.' };
     }
 
     try {
@@ -303,10 +208,7 @@ export async function processOrderCheckout(formData: CheckoutInput) {
         customerEmail,
         customerPhone,
         shippingAddress: fullAddress,
-        paymentMethod:
-          paymentMethod === 'ONLINE'
-            ? 'PhonePe Online Payment'
-            : paymentMethod,
+        paymentMethod: paymentMethod === 'ONLINE' ? 'PhonePe Online Payment' : paymentMethod,
         grandTotal,
         subtotal: serverSubtotal,
         shippingCharge: customerShippingCharge,
@@ -316,10 +218,7 @@ export async function processOrderCheckout(formData: CheckoutInput) {
         items: verifiedItems,
       });
     } catch (notificationError) {
-      console.warn(
-        '[ORDER_NOTIFICATION_WARNING]',
-        notificationError
-      );
+      console.warn('[ORDER_NOTIFICATION_WARNING]', notificationError);
     }
 
     return {
@@ -332,27 +231,14 @@ export async function processOrderCheckout(formData: CheckoutInput) {
         offer_label: primaryOfferLabel,
         discount_amount: serverTotalDiscount,
         subtotal: serverSubtotal,
-        shipment_weight:
-          `${pricing.actualWeightGrams} g`,
-        shipping_charge:
-          `₹${customerShippingCharge.toFixed(2)}`,
-        cod_charge:
-          `₹${appliedCodCharge.toFixed(2)}`,
+        shipment_weight: `${pricing.actualWeightGrams} g`,
+        shipping_charge: `₹${customerShippingCharge.toFixed(2)}`,
+        cod_charge: `₹${appliedCodCharge.toFixed(2)}`,
         total_payable: grandTotal,
       },
     };
   } catch (error: unknown) {
-    console.error(
-      '[CHECKOUT_PROCESSING_ERROR]',
-      error
-    );
-
-    return {
-      success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : 'An unexpected error occurred during checkout.',
-    };
+    console.error('[CHECKOUT_PROCESSING_ERROR]', error);
+    return { success: false, error: error instanceof Error ? error.message : 'An unexpected error occurred during checkout.' };
   }
 }
