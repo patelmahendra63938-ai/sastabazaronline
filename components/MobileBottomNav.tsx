@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, LayoutGrid, ShoppingCart, UserRound } from 'lucide-react';
 
-const hiddenRoutes = ['/admin', '/checkout'];
+const hiddenRoutes = ['/admin', '/checkout', '/product'];
 
 export default function MobileBottomNav() {
   const pathname = usePathname();

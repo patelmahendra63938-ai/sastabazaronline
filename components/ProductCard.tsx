@@ -180,7 +180,7 @@ export default function ProductCard({ product, activeCampaigns = [], priorityIma
           </div>
         </div>
 
-        <div className="min-w-0 p-2.5 pt-0 md:p-3.5 md:pt-0">
+        <div className="hidden min-w-0 md:block md:p-3.5 md:pt-0">
           {isOutOfStock ? (
             <button type="button" disabled className="flex min-h-10 w-full cursor-not-allowed items-center justify-center rounded-xl bg-stone-200 px-2 text-[11px] font-bold text-stone-500 md:min-h-11 md:px-3 md:text-xs">Out of Stock</button>
           ) : hasInventoryVariants ? (
