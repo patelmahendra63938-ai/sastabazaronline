@@ -9,9 +9,9 @@ import MobileBottomNav from '@/components/MobileBottomNav';
 
 const SITE_URL = 'https://www.adhyeybrothers.in';
 const SITE_NAME = 'ADHYEY BROTHERS';
-const DEFAULT_TITLE = 'Clothing, Home & Kitchen Online Shopping | ADHYEY BROTHERS';
+const DEFAULT_TITLE = 'Online Shopping for Clothing, Home & Kitchen & Everyday Essentials | ADHYEY BROTHERS';
 const DEFAULT_DESCRIPTION =
-  'Shop clothing, women’s ethnic wear, girls fashion, kitchen, dining, cleaning and home utility products at ADHYEY BROTHERS with Pan India delivery.';
+  'Shop clothing, Home & Kitchen essentials and useful everyday products at competitive prices from ADHYEY BROTHERS, with secure payments, GST invoices and Pan India delivery.';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -39,13 +39,15 @@ export const metadata: Metadata = {
   keywords: [
     'ADHYEY BROTHERS',
     'online shopping India',
-    'women ethnic wear online India',
-    'dhoti choli for women',
-    'lehenga choli online',
-    'girls nightwear online',
+    'clothing online India',
     'home and kitchen products online',
     'kitchen accessories online India',
     'cleaning products online India',
+    'home utility products online',
+    'everyday essentials online India',
+    'women ethnic wear online India',
+    'dhoti choli for women',
+    'girls fashion online',
     'Surat online shopping',
   ],
 
