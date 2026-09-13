@@ -92,6 +92,28 @@ a {
  * - Trust content stays available, but is compressed and placed after products.
  */
 @media (max-width: 767px) {
+  main,
+  section,
+  article,
+  form,
+  fieldset,
+  div {
+    min-width: 0;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  /* The old marketplace block remains for desktop only. */
+  section[aria-labelledby="seller-trust-heading"] {
+    display: none !important;
+  }
+
   [data-mobile-home-discovery] + .max-w-7xl {
     display: flex;
     flex-direction: column;
@@ -138,7 +160,7 @@ a {
     gap: 0.5rem;
   }
 
-  /* Keep trust proof, but move it below products and make it horizontally compact. */
+  /* Keep trust proof below featured products and place marketplace links directly under it. */
   [data-mobile-home-discovery] + .max-w-7xl > section[aria-labelledby="top-trust-heading"] {
     order: 2;
     border-radius: 1rem;
@@ -154,31 +176,31 @@ a {
     letter-spacing: 0.08em;
   }
 
-  [data-mobile-home-discovery] + .max-w-7xl > section[aria-labelledby="top-trust-heading"] > div:last-child {
+  [data-mobile-home-discovery] + .max-w-7xl > section[aria-labelledby="top-trust-heading"] > div:nth-child(2) {
     display: flex;
     overflow-x: auto;
     overscroll-behavior-inline: contain;
     scrollbar-width: none;
   }
 
-  [data-mobile-home-discovery] + .max-w-7xl > section[aria-labelledby="top-trust-heading"] > div:last-child::-webkit-scrollbar {
+  [data-mobile-home-discovery] + .max-w-7xl > section[aria-labelledby="top-trust-heading"] > div:nth-child(2)::-webkit-scrollbar {
     display: none;
   }
 
-  [data-mobile-home-discovery] + .max-w-7xl > section[aria-labelledby="top-trust-heading"] > div:last-child > a {
+  [data-mobile-home-discovery] + .max-w-7xl > section[aria-labelledby="top-trust-heading"] > div:nth-child(2) > a {
     flex: 0 0 7.5rem;
     border-right: 1px solid #eee7df;
   }
 
-  [data-mobile-home-discovery] + .max-w-7xl > section[aria-labelledby="top-trust-heading"] > div:last-child > a:last-child {
+  [data-mobile-home-discovery] + .max-w-7xl > section[aria-labelledby="top-trust-heading"] > div:nth-child(2) > a:last-child {
     border-right: 0;
   }
 
-  [data-mobile-home-discovery] + .max-w-7xl > section[aria-labelledby="top-trust-heading"] > div:last-child > a > div {
+  [data-mobile-home-discovery] + .max-w-7xl > section[aria-labelledby="top-trust-heading"] > div:nth-child(2) > a > div {
     padding: 0.625rem 0.5rem;
   }
 
-  [data-mobile-home-discovery] + .max-w-7xl > section[aria-labelledby="top-trust-heading"] > div:last-child > a p {
+  [data-mobile-home-discovery] + .max-w-7xl > section[aria-labelledby="top-trust-heading"] > div:nth-child(2) > a p {
     display: none;
   }
 }
