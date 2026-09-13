@@ -1,6 +1,6 @@
 import { ImageResponse } from 'next/og';
 
-export const alt = 'ADHYEY BROTHERS — Women’s Ethnic Wear & Fashion';
+export const alt = 'ADHYEY BROTHERS — Clothing, Home & Kitchen & Everyday Essentials';
 export const size = {
   width: 1200,
   height: 630,
@@ -52,7 +52,7 @@ export default function OpenGraphImage() {
             color: '#8a5c25',
           }}
         >
-          Women’s Ethnic Wear • Girls Fashion • Pan India Delivery
+          Clothing • Home & Kitchen • Everyday Essentials
         </div>
         <div
           style={{
@@ -61,7 +61,7 @@ export default function OpenGraphImage() {
             color: '#5f5148',
           }}
         >
-          Quality • Trust • Style
+          Quality • Trust • Value
         </div>
       </div>
     ),
