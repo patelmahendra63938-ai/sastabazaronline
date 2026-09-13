@@ -3,6 +3,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { getCurrentUser } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
+import { SHARED_STOCK_SIZE } from '@/lib/catalog/pack-options';
 
 interface CancelCustomerOrderInput {
   orderId: string;
@@ -17,21 +18,17 @@ export async function cancelCustomerOrderAction(input: CancelCustomerOrderInput)
   try {
     const orderId = String(input.orderId || '').trim();
     const reason = String(input.reason || 'Customer requested cancellation').trim();
-
     if (!orderId) return { success: false, error: 'Order ID is required.' };
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!supabaseUrl || !serviceRoleKey) {
-      return { success: false, error: 'Secure cancellation service is unavailable.' };
-    }
+    if (!supabaseUrl || !serviceRoleKey) return { success: false, error: 'Secure cancellation service is unavailable.' };
 
     const admin = createClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
     });
 
     const { user } = await getCurrentUser();
-
     const { data: order, error: orderError } = await admin
       .from('orders')
       .select(`
@@ -48,7 +45,10 @@ export async function cancelCustomerOrderAction(input: CancelCustomerOrderInput)
           id,
           product_id,
           quantity,
-          size
+          size,
+          pack_option_id,
+          pieces_per_unit,
+          physical_quantity
         )
       `)
       .eq('id', orderId)
@@ -58,20 +58,13 @@ export async function cancelCustomerOrderAction(input: CancelCustomerOrderInput)
 
     if (user) {
       const ownsById = order.customer_id === user.id;
-      const ownsByVerifiedEmail = Boolean(
-        user.email &&
-        String(order.customer_email || '').trim().toLowerCase() === user.email.trim().toLowerCase()
-      );
-
-      if (!ownsById && !ownsByVerifiedEmail) {
-        return { success: false, error: 'You can only cancel your own order.' };
-      }
+      const ownsByVerifiedEmail = Boolean(user.email && String(order.customer_email || '').trim().toLowerCase() === user.email.trim().toLowerCase());
+      if (!ownsById && !ownsByVerifiedEmail) return { success: false, error: 'You can only cancel your own order.' };
     } else {
       const cleanEmail = String(input.email || '').trim().toLowerCase();
       const cleanPhone = String(input.phone || '').replace(/\D/g, '').slice(-10);
       const orderEmail = String(order.customer_email || '').trim().toLowerCase();
       const orderPhone = String(order.customer_phone || '').replace(/\D/g, '').slice(-10);
-
       if (!cleanEmail || cleanPhone.length !== 10 || cleanEmail !== orderEmail || cleanPhone !== orderPhone) {
         return { success: false, error: 'Order verification failed. Please search again with the order email and phone.' };
       }
@@ -93,51 +86,45 @@ export async function cancelCustomerOrderAction(input: CancelCustomerOrderInput)
 
     const { data: cancelledOrder, error: cancelError } = await admin
       .from('orders')
-      .update({
-        order_status: 'CANCELLED',
-        payment_status: isPrepaid ? 'REFUND_PENDING' : order.payment_status,
-        updated_at: new Date().toISOString(),
-      })
+      .update({ order_status: 'CANCELLED', payment_status: isPrepaid ? 'REFUND_PENDING' : order.payment_status, updated_at: new Date().toISOString() })
       .eq('id', order.id)
       .in('order_status', CANCELLABLE_STATUSES)
       .select('id')
       .maybeSingle();
 
     if (cancelError) return { success: false, error: cancelError.message };
-    if (!cancelledOrder) {
-      return { success: false, error: 'Order status changed before cancellation could complete. Please refresh and check the order.' };
-    }
+    if (!cancelledOrder) return { success: false, error: 'Order status changed before cancellation could complete. Please refresh and check the order.' };
 
     for (const item of order.order_items || []) {
       if (!item.product_id || !item.quantity) continue;
 
-      let inventoryQuery = admin
+      const inventorySize = item.pack_option_id ? SHARED_STOCK_SIZE : (item.size || 'Free Size');
+      const restoreQuantity = Math.max(
+        1,
+        Number(item.physical_quantity || (Number(item.quantity) * Math.max(1, Number(item.pieces_per_unit || 1))))
+      );
+
+      const { data: inventoryRow, error: inventoryLookupError } = await admin
         .from('inventory')
         .select('id, size, available_quantity, sold_quantity')
-        .eq('product_id', item.product_id);
+        .eq('product_id', item.product_id)
+        .eq('size', inventorySize)
+        .maybeSingle();
 
-      if (item.size) inventoryQuery = inventoryQuery.eq('size', item.size);
-
-      const { data: inventoryRow, error: inventoryLookupError } = await inventoryQuery.maybeSingle();
       if (inventoryLookupError) {
         console.error('[CUSTOMER_CANCEL_INVENTORY_LOOKUP_ERROR]', inventoryLookupError);
         continue;
       }
       if (!inventoryRow) continue;
 
-      const quantity = Number(item.quantity || 0);
       const previousAvailable = Number(inventoryRow.available_quantity || 0);
       const previousSold = Number(inventoryRow.sold_quantity || 0);
-      const newAvailable = previousAvailable + quantity;
-      const newSold = Math.max(0, previousSold - quantity);
+      const newAvailable = previousAvailable + restoreQuantity;
+      const newSold = Math.max(0, previousSold - restoreQuantity);
 
       const { error: inventoryUpdateError } = await admin
         .from('inventory')
-        .update({
-          available_quantity: newAvailable,
-          sold_quantity: newSold,
-          updated_at: new Date().toISOString(),
-        })
+        .update({ available_quantity: newAvailable, sold_quantity: newSold, updated_at: new Date().toISOString() })
         .eq('id', inventoryRow.id);
 
       if (inventoryUpdateError) {
@@ -145,24 +132,19 @@ export async function cancelCustomerOrderAction(input: CancelCustomerOrderInput)
         continue;
       }
 
-      const { error: movementError } = await admin
-        .from('inventory_movements')
-        .insert({
-          product_id: item.product_id,
-          order_id: order.id,
-          size: item.size || inventoryRow.size || 'Free Size',
-          quantity,
-          movement_type: 'ORDER_RELEASED',
-          previous_quantity: previousAvailable,
-          new_quantity: newAvailable,
-          reference: order.order_number,
-          notes: `Customer cancelled order. Reason: ${reason}`,
-          created_by: user ? user.id : 'CUSTOMER_GUEST',
-        });
-
-      if (movementError) {
-        console.error('[CUSTOMER_CANCEL_MOVEMENT_ERROR]', movementError);
-      }
+      const { error: movementError } = await admin.from('inventory_movements').insert({
+        product_id: item.product_id,
+        order_id: order.id,
+        size: inventorySize,
+        quantity: restoreQuantity,
+        movement_type: 'ORDER_RELEASED',
+        previous_quantity: previousAvailable,
+        new_quantity: newAvailable,
+        reference: order.order_number,
+        notes: `Customer cancelled order. Reason: ${reason}`,
+        created_by: user ? user.id : 'CUSTOMER_GUEST',
+      });
+      if (movementError) console.error('[CUSTOMER_CANCEL_MOVEMENT_ERROR]', movementError);
     }
 
     await admin.from('order_status_history').insert({
