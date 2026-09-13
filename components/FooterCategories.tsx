@@ -44,11 +44,6 @@ export default function FooterCategories() {
 
   return (
     <>
-      <li>
-        <Link href="/collections/dhoti-choli" className={linkClass}>
-          Women’s Dhoti Choli
-        </Link>
-      </li>
       {dynamicCategories.length === 0 ? (
         <li className="py-2 text-stone-400">Browse products from the main catalog</li>
       ) : (
@@ -63,6 +58,11 @@ export default function FooterCategories() {
           </li>
         ))
       )}
+      <li>
+        <Link href="/collections/dhoti-choli" className={linkClass}>
+          Women’s Dhoti Choli
+        </Link>
+      </li>
     </>
   );
 }
