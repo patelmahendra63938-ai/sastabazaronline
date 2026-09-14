@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -18,7 +18,14 @@ import MobileHomeDiscovery from './MobileHomeDiscovery';
 
 interface HeaderCategory {
   name: string;
+  main_category: string;
   product_count: number;
+}
+
+interface HeaderCategoryGroup {
+  name: string;
+  product_count: number;
+  subcategories: HeaderCategory[];
 }
 
 export default function Header() {
@@ -100,11 +107,20 @@ export default function Header() {
         const data = await response.json();
         if (!cancelled && Array.isArray(data)) {
           setCategories(
-            data.filter(
-              (item): item is HeaderCategory =>
-                typeof item?.name === 'string' &&
-                Number(item?.product_count || 0) > 0
-            )
+            data
+              .filter(
+                item =>
+                  typeof item?.name === 'string' &&
+                  Number(item?.product_count || 0) > 0
+              )
+              .map(item => ({
+                name: item.name,
+                main_category:
+                  typeof item?.main_category === 'string' && item.main_category.trim()
+                    ? item.main_category
+                    : item.name,
+                product_count: Number(item.product_count || 0),
+              }))
           );
         }
       } catch {
@@ -118,16 +134,30 @@ export default function Header() {
     };
   }, [mobileMenuOpen, categories.length]);
 
+  const categoryGroups = useMemo<HeaderCategoryGroup[]>(() => {
+    const grouped = new Map<string, HeaderCategoryGroup>();
+
+    for (const category of categories) {
+      const key = category.main_category.trim().toLowerCase();
+      const current = grouped.get(key) || {
+        name: category.main_category,
+        product_count: 0,
+        subcategories: [],
+      };
+      current.product_count += category.product_count;
+      current.subcategories.push(category);
+      grouped.set(key, current);
+    }
+
+    return Array.from(grouped.values());
+  }, [categories]);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     const query = searchQuery.trim();
     if (!query) return;
     router.push(`/search?q=${encodeURIComponent(query)}`);
   };
-
-  const dynamicCategories = categories.filter(
-    category => category.name.trim().toLowerCase() !== 'dhoti choli'
-  );
 
   return (
     <>
@@ -237,40 +267,58 @@ export default function Header() {
           </div>
         </div>
 
-        <div className="hidden border-b border-[#ead8b8] bg-white lg:block">
-          <nav aria-label="Product categories" className="mx-auto flex max-w-7xl items-center gap-1 overflow-x-auto px-4 py-2">
-            <Link
-              href="/collections/dhoti-choli"
-              className="whitespace-nowrap rounded-lg bg-[#fff7e8] px-4 py-2 text-xs font-black uppercase tracking-wide text-[#741f23] transition hover:bg-[#fff2dc]"
-            >
-              Dhoti Choli
-            </Link>
-            {dynamicCategories.map(category => (
-              <Link
-                key={category.name}
-                href={`/category/${encodeURIComponent(category.name)}`}
-                className="whitespace-nowrap rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-wide text-stone-700 transition hover:bg-[#fff2dc] hover:text-[#741f23]"
-              >
-                {category.name}
-              </Link>
-            ))}
-          </nav>
-        </div>
+        {categoryGroups.length > 0 && (
+          <div className="hidden border-b border-[#ead8b8] bg-white lg:block">
+            <nav aria-label="Product categories" className="mx-auto flex max-w-7xl items-center gap-3 overflow-x-auto px-4 py-2.5">
+              {categoryGroups.map(group => (
+                <div key={group.name} className="flex shrink-0 items-center gap-1 rounded-xl border border-[#f0e3cf] bg-[#fffdf9] p-1">
+                  <Link
+                    href={`/category/${encodeURIComponent(group.name)}`}
+                    className="whitespace-nowrap rounded-lg bg-[#fff2dc] px-3 py-2 text-xs font-black uppercase tracking-wide text-[#741f23] transition hover:bg-[#fbe6c7]"
+                  >
+                    {group.name}
+                  </Link>
+                  {group.subcategories.map(category => (
+                    <Link
+                      key={category.name}
+                      href={`/category/${encodeURIComponent(category.name)}`}
+                      className="whitespace-nowrap rounded-lg px-3 py-2 text-xs font-bold text-stone-600 transition hover:bg-[#fff2dc] hover:text-[#741f23]"
+                    >
+                      {category.name}
+                    </Link>
+                  ))}
+                </div>
+              ))}
+            </nav>
+          </div>
+        )}
 
         {mobileMenuOpen && (
           <div className="border-b border-[#ead8b8] bg-[#fffdf9] lg:hidden">
-            <nav aria-label="Mobile navigation" className="mx-auto grid max-w-7xl grid-cols-2 gap-1 px-4 py-3">
-              <Link href="/" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-3 text-xs font-bold text-stone-800 transition hover:bg-[#fff6e9] hover:text-[#741f23]">HOME</Link>
-              <Link href="/collections/dhoti-choli" onClick={() => setMobileMenuOpen(false)} className="rounded-lg bg-[#fff7e8] px-3 py-3 text-xs font-black text-[#741f23] transition hover:bg-[#fff2dc]">DHOTI CHOLI</Link>
-              {dynamicCategories.map(category => (
-                <Link
-                  key={category.name}
-                  href={`/category/${encodeURIComponent(category.name)}`}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="rounded-lg px-3 py-3 text-xs font-bold text-stone-800 transition hover:bg-[#fff6e9] hover:text-[#741f23]"
-                >
-                  {category.name.toUpperCase()}
-                </Link>
+            <nav aria-label="Mobile navigation" className="mx-auto grid max-w-7xl grid-cols-2 gap-2 px-4 py-3">
+              <Link href="/" onClick={() => setMobileMenuOpen(false)} className="col-span-2 rounded-lg px-3 py-3 text-xs font-bold text-stone-800 transition hover:bg-[#fff6e9] hover:text-[#741f23]">HOME</Link>
+              {categoryGroups.map(group => (
+                <div key={group.name} className="col-span-2 rounded-xl border border-[#ead8b8] bg-white p-2">
+                  <Link
+                    href={`/category/${encodeURIComponent(group.name)}`}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex min-h-10 items-center rounded-lg bg-[#fff7e8] px-3 text-xs font-black text-[#741f23]"
+                  >
+                    {group.name.toUpperCase()}
+                  </Link>
+                  <div className="mt-1 grid grid-cols-2 gap-1">
+                    {group.subcategories.map(category => (
+                      <Link
+                        key={category.name}
+                        href={`/category/${encodeURIComponent(category.name)}`}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="rounded-lg px-3 py-2.5 text-[11px] font-bold text-stone-700 transition hover:bg-[#fff6e9] hover:text-[#741f23]"
+                      >
+                        {category.name}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
               ))}
               <Link href="/orders" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-3 text-xs font-bold text-stone-800 transition hover:bg-[#fff6e9] hover:text-[#741f23]">MY ORDERS</Link>
               <Link href="/wishlist" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-3 text-xs font-bold text-stone-800 transition hover:bg-[#fff6e9] hover:text-[#741f23]">WISHLIST</Link>
