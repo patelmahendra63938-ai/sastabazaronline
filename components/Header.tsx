@@ -269,25 +269,15 @@ export default function Header() {
 
         {categoryGroups.length > 0 && (
           <div className="hidden border-b border-[#ead8b8] bg-white lg:block">
-            <nav aria-label="Product categories" className="mx-auto flex max-w-7xl items-center gap-3 overflow-x-auto px-4 py-2.5">
+            <nav aria-label="Product categories" className="mx-auto flex max-w-7xl items-center justify-center gap-2 overflow-x-auto px-4 py-2.5">
               {categoryGroups.map(group => (
-                <div key={group.name} className="flex shrink-0 items-center gap-1 rounded-xl border border-[#f0e3cf] bg-[#fffdf9] p-1">
-                  <Link
-                    href={`/category/${encodeURIComponent(group.name)}`}
-                    className="whitespace-nowrap rounded-lg bg-[#fff2dc] px-3 py-2 text-xs font-black uppercase tracking-wide text-[#741f23] transition hover:bg-[#fbe6c7]"
-                  >
-                    {group.name}
-                  </Link>
-                  {group.subcategories.map(category => (
-                    <Link
-                      key={category.name}
-                      href={`/category/${encodeURIComponent(category.name)}`}
-                      className="whitespace-nowrap rounded-lg px-3 py-2 text-xs font-bold text-stone-600 transition hover:bg-[#fff2dc] hover:text-[#741f23]"
-                    >
-                      {category.name}
-                    </Link>
-                  ))}
-                </div>
+                <Link
+                  key={group.name}
+                  href={`/category/${encodeURIComponent(group.name)}`}
+                  className="shrink-0 whitespace-nowrap rounded-xl border border-[#f0e3cf] bg-[#fffdf9] px-4 py-2.5 text-xs font-black uppercase tracking-wide text-[#741f23] transition hover:border-[#d7b06a] hover:bg-[#fff2dc]"
+                >
+                  {group.name}
+                </Link>
               ))}
             </nav>
           </div>
