@@ -8,6 +8,7 @@ export async function GET() {
   return NextResponse.json(
     categories.map(category => ({
       name: category.name,
+      main_category: category.main_category,
       product_count: category.product_count,
     })),
     {

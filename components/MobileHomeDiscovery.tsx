@@ -2,12 +2,9 @@ import Link from 'next/link';
 import { ArrowRight, Sparkles, ShoppingBag } from 'lucide-react';
 
 const mobileShortcuts = [
+  { label: 'Categories', href: '#shop-by-category-heading' },
   { label: 'Featured', href: '#featured-products-heading' },
-  { label: 'Dhoti Choli', href: '/collections/dhoti-choli' },
-  { label: 'Wedding', href: '/search?q=Wedding' },
-  { label: 'Haldi', href: '/search?q=Haldi' },
-  { label: 'Navratri', href: '/search?q=Navratri' },
-  { label: 'Girls', href: '/search?q=Girls' },
+  { label: 'All Products', href: '#all-products' },
 ];
 
 export default function MobileHomeDiscovery() {
@@ -34,16 +31,16 @@ export default function MobileHomeDiscovery() {
             <div className="min-w-0 flex-1">
               <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-[#f0c987]">
                 <Sparkles size={12} aria-hidden="true" />
-                Shop the latest styles
+                Browse active categories
               </p>
               <p className="mt-1 max-w-[15rem] text-lg font-black leading-tight tracking-tight text-white">
-                Festive fashion, faster to browse
+                Fashion, home & kitchen made easy to browse
               </p>
               <Link
-                href="#featured-products-heading"
+                href="#shop-by-category-heading"
                 className="mt-2 inline-flex min-h-9 items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-black text-[#741f23] shadow-sm"
               >
-                Shop products
+                Shop categories
                 <ArrowRight size={13} aria-hidden="true" />
               </Link>
             </div>
@@ -59,10 +56,10 @@ export default function MobileHomeDiscovery() {
 
         <nav
           id="mobile-shop-pills"
-          aria-label="Quick shopping categories"
+          aria-label="Quick shopping navigation"
           className="scrollbar-hide -mx-1 mt-2 flex gap-2 overflow-x-auto px-1 pb-0.5 whitespace-nowrap"
         >
-          {mobileShortcuts.map((item) => (
+          {mobileShortcuts.map(item => (
             <Link
               key={item.label}
               href={item.href}

@@ -1,11 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 
 interface FooterCategory {
   name: string;
+  main_category: string;
   product_count: number;
+}
+
+interface FooterCategoryGroup {
+  name: string;
+  subcategories: FooterCategory[];
 }
 
 const linkClass =
@@ -22,10 +28,19 @@ export default function FooterCategories() {
       .then(data => {
         if (!cancelled && Array.isArray(data)) {
           setCategories(
-            data.filter(
-              (item): item is FooterCategory =>
-                typeof item?.name === 'string' && Number(item?.product_count || 0) > 0
-            )
+            data
+              .filter(
+                item =>
+                  typeof item?.name === 'string' && Number(item?.product_count || 0) > 0
+              )
+              .map(item => ({
+                name: item.name,
+                main_category:
+                  typeof item?.main_category === 'string' && item.main_category.trim()
+                    ? item.main_category
+                    : item.name,
+                product_count: Number(item.product_count || 0),
+              }))
           );
         }
       })
@@ -38,31 +53,48 @@ export default function FooterCategories() {
     };
   }, []);
 
-  const dynamicCategories = categories.filter(
-    category => category.name.trim().toLowerCase() !== 'dhoti choli'
-  );
+  const categoryGroups = useMemo<FooterCategoryGroup[]>(() => {
+    const grouped = new Map<string, FooterCategoryGroup>();
+
+    for (const category of categories) {
+      const key = category.main_category.trim().toLowerCase();
+      const current = grouped.get(key) || {
+        name: category.main_category,
+        subcategories: [],
+      };
+      current.subcategories.push(category);
+      grouped.set(key, current);
+    }
+
+    return Array.from(grouped.values());
+  }, [categories]);
 
   return (
     <>
-      {dynamicCategories.length === 0 ? (
+      {categoryGroups.length === 0 ? (
         <li className="py-2 text-stone-400">Browse products from the main catalog</li>
       ) : (
-        dynamicCategories.map(category => (
-          <li key={category.name}>
+        categoryGroups.flatMap(group => [
+          <li key={`main-${group.name}`}>
             <Link
-              href={`/category/${encodeURIComponent(category.name)}`}
-              className={linkClass}
+              href={`/category/${encodeURIComponent(group.name)}`}
+              className={`${linkClass} font-bold text-[#e7c98d]`}
             >
-              {category.name}
+              {group.name}
             </Link>
-          </li>
-        ))
+          </li>,
+          ...group.subcategories.map(category => (
+            <li key={`${group.name}-${category.name}`} className="pl-3">
+              <Link
+                href={`/category/${encodeURIComponent(category.name)}`}
+                className={linkClass}
+              >
+                {category.name}
+              </Link>
+            </li>
+          )),
+        ])
       )}
-      <li>
-        <Link href="/collections/dhoti-choli" className={linkClass}>
-          Women’s Dhoti Choli
-        </Link>
-      </li>
     </>
   );
 }
