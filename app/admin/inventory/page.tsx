@@ -1,43 +1,72 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Loader2, Package, RefreshCw, Search, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { 
-  Package, Plus, Search, Filter, RefreshCw, AlertTriangle, 
-  ShieldCheck, History, ArrowUpDown, X, Loader2, Layers, CheckCircle2 
-} from 'lucide-react';
+import { inventoryVariantDisplay } from '@/lib/catalog/inventory-variant';
+
+type ActionType = 'ADD' | 'REMOVE' | 'SET';
+
+type InventoryRow = {
+  id: string;
+  product_id: string;
+  size: string;
+  sku: string | null;
+  weight_kg: number | null;
+  available_quantity: number;
+  reserved_quantity: number;
+  sold_quantity: number;
+  damaged_quantity?: number;
+  reorder_level?: number;
+  products?: {
+    id: string;
+    title: string;
+    price: number;
+    category: string;
+    images: string[] | null;
+    stock: number | null;
+    available_colours: string[] | null;
+    colour_selection_mode: string | null;
+  } | null;
+};
+
+type MovementRow = {
+  id: string;
+  size: string | null;
+  quantity: number;
+  movement_type: string;
+  previous_quantity: number;
+  new_quantity: number;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+};
 
 export default function AdminInventoryPage() {
-  const [inventory, setInventory] = useState<any[]>([]);
-  const [movements, setMovements] = useState<any[]>([]);
+  const [inventory, setInventory] = useState<InventoryRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('ALL');
-
-  // Modal States
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
-  const [actionType, setActionType] = useState<'ADD' | 'REMOVE' | 'SET'>('ADD');
-  const [quantity, setQuantity] = useState<string>('');
-  const [reason, setReason] = useState<string>('');
+  const [selectedRow, setSelectedRow] = useState<InventoryRow | null>(null);
+  const [actionType, setActionType] = useState<ActionType>('ADD');
+  const [quantity, setQuantity] = useState('');
+  const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [historyRow, setHistoryRow] = useState<InventoryRow | null>(null);
+  const [history, setHistory] = useState<MovementRow[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [message, setMessage] = useState('');
 
-  // History Modal State
-  const [historyProduct, setHistoryProduct] = useState<any | null>(null);
-  const [productMovements, setProductMovements] = useState<any[]>([]);
-  const [loadingHistory, setLoadingHistory] = useState(false);
-
-  // Fetch Inventory Ledger
   const fetchInventory = async () => {
     setLoading(true);
+    setMessage('');
     const { data, error } = await supabase
       .from('inventory')
-      .select('*, products(id, title, price, category, images, hsn_code, stock)')
+      .select('*, products(id,title,price,category,images,stock,available_colours,colour_selection_mode)')
       .order('available_quantity', { ascending: true });
 
-    if (!error && data) {
-      setInventory(data);
-    }
+    if (error) setMessage(`Inventory could not be loaded: ${error.message}`);
+    setInventory((data || []) as InventoryRow[]);
     setLoading(false);
   };
 
@@ -45,214 +74,186 @@ export default function AdminInventoryPage() {
     fetchInventory();
   }, []);
 
-  // Handle Stock Adjustment Submit (Add, Remove, Set)
-  const handleStockSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedProduct || !quantity || isNaN(Number(quantity))) {
-      alert('Please select a product and enter a valid quantity.');
+  const filteredInventory = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return inventory.filter((item) => {
+      const variant = inventoryVariantDisplay(item.size, item.products?.available_colours);
+      const haystack = [
+        item.products?.title,
+        item.products?.category,
+        item.sku,
+        item.size,
+        variant.size,
+        variant.colour,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+      const available = Number(item.available_quantity || 0);
+      const threshold = Number(item.reorder_level ?? 5);
+      const isOut = available === 0;
+      const isLow = available > 0 && available <= threshold;
+      const statusMatches =
+        filterStatus === 'ALL' ||
+        (filterStatus === 'OUT' && isOut) ||
+        (filterStatus === 'LOW' && isLow) ||
+        (filterStatus === 'IN' && !isOut && !isLow);
+
+      return (!q || haystack.includes(q)) && statusMatches;
+    });
+  }, [inventory, searchQuery, filterStatus]);
+
+  const openAdjust = (row: InventoryRow) => {
+    setSelectedRow(row);
+    setActionType('ADD');
+    setQuantity('');
+    setReason('');
+    setMessage('');
+  };
+
+  const submitAdjustment = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!selectedRow) return;
+    const value = Number(quantity);
+    if (!Number.isInteger(value) || value < 0 || (actionType !== 'SET' && value === 0)) {
+      setMessage('Enter a valid whole-number quantity.');
       return;
     }
 
-    const qtyNum = parseInt(quantity);
-    if (qtyNum <= 0 && actionType !== 'SET') {
-      alert('Quantity must be greater than zero.');
+    let delta = value;
+    if (actionType === 'REMOVE') delta = -value;
+    if (actionType === 'SET') delta = value - Number(selectedRow.available_quantity || 0);
+
+    if (delta === 0) {
+      setSelectedRow(null);
       return;
     }
 
     setSubmitting(true);
-    try {
-      let delta = qtyNum;
-      if (actionType === 'REMOVE') delta = -qtyNum;
+    const { error } = await supabase.rpc('adjust_inventory_stock', {
+      p_product_id: selectedRow.product_id,
+      p_size: selectedRow.size,
+      p_quantity_delta: delta,
+      p_movement_type:
+        actionType === 'ADD' ? 'PURCHASE' : actionType === 'REMOVE' ? 'DAMAGE' : 'MANUAL_ADJUSTMENT',
+      p_notes: reason.trim() || `Admin ${actionType.toLowerCase()} stock adjustment`,
+      p_created_by: 'ADMIN',
+    });
+    setSubmitting(false);
 
-      if (actionType === 'SET') {
-        delta = qtyNum - selectedProduct.available_quantity;
-      }
-
-      // Call database RPC function for atomic inventory adjustment
-      const { error } = await supabase.rpc('adjust_inventory_stock', {
-        p_product_id: selectedProduct.product_id,
-        p_quantity_delta: delta,
-        p_movement_type: actionType === 'ADD' ? 'PURCHASE' : (actionType === 'REMOVE' ? 'DAMAGE' : 'MANUAL_ADJUSTMENT'),
-        p_notes: reason || `Admin stock ${actionType.toLowerCase()} operation`,
-        p_created_by: 'ADMIN'
-      });
-
-      if (error) throw error;
-
-      alert(`Stock successfully updated!`);
-      setIsAddModalOpen(false);
-      setSelectedProduct(null);
-      setQuantity('');
-      setReason('');
-      fetchInventory();
-    } catch (err: any) {
-      alert('Error updating stock: ' + err.message);
-    } finally {
-      setSubmitting(false);
+    if (error) {
+      setMessage(`Stock update failed: ${error.message}`);
+      return;
     }
+
+    setSelectedRow(null);
+    setMessage('Stock updated and inventory movement recorded successfully.');
+    await fetchInventory();
   };
 
-  // Fetch History for a specific product
-  const openHistoryModal = async (item: any) => {
-    setHistoryProduct(item);
-    setLoadingHistory(true);
-    const { data } = await supabase
+  const openHistory = async (row: InventoryRow) => {
+    setHistoryRow(row);
+    setHistory([]);
+    setHistoryLoading(true);
+    const { data, error } = await supabase
       .from('inventory_movements')
-      .select('*')
-      .eq('product_id', item.product_id)
+      .select('id,size,quantity,movement_type,previous_quantity,new_quantity,notes,created_by,created_at')
+      .eq('product_id', row.product_id)
+      .eq('size', row.size)
       .order('created_at', { ascending: false })
-      .limit(20);
-
-    if (data) setProductMovements(data);
-    setLoadingHistory(false);
+      .limit(50);
+    if (error) setMessage(`History could not be loaded: ${error.message}`);
+    setHistory((data || []) as MovementRow[]);
+    setHistoryLoading(false);
   };
-
-  // Filter logic
-  const filteredInventory = inventory.filter(item => {
-    const title = item.products?.title || '';
-    const matchesSearch = title.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    let matchesFilter = true;
-    const isLow = item.available_quantity > 0 && item.available_quantity <= (item.reorder_level || 5);
-    const isOut = item.available_quantity === 0;
-
-    if (filterStatus === 'LOW') matchesFilter = isLow;
-    if (filterStatus === 'OUT') matchesFilter = isOut;
-    if (filterStatus === 'IN') matchesFilter = !isLow && !isOut;
-
-    return matchesSearch && matchesFilter;
-  });
 
   return (
     <div className="space-y-6">
-      {/* Header with "+ Add Inventory" Button */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-black text-indigo-950">Inventory & Stock Ledger</h1>
-          <p className="text-xs text-gray-500 mt-1">Manage physical stock, reservations, and real-time adjustments.</p>
+          <p className="mt-1 text-xs text-gray-500">Variant-safe stock control with SKU, size/option, colour and movement history.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={fetchInventory}
-            className="bg-white border hover:bg-gray-50 text-gray-700 font-bold px-3.5 py-2.5 rounded-xl text-xs transition flex items-center gap-1.5 shadow-sm"
-          >
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
-          </button>
-          <button
-            onClick={() => {
-              setSelectedProduct(inventory[0] || null);
-              setActionType('ADD');
-              setIsAddModalOpen(true);
-            }}
-            className="bg-orange-500 hover:bg-orange-600 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition flex items-center gap-2 shadow"
-          >
-            <Plus size={16} /> + Add Inventory / Stock
-          </button>
-        </div>
+        <button onClick={fetchInventory} className="inline-flex items-center gap-2 rounded-xl border bg-white px-4 py-2.5 text-xs font-bold text-gray-700 shadow-sm hover:bg-gray-50">
+          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
+        </button>
       </div>
 
-      {/* Filters & Search Bar */}
-      <div className="bg-white p-4 rounded-2xl border shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="relative flex-1 w-full max-w-md">
+      {message && <div className="rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-3 text-xs font-bold text-indigo-950">{message}</div>}
+
+      <div className="flex flex-col gap-3 rounded-2xl border bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative w-full max-w-lg">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
-            type="text"
-            placeholder="Search by product name..."
             value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 text-xs border rounded-xl bg-gray-50 focus:bg-white outline-none"
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search product, SKU, size or colour..."
+            className="w-full rounded-xl border bg-gray-50 py-2 pl-9 pr-3 text-xs outline-none focus:bg-white focus:ring-2 focus:ring-indigo-600"
           />
         </div>
-
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <select
-            value={filterStatus}
-            onChange={e => setFilterStatus(e.target.value)}
-            className="text-xs border rounded-xl px-3 py-2 bg-gray-50 font-semibold text-gray-700 outline-none"
-          >
+        <div className="flex items-center gap-3">
+          <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="rounded-xl border bg-gray-50 px-3 py-2 text-xs font-semibold">
             <option value="ALL">All Stock Levels</option>
             <option value="IN">In Stock</option>
-            <option value="LOW">Low Stock Alert (≤5)</option>
-            <option value="OUT">Out of Stock (0)</option>
+            <option value="LOW">Low Stock</option>
+            <option value="OUT">Out of Stock</option>
           </select>
-          <span className="text-xs font-bold text-gray-500 pl-2">Total Items: {filteredInventory.length}</span>
+          <span className="whitespace-nowrap text-xs font-bold text-gray-500">Rows: {filteredInventory.length}</span>
         </div>
       </div>
 
-      {/* Inventory Table */}
-      <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
+      <div className="overflow-hidden rounded-2xl border bg-white shadow-sm">
         {loading ? (
-          <div className="p-16 text-center text-xs text-gray-400 flex items-center justify-center gap-2">
-            <Loader2 size={16} className="animate-spin" /> Loading inventory ledger...
-          </div>
-        ) : filteredInventory.length === 0 ? (
-          <div className="p-16 text-center text-xs text-gray-500">No inventory records found.</div>
+          <div className="flex items-center justify-center gap-2 p-16 text-xs text-gray-500"><Loader2 size={16} className="animate-spin" /> Loading inventory...</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="bg-gray-50 border-b text-gray-600 font-bold uppercase text-[10px]">
+            <table className="w-full min-w-[1050px] text-left text-xs">
+              <thead className="border-b bg-gray-50 text-[10px] font-black uppercase text-gray-500">
+                <tr>
                   <th className="p-3.5">Product</th>
-                  <th className="p-3.5">Category</th>
-                  <th className="p-3.5 text-center">Available Stock</th>
+                  <th className="p-3.5">Size / Option</th>
+                  <th className="p-3.5">Colour</th>
+                  <th className="p-3.5">SKU</th>
+                  <th className="p-3.5 text-center">Available</th>
                   <th className="p-3.5 text-center">Reserved</th>
-                  <th className="p-3.5 text-center">Sold Qty</th>
-                  <th className="p-3.5">Stock Status</th>
+                  <th className="p-3.5 text-center">Sold</th>
+                  <th className="p-3.5">Status</th>
                   <th className="p-3.5 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filteredInventory.map(item => {
-                  const available = item.available_quantity ?? 0;
-                  const threshold = item.reorder_level ?? 5;
+              <tbody className="divide-y">
+                {filteredInventory.map((item) => {
+                  const variant = inventoryVariantDisplay(item.size, item.products?.available_colours);
+                  const available = Number(item.available_quantity || 0);
+                  const threshold = Number(item.reorder_level ?? 5);
                   const isOut = available === 0;
                   const isLow = available > 0 && available <= threshold;
-
                   return (
-                    <tr key={item.product_id} className="hover:bg-gray-50 transition">
-                      <td className="p-3.5 flex items-center gap-3">
-                        <img 
-                          src={item.products?.images?.[0] || 'https://via.placeholder.com/60'} 
-                          alt="" 
-                          className="w-10 h-10 object-cover rounded-lg border shrink-0" 
-                        />
-                        <div>
-                          <p className="font-bold text-gray-900 line-clamp-1">{item.products?.title || 'Unknown Product'}</p>
-                          <p className="text-[10px] text-gray-400 font-mono">Price: ₹{item.products?.price}</p>
+                    <tr key={item.id} className="hover:bg-gray-50">
+                      <td className="p-3.5">
+                        <div className="flex items-center gap-3">
+                          <img src={item.products?.images?.[0] || '/placeholder.png'} alt="" className="h-10 w-10 rounded-lg border object-cover" />
+                          <div>
+                            <p className="max-w-[280px] truncate font-black text-gray-900">{item.products?.title || 'Unknown Product'}</p>
+                            <p className="text-[10px] text-gray-400">{item.products?.category || 'General'} • ₹{item.products?.price ?? 0}</p>
+                          </div>
                         </div>
                       </td>
-                      <td className="p-3.5 text-gray-600 font-medium">{item.products?.category || 'General'}</td>
-                      <td className="p-3.5 text-center font-mono font-black text-green-700 text-sm">{available}</td>
-                      <td className="p-3.5 text-center font-mono font-bold text-purple-600">{item.reserved_quantity ?? 0}</td>
-                      <td className="p-3.5 text-center font-mono text-gray-600">{item.sold_quantity ?? 0}</td>
+                      <td className="p-3.5 font-bold text-gray-700">{variant.size}</td>
+                      <td className="p-3.5"><span className="rounded-full bg-purple-50 px-2 py-1 font-bold text-purple-700">{variant.colour || '—'}</span></td>
+                      <td className="p-3.5 font-mono text-[11px] font-bold text-gray-700">{item.sku || '—'}</td>
+                      <td className="p-3.5 text-center text-sm font-black text-green-700">{available}</td>
+                      <td className="p-3.5 text-center font-bold text-purple-700">{item.reserved_quantity ?? 0}</td>
+                      <td className="p-3.5 text-center font-bold text-gray-600">{item.sold_quantity ?? 0}</td>
                       <td className="p-3.5">
-                        {isOut ? (
-                          <span className="bg-red-50 text-red-700 font-bold px-2 py-0.5 rounded text-[10px] border border-red-200">OUT OF STOCK</span>
-                        ) : isLow ? (
-                          <span className="bg-orange-50 text-orange-700 font-bold px-2 py-0.5 rounded text-[10px] border border-orange-200">LOW STOCK</span>
-                        ) : (
-                          <span className="bg-green-50 text-green-700 font-bold px-2 py-0.5 rounded text-[10px]">IN STOCK</span>
-                        )}
+                        <span className={`rounded px-2 py-1 text-[10px] font-black ${isOut ? 'bg-red-50 text-red-700' : isLow ? 'bg-orange-50 text-orange-700' : 'bg-green-50 text-green-700'}`}>
+                          {isOut ? 'OUT OF STOCK' : isLow ? 'LOW STOCK' : 'IN STOCK'}
+                        </span>
                       </td>
-                      <td className="p-3.5 text-right space-x-1">
-                        <button
-                          onClick={() => {
-                            setSelectedProduct(item);
-                            setActionType('ADD');
-                            setIsAddModalOpen(true);
-                          }}
-                          className="bg-indigo-50 hover:bg-indigo-100 text-indigo-950 font-bold px-2.5 py-1.5 rounded-lg transition"
-                          title="Add / Edit Stock"
-                        >
-                          Edit Stock
-                        </button>
-                        <button
-                          onClick={() => openHistoryModal(item)}
-                          className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold px-2.5 py-1.5 rounded-lg transition"
-                          title="Stock History"
-                        >
-                          History
-                        </button>
+                      <td className="p-3.5 text-right">
+                        <button onClick={() => openAdjust(item)} className="mr-1 rounded-lg bg-indigo-50 px-2.5 py-1.5 font-bold text-indigo-950 hover:bg-indigo-100">Edit Stock</button>
+                        <button onClick={() => openHistory(item)} className="rounded-lg bg-gray-100 px-2.5 py-1.5 font-bold text-gray-700 hover:bg-gray-200">History</button>
                       </td>
                     </tr>
                   );
@@ -263,178 +264,65 @@ export default function AdminInventoryPage() {
         )}
       </div>
 
-      {/* ========================================================================= */}
-      {/* MODAL: ADD / EDIT STOCK (+ ADD INVENTORY)                                 */}
-      {/* ========================================================================= */}
-      {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <form onSubmit={handleStockSubmit} className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 text-xs">
-            <div className="flex justify-between items-center border-b pb-3">
-              <h3 className="text-sm font-black text-indigo-950 flex items-center gap-2">
-                <Package size={16} className="text-orange-500" /> Manage Inventory Stock
-              </h3>
-              <button type="button" onClick={() => setIsAddModalOpen(false)} className="text-gray-400 hover:text-gray-600">
-                <X size={18} />
-              </button>
-            </div>
-
-            <div>
-              <label className="block font-bold text-gray-700 uppercase mb-1">Select Product</label>
-              <select
-                value={selectedProduct?.product_id || ''}
-                onChange={e => {
-                  const found = inventory.find(i => i.product_id === e.target.value);
-                  setSelectedProduct(found);
-                }}
-                className="w-full px-3 py-2.5 border rounded-xl font-bold bg-white outline-none focus:ring-2 focus:ring-indigo-600"
-              >
-                {inventory.map(item => (
-                  <option key={item.product_id} value={item.product_id}>
-                    {item.products?.title} (Current: {item.available_quantity})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {selectedProduct && (
-              <div className="bg-gray-50 p-3 rounded-xl flex justify-between font-mono text-gray-700">
-                <span>Current Stock: <strong className="text-indigo-950">{selectedProduct.available_quantity}</strong></span>
-                <span>Reserved: <strong className="text-purple-700">{selectedProduct.reserved_quantity}</strong></span>
+      {selectedRow && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <form onSubmit={submitAdjustment} className="w-full max-w-md space-y-4 rounded-3xl bg-white p-6 shadow-2xl">
+            <div className="flex items-center justify-between border-b pb-3">
+              <div>
+                <h2 className="flex items-center gap-2 text-sm font-black text-indigo-950"><Package size={16} /> Manage Variant Stock</h2>
+                <p className="mt-1 text-[11px] text-gray-500">{selectedRow.products?.title} • {inventoryVariantDisplay(selectedRow.size, selectedRow.products?.available_colours).label} • {selectedRow.sku}</p>
               </div>
-            )}
-
-            <div>
-              <label className="block font-bold text-gray-700 uppercase mb-1">Stock Action</label>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setActionType('ADD')}
-                  className={`py-2 rounded-xl font-bold transition border ${actionType === 'ADD' ? 'bg-green-600 text-white border-green-600' : 'bg-gray-50 text-gray-700 border-gray-200'}`}
-                >
-                  + Add Stock
+              <button type="button" onClick={() => setSelectedRow(null)}><X size={18} /></button>
+            </div>
+            <div className="grid grid-cols-2 gap-2 rounded-xl bg-gray-50 p-3 text-xs">
+              <span>Available: <strong>{selectedRow.available_quantity}</strong></span>
+              <span>Reserved: <strong>{selectedRow.reserved_quantity}</strong></span>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {(['ADD', 'REMOVE', 'SET'] as ActionType[]).map((type) => (
+                <button key={type} type="button" onClick={() => setActionType(type)} className={`rounded-xl border py-2 text-xs font-black ${actionType === type ? 'bg-indigo-950 text-white' : 'bg-gray-50 text-gray-700'}`}>
+                  {type === 'ADD' ? '+ Add' : type === 'REMOVE' ? '- Remove' : '= Set'}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setActionType('REMOVE')}
-                  className={`py-2 rounded-xl font-bold transition border ${actionType === 'REMOVE' ? 'bg-red-600 text-white border-red-600' : 'bg-gray-50 text-gray-700 border-gray-200'}`}
-                >
-                  - Remove
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActionType('SET')}
-                  className={`py-2 rounded-xl font-bold transition border ${actionType === 'SET' ? 'bg-indigo-950 text-white border-indigo-950' : 'bg-gray-50 text-gray-700 border-gray-200'}`}
-                >
-                  = Set Stock
-                </button>
-              </div>
+              ))}
             </div>
-
             <div>
-              <label className="block font-bold text-gray-700 uppercase mb-1">
-                {actionType === 'SET' ? 'New Exact Stock Quantity' : 'Quantity'}
-              </label>
-              <input
-                type="number"
-                required
-                min="0"
-                value={quantity}
-                onChange={e => setQuantity(e.target.value)}
-                placeholder={actionType === 'SET' ? 'e.g. 50' : 'e.g. 10'}
-                className="w-full px-3 py-2.5 border rounded-xl font-mono font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-600"
-              />
+              <label className="mb-1 block text-[10px] font-black uppercase text-gray-600">{actionType === 'SET' ? 'Exact new stock' : 'Quantity'}</label>
+              <input type="number" min="0" step="1" required value={quantity} onChange={(e) => setQuantity(e.target.value)} className="w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-600" />
             </div>
-
             <div>
-              <label className="block font-bold text-gray-700 uppercase mb-1">Reason / Notes</label>
-              <input
-                type="text"
-                value={reason}
-                onChange={e => setReason(e.target.value)}
-                placeholder="e.g. New supplier shipment / Stock correction"
-                className="w-full px-3 py-2.5 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-600"
-              />
+              <label className="mb-1 block text-[10px] font-black uppercase text-gray-600">Reason / Notes</label>
+              <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Supplier stock, correction, damage..." className="w-full rounded-xl border px-3 py-2.5 text-xs outline-none focus:ring-2 focus:ring-indigo-600" />
             </div>
-
-            <div className="pt-2 flex gap-2">
-              <button
-                type="button"
-                onClick={() => setIsAddModalOpen(false)}
-                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-xl transition"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={submitting}
-                className="flex-1 bg-indigo-950 hover:bg-indigo-900 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2"
-              >
-                {submitting ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                <span>Save Stock</span>
-              </button>
-            </div>
+            <button disabled={submitting} className="w-full rounded-xl bg-orange-500 py-3 text-xs font-black text-white disabled:opacity-50">
+              {submitting ? 'Updating...' : 'Save Stock Adjustment'}
+            </button>
           </form>
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* MODAL: INVENTORY HISTORY (AUDIT TRAIL)                                    */}
-      {/* ========================================================================= */}
-      {historyProduct && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-6 shadow-2xl space-y-4 text-xs">
-            <div className="flex justify-between items-center border-b pb-3">
+      {historyRow && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="max-h-[80vh] w-full max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b p-5">
               <div>
-                <h3 className="text-sm font-black text-indigo-950">Stock Movement History</h3>
-                <p className="text-gray-500 font-medium">{historyProduct.products?.title}</p>
+                <h2 className="text-sm font-black text-indigo-950">Variant Stock History</h2>
+                <p className="mt-1 text-[11px] text-gray-500">{historyRow.products?.title} • {inventoryVariantDisplay(historyRow.size, historyRow.products?.available_colours).label} • {historyRow.sku}</p>
               </div>
-              <button onClick={() => setHistoryProduct(null)} className="text-gray-400 hover:text-gray-600 font-bold text-lg">
-                ✕
-              </button>
+              <button onClick={() => setHistoryRow(null)}><X size={18} /></button>
             </div>
-
-            {loadingHistory ? (
-              <div className="p-12 text-center text-gray-400">Loading history ledger...</div>
-            ) : productMovements.length === 0 ? (
-              <div className="p-12 text-center text-gray-500">No recorded movements for this product yet.</div>
-            ) : (
-              <div className="divide-y overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-gray-50 text-[10px] font-bold text-gray-500 uppercase">
-                      <th className="p-2.5">Date / Time</th>
-                      <th className="p-2.5">Action</th>
-                      <th className="p-2.5">Change</th>
-                      <th className="p-2.5">Stock Flow</th>
-                      <th className="p-2.5">Notes</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y font-mono">
-                    {productMovements.map(mov => (
-                      <tr key={mov.id} className="hover:bg-gray-50">
-                        <td className="p-2.5 text-gray-500 font-sans text-[11px]">
-                          {new Date(mov.created_at).toLocaleString()}
-                        </td>
-                        <td className="p-2.5">
-                          <span className="bg-gray-100 text-gray-800 font-bold px-2 py-0.5 rounded text-[10px]">
-                            {mov.movement_type}
-                          </span>
-                        </td>
-                        <td className={`p-2.5 font-bold ${mov.quantity > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {mov.quantity > 0 ? `+${mov.quantity}` : mov.quantity}
-                        </td>
-                        <td className="p-2.5 text-gray-600">
-                          {mov.previous_quantity} → <strong className="text-gray-900">{mov.new_quantity}</strong>
-                        </td>
-                        <td className="p-2.5 text-gray-500 font-sans text-[11px]">
-                          {mov.notes || mov.reference || '—'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            <div className="max-h-[65vh] overflow-auto p-5">
+              {historyLoading ? <div className="py-12 text-center text-xs text-gray-500">Loading history...</div> : history.length === 0 ? <div className="py-12 text-center text-xs text-gray-500">No movement history for this exact variant.</div> : (
+                <div className="space-y-2">
+                  {history.map((row) => (
+                    <div key={row.id} className="grid grid-cols-[120px_80px_1fr] gap-3 rounded-xl border p-3 text-xs">
+                      <div><p className="font-black">{row.movement_type}</p><p className="text-[10px] text-gray-400">{new Date(row.created_at).toLocaleString()}</p></div>
+                      <div className={`font-black ${row.quantity >= 0 ? 'text-green-700' : 'text-red-700'}`}>{row.quantity >= 0 ? '+' : ''}{row.quantity}</div>
+                      <div><p className="font-bold text-gray-700">{row.previous_quantity} → {row.new_quantity}</p><p className="mt-1 text-[10px] text-gray-500">{row.notes || 'No note'} • {row.created_by || 'SYSTEM'}</p></div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
