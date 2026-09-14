@@ -97,6 +97,17 @@ export const CATEGORY_ENGINE: Record<string, CategoryConfig> = {
         ]
       },
       {
+        name: 'Kitchen Tools & Accessories',
+        productTypes: ['Rolling Pin', 'Dough Roller', 'Pastry Roller', 'Fondant Roller'],
+        attributes: [
+          { key: 'Tool Type', label: 'Kitchen Tool Type', type: 'select', options: ['Rolling Pin', 'Dough Roller', 'Pastry Roller', 'Fondant Roller'], level: 'required' },
+          { key: 'Primary Use', label: 'Primary Use', type: 'select', options: ['Roti / Chapati Dough', 'Bread Dough', 'Pastry', 'Fondant', 'Dumpling Wrappers', 'Multi-purpose Dough Rolling'], level: 'recommended' },
+          { key: 'Surface / Finish', label: 'Surface / Finish', type: 'text', placeholder: 'e.g. Textured non-stick surface', level: 'recommended' },
+          { key: 'Product Length', label: 'Product Length', type: 'text', placeholder: 'e.g. 30 cm', level: 'optional' },
+          { key: 'Dishwasher Safe', label: 'Dishwasher Safe', type: 'select', options: ['Yes', 'No', 'Not Confirmed'], level: 'optional' }
+        ]
+      },
+      {
         name: 'Door & Wall Accessories',
         productTypes: ['Wall Protector / Door Knob Stopper', 'Door Stopper', 'Wall Bumper / Crash Pad'],
         attributes: [
