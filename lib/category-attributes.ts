@@ -147,6 +147,16 @@ export const CATEGORY_ENGINE: Record<string, CategoryConfig> = {
         attributes: [
           { key: 'Formulation', label: 'Formulation', type: 'select', options: ['Liquid Serum', 'Gel', 'Cream', 'Lotion', 'Oil'], level: 'recommended' }
         ]
+      },
+      {
+        name: 'Makeup Accessories',
+        productTypes: ['Foldable Makeup Mirror', 'Vanity Mirror', 'Compact Mirror'],
+        attributes: [
+          { key: 'Mirror Type', label: 'Mirror Type', type: 'select', options: ['Foldable', 'Free Standing', 'Compact / Travel'], level: 'required' },
+          { key: 'Frame / Cover Material', label: 'Frame / Cover Material', type: 'text', placeholder: 'e.g. PU Leather, Plastic', level: 'recommended' },
+          { key: 'Color', label: 'Color', type: 'text', placeholder: 'e.g. Pink, Blue, Beige, Purple', level: 'recommended' },
+          { key: 'Primary Use', label: 'Primary Use', type: 'text', placeholder: 'e.g. Makeup, skincare, travel grooming', level: 'recommended' }
+        ]
       }
     ]
   }
