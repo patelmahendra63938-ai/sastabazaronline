@@ -97,6 +97,17 @@ export const CATEGORY_ENGINE: Record<string, CategoryConfig> = {
         ]
       },
       {
+        name: 'Door & Wall Accessories',
+        productTypes: ['Wall Protector / Door Knob Stopper', 'Door Stopper', 'Wall Bumper / Crash Pad'],
+        attributes: [
+          { key: 'Mount Type', label: 'Mount Type', type: 'select', options: ['Self Adhesive', 'Screw Mount', 'Freestanding', 'Not Applicable'], level: 'required' },
+          { key: 'Primary Use', label: 'Primary Use', type: 'select', options: ['Door Knob / Handle Impact Protection', 'Door Stopper', 'Wall Bumper / Crash Protection'], level: 'required' },
+          { key: 'Design / Shape', label: 'Design / Shape', type: 'text', placeholder: 'e.g. Cartoon, Round, Square', level: 'recommended' },
+          { key: 'Surface Compatibility', label: 'Suitable Surface', type: 'text', placeholder: 'e.g. Painted wall, tile, wood, glass', level: 'optional' },
+          { key: 'Installation', label: 'Installation', type: 'select', options: ['Peel & Stick', 'Screw Fix', 'Place on Floor / Surface'], level: 'recommended' }
+        ]
+      },
+      {
         name: 'Home Organization',
         productTypes: ['Holder', 'Rack', 'Organizer', 'Brush', 'Drain', 'Sink', 'Utility Storage', 'Hair Dryer'],
         attributes: [
