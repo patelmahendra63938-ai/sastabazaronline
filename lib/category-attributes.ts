@@ -108,6 +108,18 @@ export const CATEGORY_ENGINE: Record<string, CategoryConfig> = {
         ]
       },
       {
+        name: 'Kitchen & Bathroom Accessories',
+        productTypes: ['Faucet Aerator / Tap Nozzle', 'Faucet Extender', 'Tap Filter / Nozzle', 'Sink Accessory'],
+        attributes: [
+          { key: 'Rotation', label: 'Rotation / Swivel', type: 'select', options: ['360 Degree', '180 Degree', 'Fixed', 'Not Applicable'], level: 'recommended' },
+          { key: 'Flow Modes', label: 'Water Flow Modes', type: 'number', placeholder: 'e.g. 3', level: 'recommended' },
+          { key: 'Connection Type', label: 'Mount / Connection Type', type: 'text', placeholder: 'e.g. Threaded tap connection', level: 'required' },
+          { key: 'Compatible Tap Type', label: 'Compatible Tap Type', type: 'text', placeholder: 'e.g. Kitchen sink / wash basin threaded faucet', level: 'recommended' },
+          { key: 'Water Saving', label: 'Water Saving', type: 'select', options: ['Yes', 'No'], level: 'recommended' },
+          { key: 'Primary Use', label: 'Primary Use', type: 'select', options: ['Kitchen Sink', 'Bathroom / Wash Basin', 'Kitchen & Bathroom'], level: 'recommended' }
+        ]
+      },
+      {
         name: 'Home Organization',
         productTypes: ['Holder', 'Rack', 'Organizer', 'Brush', 'Drain', 'Sink', 'Utility Storage', 'Hair Dryer'],
         attributes: [
