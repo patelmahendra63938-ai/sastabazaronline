@@ -6,11 +6,62 @@ import { checkPincodeShippingRate, type ShippingPackageInput } from '@/lib/shipp
 import { SHARED_STOCK_SIZE } from '@/lib/catalog/pack-options';
 
 export type PricingPaymentMethod = 'COD' | 'ONLINE' | 'UPI_QR';
-export interface PricingCartItem { id?: string; product_id?: string; size?: string; quantity: number; selected_campaign_id?: string; pack_option_id?: string; }
+export interface PricingCartItem { id?: string; product_id?: string; size?: string; selected_colour?: string; quantity: number; selected_campaign_id?: string; pack_option_id?: string; }
 export interface VerifiedPricingItem { product_id: string; product_title: string; size: string; sku: string; hsn_code: string; gst_rate: number; unit_price: number; original_price: number; applied_offer_label: string | null; discount_reduction: number; weight_kg: number; quantity: number; line_total: number; pack_option_id: string | null; pieces_per_unit: number; physical_quantity: number; }
 export interface PricingBreakdown { pricingMode: 'nimbuspost_live'; originalProductPriceTotal: number; discountDeductionAmount: number; primaryOfferName: string | null; discountedSubtotal: number; totalTaxAmount: number; actualWeightGrams: number; chargeableWeightGrams: number; shippingCharge: number; codCharge: number; totalPayable: number; freeShippingApplied: boolean; serviceable: boolean; message: string; verifiedItems: VerifiedPricingItem[]; ruleVersion: number; }
 
 const MAX_RETAIL_QTY_PER_PRODUCT_SIZE = 5;
+
+function normalizeColours(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set<string>();
+  const output: string[] = [];
+  for (const raw of value) {
+    const colour = String(raw || '').trim();
+    if (!colour) continue;
+    const key = colour.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    output.push(colour);
+  }
+  return output;
+}
+
+function resolveColourSelection(rawOption: string, requestedColour: unknown, availableColours: unknown) {
+  const colours = normalizeColours(availableColours);
+  const raw = String(rawOption || '').trim() || 'Free Size';
+  let colour = String(requestedColour || '').trim();
+  let inventorySize = raw;
+
+  if (colour) {
+    const canonical = colours.find((value) => value.toLowerCase() === colour.toLowerCase());
+    if (canonical) colour = canonical;
+  }
+
+  for (const available of colours) {
+    const lowerRaw = raw.toLowerCase();
+    const lowerColour = available.toLowerCase();
+    if (lowerRaw === lowerColour) {
+      colour = available;
+      inventorySize = 'Standard';
+      break;
+    }
+    const suffix = ` / ${lowerColour}`;
+    if (lowerRaw.endsWith(suffix)) {
+      colour = available;
+      inventorySize = raw.slice(0, raw.length - suffix.length).trim() || 'Standard';
+      break;
+    }
+  }
+
+  return { colour, inventorySize };
+}
+
+function colourSku(baseSku: string, colour: string) {
+  if (!colour) return baseSku;
+  const suffix = colour.toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/^-|-$/g, '');
+  return suffix ? `${baseSku}-${suffix}` : baseSku;
+}
 
 export async function calculateAuthoritativeOrderPricing(input: { db: SupabaseClient; pincode: string; paymentMethod: PricingPaymentMethod; cart: PricingCartItem[]; couponCode?: string; }): Promise<PricingBreakdown> {
   const cleanPin = String(input.pincode || '').trim();
@@ -33,7 +84,7 @@ export async function calculateAuthoritativeOrderPricing(input: { db: SupabaseCl
   if (!productIds.length) throw new Error('No valid product references were found in the cart.');
 
   const [productsResult, inventoryResult, packOptionsResult, promotionsResult] = await Promise.all([
-    input.db.from('products').select('id, title, price, mrp, category, hsn_code, gst_rate, net_weight_grams, package_length_cm, package_width_cm, package_height_cm, selling_mode').in('id', productIds),
+    input.db.from('products').select('id, title, price, mrp, category, hsn_code, gst_rate, net_weight_grams, package_length_cm, package_width_cm, package_height_cm, selling_mode, colour_selection_mode, available_colours').in('id', productIds),
     input.db.from('inventory').select('product_id, size, sku, available_quantity').in('product_id', productIds),
     input.db.from('product_pack_options').select('id, product_id, label, pieces_per_unit, price, mrp, sku, is_active').in('product_id', productIds).eq('is_active', true),
     input.db.from('promotions').select('*').eq('is_enabled', true),
@@ -73,7 +124,8 @@ export async function calculateAuthoritativeOrderPricing(input: { db: SupabaseCl
     }
 
     const requestedPackOptionId = String(item.pack_option_id || '').trim();
-    const requestedPackLabel = String(item.size || '').trim().toLowerCase();
+    const requestedOption = String(item.size || '').trim() || 'Free Size';
+    const requestedPackLabel = requestedOption.toLowerCase();
     const packOption = requestedPackOptionId
       ? packOptionsResult.data.find((row) => row.id === requestedPackOptionId && row.product_id === product.id)
       : product.selling_mode === 'shared_pack' && requestedPackLabel
@@ -83,13 +135,17 @@ export async function calculateAuthoritativeOrderPricing(input: { db: SupabaseCl
     if (product.selling_mode === 'shared_pack' && !packOption) throw new Error(`Please select a valid pack size for "${product.title}".`);
     if (requestedPackOptionId && !packOption) throw new Error(`The selected pack size for "${product.title}" is no longer available.`);
 
+    const colourSelection = product.colour_selection_mode === 'customer'
+      ? resolveColourSelection(requestedOption, item.selected_colour, product.available_colours)
+      : { colour: '', inventorySize: requestedOption };
+
     const piecesPerUnit = packOption ? Math.max(1, Number(packOption.pieces_per_unit) || 1) : 1;
     const physicalQuantity = quantity * piecesPerUnit;
-    const size = packOption ? String(packOption.label) : String(item.size || 'Free Size');
-    const inventorySize = packOption ? SHARED_STOCK_SIZE : size;
+    const size = packOption ? String(packOption.label) : colourSelection.inventorySize;
+    const inventorySize = packOption ? SHARED_STOCK_SIZE : colourSelection.inventorySize;
     const inventory = inventoryResult.data.find((row) => row.product_id === productId && row.size === inventorySize);
-    if (!inventory) throw new Error(`Inventory for "${product.title}" (${size}) is unavailable.`);
-    if (Number(inventory.available_quantity) < physicalQuantity) throw new Error(`Insufficient stock for "${product.title}" (${size}).`);
+    if (!inventory) throw new Error(`Inventory for "${product.title}" (${inventorySize}) is unavailable.`);
+    if (Number(inventory.available_quantity) < physicalQuantity) throw new Error(`Insufficient stock for "${product.title}" (${inventorySize}).`);
 
     const originalPrice = packOption ? Number(packOption.price) : Number(product.price);
     if (!Number.isFinite(originalPrice) || originalPrice < 0) throw new Error(`Invalid server price for "${product.title}".`);
@@ -110,11 +166,14 @@ export async function calculateAuthoritativeOrderPricing(input: { db: SupabaseCl
     combinedPackageHeight += packageHeightPerSellingUnit * quantity;
     if (appliedOffer && !primaryOfferName) primaryOfferName = appliedOffer.offerLabel;
 
+    const baseSku = packOption?.sku || inventory.sku || `SKU-${product.id.slice(0, 4)}-${size}`;
+    const displayTitle = colourSelection.colour ? `${product.title} — Colour: ${colourSelection.colour}` : product.title;
+
     verifiedItems.push({
       product_id: product.id,
-      product_title: product.title,
+      product_title: displayTitle,
       size,
-      sku: packOption?.sku || inventory.sku || `SKU-${product.id.slice(0, 4)}-${size}`,
+      sku: colourSku(baseSku, colourSelection.colour),
       hsn_code: product.hsn_code || '6204',
       gst_rate: gstRate,
       unit_price: Number(finalPrice),
@@ -182,6 +241,6 @@ export async function calculateAuthoritativeOrderPricing(input: { db: SupabaseCl
     serviceable: true,
     message: canApplyWelcome50 ? 'Delivery is available. WELCOME50 launch offer applied.' : 'Delivery is available for this PIN code.',
     verifiedItems,
-    ruleVersion: 3,
+    ruleVersion: 4,
   };
 }

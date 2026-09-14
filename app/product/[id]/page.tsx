@@ -1,13 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
 
 import MeeshoReviewsPreview from '@/components/MeeshoReviewsPreview';
+import ProductColourPurchaseBridge from './ProductDetailClient';
 import ProductDetailPageClient, { type ProductDetailType } from './ProductPageClient';
 import SharedPackProductPageClient from './SharedPackProductPageClient';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-async function getInitialProduct(productId: string): Promise<(ProductDetailType & { selling_mode?: string | null }) | null> {
+async function getInitialProduct(productId: string): Promise<(ProductDetailType & { selling_mode?: string | null; colour_selection_mode?: string | null; available_colours?: string[] | null }) | null> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -31,7 +32,7 @@ async function getInitialProduct(productId: string): Promise<(ProductDetailType 
     return null;
   }
 
-  return (data as (ProductDetailType & { selling_mode?: string | null }) | null) || null;
+  return (data as (ProductDetailType & { selling_mode?: string | null; colour_selection_mode?: string | null; available_colours?: string[] | null }) | null) || null;
 }
 
 export default async function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -44,7 +45,9 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
       {isSharedPackProduct && initialProduct ? (
         <SharedPackProductPageClient productId={id} initialProduct={initialProduct as any} />
       ) : (
-        <ProductDetailPageClient productId={id} initialProduct={initialProduct} />
+        <ProductColourPurchaseBridge product={initialProduct}>
+          <ProductDetailPageClient productId={id} initialProduct={initialProduct} />
+        </ProductColourPurchaseBridge>
       )}
       <MeeshoReviewsPreview productId={id} />
     </>
