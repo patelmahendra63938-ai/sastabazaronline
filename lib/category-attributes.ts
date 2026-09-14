@@ -90,10 +90,15 @@ export const CATEGORY_ENGINE: Record<string, CategoryConfig> = {
       },
       {
         name: 'Dining & Table Accessories',
-        productTypes: ['Coaster', 'Placemat', 'Table Mat', 'Cup Mat', 'Drinkware'],
+        productTypes: ['Coaster', 'Placemat', 'Table Mat', 'Cup Mat', 'Drinkware', 'Ceramic Bowl / Serving Bowl', 'Salad Bowl', 'Dessert Bowl'],
         attributes: [
-          { key: 'Capacity / Size', label: 'Capacity / Size', type: 'text', placeholder: 'e.g. 10 cm coaster, 300 ml mug', level: 'recommended' },
-          { key: 'Primary Use', label: 'Primary Use', type: 'text', placeholder: 'e.g. Dining, serving, table protection', level: 'recommended' }
+          { key: 'Capacity / Size', label: 'Capacity / Size', type: 'text', placeholder: 'e.g. 10 cm coaster, 300 ml bowl', level: 'recommended' },
+          { key: 'Primary Use', label: 'Primary Use', type: 'text', placeholder: 'e.g. Dining, serving, salad, pasta, dessert, table protection', level: 'recommended' },
+          { key: 'Shape', label: 'Shape', type: 'select', options: ['Round', 'Square', 'Oval', 'Organic / Irregular'], level: 'recommended', productTypes: ['Ceramic Bowl / Serving Bowl', 'Salad Bowl', 'Dessert Bowl'] },
+          { key: 'Pattern / Design', label: 'Pattern / Design', type: 'text', placeholder: 'e.g. Printed fruit design, solid, floral', level: 'recommended', productTypes: ['Ceramic Bowl / Serving Bowl', 'Salad Bowl', 'Dessert Bowl'] },
+          { key: 'Microwave Safe', label: 'Microwave Safe', type: 'select', options: ['Yes', 'No', 'Not Confirmed'], level: 'optional', productTypes: ['Ceramic Bowl / Serving Bowl', 'Salad Bowl', 'Dessert Bowl'] },
+          { key: 'Dishwasher Safe', label: 'Dishwasher Safe', type: 'select', options: ['Yes', 'No', 'Not Confirmed'], level: 'optional', productTypes: ['Ceramic Bowl / Serving Bowl', 'Salad Bowl', 'Dessert Bowl'] },
+          { key: 'Oven Safe', label: 'Oven Safe', type: 'select', options: ['Yes', 'No', 'Not Confirmed'], level: 'optional', productTypes: ['Ceramic Bowl / Serving Bowl', 'Salad Bowl', 'Dessert Bowl'] }
         ]
       },
       {
