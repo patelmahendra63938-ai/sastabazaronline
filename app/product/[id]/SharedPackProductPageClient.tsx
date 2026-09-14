@@ -112,6 +112,10 @@ export default function SharedPackProductPageClient({
     setDeliveryMessage('');
   }, [selectedPackId]);
 
+  useEffect(() => {
+    setDeliveryMessage('');
+  }, [quantity, selectedCampaignId]);
+
   const images = (product.images || []).map((src) => resolveStorefrontImageSrc(src));
   const currentImage = images[selectedImage] || resolveStorefrontImageSrc(null);
   const outOfStock = !activePack || availableUnits <= 0;
@@ -190,7 +194,17 @@ export default function SharedPackProductPageClient({
         }),
       });
       const data = await response.json().catch(() => ({}));
-      setDeliveryMessage(response.ok && data.serviceable ? (data.message || 'Delivery is available.') : (data.message || 'Delivery is not available for this PIN code.'));
+      if (response.ok && data.serviceable) {
+        const shippingCharge = Number(data.shippingCharge || 0);
+        const totalPayable = Number(data.totalPayable || 0);
+        const chargeableWeightKg = Number(data.chargeableWeightGrams || 0) / 1000;
+        const shippingLabel = shippingCharge > 0 ? `Shipping ₹${shippingCharge.toLocaleString('en-IN')}` : 'Free shipping';
+        const weightLabel = chargeableWeightKg > 0 ? ` • Chargeable wt. ${chargeableWeightKg.toFixed(2)} kg` : '';
+        const totalLabel = Number.isFinite(totalPayable) && totalPayable > 0 ? ` • Total ₹${totalPayable.toLocaleString('en-IN')}` : '';
+        setDeliveryMessage(`Delivery available • ${shippingLabel}${weightLabel}${totalLabel}`);
+      } else {
+        setDeliveryMessage(data.message || 'Delivery is not available for this PIN code.');
+      }
     } catch {
       setDeliveryMessage('Delivery could not be checked right now.');
     } finally {

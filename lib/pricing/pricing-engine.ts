@@ -63,6 +63,52 @@ function colourSku(baseSku: string, colour: string) {
   return suffix ? `${baseSku}-${suffix}` : baseSku;
 }
 
+function estimateCompactPackageDimensions(length: number, width: number, height: number, pieceCount: number) {
+  const count = Math.max(1, Math.ceil(pieceCount));
+  let best = {
+    length,
+    width,
+    height: height * count,
+    cells: count,
+    maxDimension: Math.max(length, width, height * count),
+    surfaceScore: 2 * (length * width + width * height * count + length * height * count),
+  };
+
+  for (let columns = 1; columns <= count; columns += 1) {
+    for (let rows = 1; rows <= Math.ceil(count / columns); rows += 1) {
+      const layers = Math.ceil(count / (columns * rows));
+      const cells = columns * rows * layers;
+      const packedLength = length * columns;
+      const packedWidth = width * rows;
+      const packedHeight = height * layers;
+      const maxDimension = Math.max(packedLength, packedWidth, packedHeight);
+      const surfaceScore = 2 * (
+        packedLength * packedWidth +
+        packedWidth * packedHeight +
+        packedLength * packedHeight
+      );
+
+      const isBetter =
+        cells < best.cells ||
+        (cells === best.cells && maxDimension < best.maxDimension) ||
+        (cells === best.cells && maxDimension === best.maxDimension && surfaceScore < best.surfaceScore);
+
+      if (isBetter) {
+        best = {
+          length: packedLength,
+          width: packedWidth,
+          height: packedHeight,
+          cells,
+          maxDimension,
+          surfaceScore,
+        };
+      }
+    }
+  }
+
+  return { length: best.length, width: best.width, height: best.height };
+}
+
 export async function calculateAuthoritativeOrderPricing(input: { db: SupabaseClient; pincode: string; paymentMethod: PricingPaymentMethod; cart: PricingCartItem[]; couponCode?: string; }): Promise<PricingBreakdown> {
   const cleanPin = String(input.pincode || '').trim();
   if (!/^\d{6}$/.test(cleanPin)) throw new Error('Please enter a valid 6-digit delivery PIN code.');
@@ -155,15 +201,20 @@ export async function calculateAuthoritativeOrderPricing(input: { db: SupabaseCl
     const originalLineTotal = originalPrice * quantity;
     const gstRate = Number(product.gst_rate || 5);
     const weightPerSellingUnitGrams = exactPieceWeight * piecesPerUnit;
-    const packageHeightPerSellingUnit = basePackageHeight * piecesPerUnit;
+    const packedDimensions = estimateCompactPackageDimensions(
+      basePackageLength,
+      basePackageWidth,
+      basePackageHeight,
+      physicalQuantity
+    );
 
     originalProductPriceTotal += originalLineTotal;
     discountedSubtotal += lineTotal;
     totalTaxAmount += lineTotal - lineTotal / (1 + gstRate / 100);
     actualWeightGrams += weightPerSellingUnitGrams * quantity;
-    combinedPackageLength = Math.max(combinedPackageLength, basePackageLength);
-    combinedPackageWidth = Math.max(combinedPackageWidth, basePackageWidth);
-    combinedPackageHeight += packageHeightPerSellingUnit * quantity;
+    combinedPackageLength = Math.max(combinedPackageLength, packedDimensions.length);
+    combinedPackageWidth = Math.max(combinedPackageWidth, packedDimensions.width);
+    combinedPackageHeight += packedDimensions.height;
     if (appliedOffer && !primaryOfferName) primaryOfferName = appliedOffer.offerLabel;
 
     const baseSku = packOption?.sku || inventory.sku || `SKU-${product.id.slice(0, 4)}-${size}`;
@@ -241,6 +292,6 @@ export async function calculateAuthoritativeOrderPricing(input: { db: SupabaseCl
     serviceable: true,
     message: canApplyWelcome50 ? 'Delivery is available. WELCOME50 launch offer applied.' : 'Delivery is available for this PIN code.',
     verifiedItems,
-    ruleVersion: 4,
+    ruleVersion: 5,
   };
 }
