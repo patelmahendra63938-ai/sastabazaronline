@@ -5,7 +5,7 @@ export interface CategoryAttribute {
   placeholder?: string;
   options?: string[];
   level: 'required' | 'recommended' | 'optional';
-  productTypes?: string[]; // If omitted, applies to all in subcategory
+  productTypes?: string[];
 }
 
 export interface SubCategoryConfig {
@@ -32,7 +32,6 @@ export const CATEGORY_ENGINE: Record<string, CategoryConfig> = {
     generalAttributes: [
       { key: 'Gender', label: 'Target Gender', type: 'select', options: ['Women', 'Men', 'Unisex', 'Girls', 'Boys'], level: 'required' },
       { key: 'Fabric', label: 'Primary Fabric / Material', type: 'text', placeholder: 'e.g. Pure Georgette, Rayon, Cotton', level: 'required' },
-      { key: 'Color', label: 'Color / Shade', type: 'text', placeholder: 'e.g. Mustard Yellow, Navy Blue', level: 'required' },
       { key: 'Pattern', label: 'Print / Pattern', type: 'select', options: ['Embroidered', 'Solid / Plain', 'Floral Print', 'Bandhani / Bandhej', 'Zari Work', 'Striped', 'Printed'], level: 'recommended' },
       { key: 'Occasion', label: 'Occasion', type: 'select', options: ['Festive & Wedding', 'Casual Wear', 'Party Wear', 'Formal / Office', 'Daily Wear'], level: 'recommended' },
       { key: 'Fit Type', label: 'Fit Type', type: 'select', options: ['Regular Fit', 'Slim Fit', 'Relaxed / Loose Fit', 'A-Line', 'Straight'], level: 'optional' },
@@ -54,9 +53,9 @@ export const CATEGORY_ENGINE: Record<string, CategoryConfig> = {
         name: 'Girls',
         productTypes: ['Girls Nightwear'],
         attributes: [
-          { key: 'Age Group', label: 'Age Group', type: 'select', options: ['2-4 Years', '4-6 Years', '6-8 Years', '8-10 Years', '10-12 Years', '12-14 Years', '14-16 Years'], level: 'required', productTypes: ['Girls Nightwear'] },
-          { key: 'Nightwear Type', label: 'Nightwear Type', type: 'select', options: ['Night Suit Set', 'Pyjama Set', 'Night Dress', 'Top & Pyjama Set'], level: 'recommended', productTypes: ['Girls Nightwear'] },
-          { key: 'Sleeve Length', label: 'Sleeve Length', type: 'select', options: ['Sleeveless', 'Half Sleeve', 'Full Sleeve'], level: 'recommended', productTypes: ['Girls Nightwear'] }
+          { key: 'Age Group', label: 'Age Group', type: 'select', options: ['2-4 Years', '4-6 Years', '6-8 Years', '8-10 Years', '10-12 Years', '12-14 Years', '14-16 Years'], level: 'required' },
+          { key: 'Nightwear Type', label: 'Nightwear Type', type: 'select', options: ['Night Suit Set', 'Pyjama Set', 'Night Dress', 'Top & Pyjama Set'], level: 'recommended' },
+          { key: 'Sleeve Length', label: 'Sleeve Length', type: 'select', options: ['Sleeveless', 'Half Sleeve', 'Full Sleeve'], level: 'recommended' }
         ]
       },
       {
@@ -69,6 +68,7 @@ export const CATEGORY_ENGINE: Record<string, CategoryConfig> = {
       }
     ]
   },
+
   'Home & Kitchen': {
     id: 'home_kitchen',
     name: 'Home & Kitchen',
@@ -84,7 +84,8 @@ export const CATEGORY_ENGINE: Record<string, CategoryConfig> = {
         productTypes: ['Jar', 'Canister', 'Bottle', 'Spice Storage', 'Storage Container'],
         attributes: [
           { key: 'Capacity / Size', label: 'Capacity / Size', type: 'text', placeholder: 'e.g. 500 ml, 1 Litre', level: 'recommended' },
-          { key: 'Lid / Seal Type', label: 'Lid / Seal Type', type: 'text', placeholder: 'e.g. Airtight Lid, Screw Lid, Standard Lid', level: 'recommended' }
+          { key: 'Lid / Seal Type', label: 'Lid / Seal Type', type: 'text', placeholder: 'e.g. Airtight Lid, Screw Lid, Standard Lid', level: 'recommended' },
+          { key: 'Dishwasher Safe', label: 'Dishwasher Safe', type: 'select', options: ['Yes', 'No', 'Not Applicable'], level: 'optional' }
         ]
       },
       {
@@ -105,6 +106,7 @@ export const CATEGORY_ENGINE: Record<string, CategoryConfig> = {
       }
     ]
   },
+
   'Electronics & Gadgets': {
     id: 'electronics',
     name: 'Electronics & Gadgets',
@@ -112,10 +114,10 @@ export const CATEGORY_ENGINE: Record<string, CategoryConfig> = {
     defaultGst: 18,
     generalAttributes: [
       { key: 'Model Name / Number', label: 'Model Number / Name', type: 'text', placeholder: 'e.g. SB-TWS-01', level: 'required' },
-      { key: 'Color', label: 'Color', type: 'text', placeholder: 'e.g. Midnight Black', level: 'required' },
       { key: 'Connectivity', label: 'Connectivity Type', type: 'select', options: ['Bluetooth 5.3 Wireless', 'USB Type-C Wired', 'Dual Mode (Wireless + Wired)'], level: 'required' },
       { key: 'Battery Backup', label: 'Battery Life / Playtime', type: 'text', placeholder: 'e.g. Up to 36 Hours, 5000 mAh', level: 'recommended' },
-      { key: 'Warranty Period', label: 'Brand Warranty Duration', type: 'select', options: ['1 Year Manufacturer Warranty', '6 Months Warranty', 'No Warranty'], level: 'recommended' }
+      { key: 'Warranty Period', label: 'Brand Warranty Duration', type: 'select', options: ['1 Year Manufacturer Warranty', '6 Months Warranty', 'No Warranty'], level: 'recommended' },
+      { key: 'Country of Origin', label: 'Country of Origin', type: 'text', placeholder: 'India', level: 'recommended' }
     ],
     subcategories: [
       {
@@ -128,16 +130,13 @@ export const CATEGORY_ENGINE: Record<string, CategoryConfig> = {
       }
     ]
   },
+
   'Beauty & Personal Care': {
     id: 'beauty',
     name: 'Beauty & Personal Care',
     defaultHsn: '3304',
     defaultGst: 18,
     generalAttributes: [
-      { key: 'Net Quantity', label: 'Net Volume / Weight', type: 'text', placeholder: 'e.g. 100 ml, 250 g', level: 'required' },
-      { key: 'Skin / Hair Type', label: 'Suitable For', type: 'select', options: ['All Skin Types', 'Oily Skin', 'Dry Skin', 'All Hair Types'], level: 'recommended' },
-      { key: 'Key Ingredients', label: 'Key Active Ingredients', type: 'text', placeholder: 'e.g. Aloe Vera, Tea Tree Oil, Vitamin C', level: 'recommended' },
-      { key: 'Expiry / Shelf Life', label: 'Shelf Life', type: 'text', placeholder: 'e.g. 24 Months from MFG Date', level: 'recommended' },
       { key: 'Country of Origin', label: 'Country of Origin', type: 'text', placeholder: 'India', level: 'recommended' }
     ],
     subcategories: [
@@ -145,6 +144,10 @@ export const CATEGORY_ENGINE: Record<string, CategoryConfig> = {
         name: 'Skin & Hair Care',
         productTypes: ['Face Serum', 'Moisturizer & Creams', 'Hair Oils & Shampoos'],
         attributes: [
+          { key: 'Net Quantity', label: 'Net Volume / Weight', type: 'text', placeholder: 'e.g. 100 ml, 250 g', level: 'required' },
+          { key: 'Skin / Hair Type', label: 'Suitable For', type: 'select', options: ['All Skin Types', 'Oily Skin', 'Dry Skin', 'All Hair Types'], level: 'recommended' },
+          { key: 'Key Ingredients', label: 'Key Active Ingredients', type: 'text', placeholder: 'e.g. Aloe Vera, Tea Tree Oil, Vitamin C', level: 'recommended' },
+          { key: 'Expiry / Shelf Life', label: 'Shelf Life', type: 'text', placeholder: 'e.g. 24 Months from MFG Date', level: 'recommended' },
           { key: 'Formulation', label: 'Formulation', type: 'select', options: ['Liquid Serum', 'Gel', 'Cream', 'Lotion', 'Oil'], level: 'recommended' }
         ]
       },
@@ -152,9 +155,15 @@ export const CATEGORY_ENGINE: Record<string, CategoryConfig> = {
         name: 'Makeup Accessories',
         productTypes: ['Foldable Makeup Mirror', 'Vanity Mirror', 'Compact Mirror'],
         attributes: [
-          { key: 'Mirror Type', label: 'Mirror Type', type: 'select', options: ['Foldable', 'Free Standing', 'Compact / Travel'], level: 'required' },
-          { key: 'Frame / Cover Material', label: 'Frame / Cover Material', type: 'text', placeholder: 'e.g. PU Leather, Plastic', level: 'recommended' },
-          { key: 'Color', label: 'Color', type: 'text', placeholder: 'e.g. Pink, Blue, Beige, Purple', level: 'recommended' },
+          { key: 'Mirror Type', label: 'Mirror Type', type: 'select', options: ['Foldable', 'Free Standing', 'Compact / Travel', 'Tabletop'], level: 'required' },
+          { key: 'Mirror Shape', label: 'Shape', type: 'select', options: ['Rectangle', 'Round', 'Square', 'Oval'], level: 'recommended' },
+          { key: 'Frame / Cover Material', label: 'Frame / Cover Material', type: 'text', placeholder: 'e.g. PU Leather, ABS Plastic', level: 'recommended' },
+          { key: 'Mirror Material', label: 'Mirror Material', type: 'text', placeholder: 'e.g. Glass', level: 'recommended' },
+          { key: 'Magnification', label: 'Magnification', type: 'select', options: ['1X', '2X', '5X', '10X', 'Not Applicable'], level: 'optional' },
+          { key: 'Lighted Mirror', label: 'Lighted Mirror', type: 'select', options: ['No', 'Yes - LED'], level: 'optional' },
+          { key: 'Stand Included', label: 'Stand Included', type: 'select', options: ['Yes', 'No'], level: 'recommended' },
+          { key: 'Foldable', label: 'Foldable', type: 'select', options: ['Yes', 'No'], level: 'recommended' },
+          { key: 'Product Dimensions', label: 'Product Dimensions', type: 'text', placeholder: 'e.g. 20 × 15 cm', level: 'optional' },
           { key: 'Primary Use', label: 'Primary Use', type: 'text', placeholder: 'e.g. Makeup, skincare, travel grooming', level: 'recommended' }
         ]
       }
