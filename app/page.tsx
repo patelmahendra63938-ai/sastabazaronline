@@ -195,7 +195,7 @@ function buildCollections(
   const counts = new Map<string, { name: string; count: number }>();
 
   for (const product of products) {
-    const name = classifySubcategory(product);
+    const name = product.category?.trim();
     if (!name) continue;
 
     const key = normalize(name);
@@ -431,7 +431,6 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
       getStorefrontFallbackProducts(),
     ]);
 
-  // P0 storefront resilience: transient data errors must not look like an empty store.
   if (productResult.error) {
     console.error('Homepage product query failed; retrying once:', productResult.error);
     productResult = await applyFilters(
@@ -541,7 +540,7 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
               <div className="flex items-end justify-between gap-4">
                 <div>
                   <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#b5843d]">
-                    Browse collections
+                    Browse departments
                   </p>
                   <h2
                     id="shop-by-category-heading"
@@ -559,27 +558,19 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
                 </a>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                 {homepageCategories.map((category) => (
                   <Link
                     key={category.id}
                     href={`/?category=${encodeURIComponent(category.name)}#all-products`}
-                    className={`group relative flex min-h-28 overflow-hidden rounded-2xl border bg-white p-4 shadow-xs transition hover:-translate-y-0.5 hover:border-[#d7b06a] hover:shadow-md ${
-                      category.homepage_featured
-                        ? 'col-span-2 min-h-36 border-[#e7c88d] sm:col-span-2 lg:col-span-2'
-                        : 'border-stone-200'
-                    }`}
+                    className="group relative flex min-h-28 overflow-hidden rounded-2xl border border-stone-200 bg-white p-4 shadow-xs transition hover:-translate-y-0.5 hover:border-[#d7b06a] hover:shadow-md lg:min-h-32"
                   >
                     {category.homepage_image_url && (
                       <Image
                         src={category.homepage_image_url}
                         alt=""
                         fill
-                        sizes={
-                          category.homepage_featured
-                            ? '(max-width: 640px) calc(100vw - 2rem), (max-width: 1024px) 66vw, 33vw'
-                            : '(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 17vw'
-                        }
+                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                         className="absolute inset-0 size-full object-cover"
                       />
                     )}
@@ -589,26 +580,12 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
                     <span className="relative z-10 flex size-full flex-col justify-between">
                       <ShoppingBag
                         size={22}
-                        className={
-                          category.homepage_image_url
-                            ? 'text-white'
-                            : 'text-[#b5843d]'
-                        }
+                        className={category.homepage_image_url ? 'text-white' : 'text-[#b5843d]'}
                         aria-hidden="true"
                       />
-                      <span
-                        className={`flex items-end justify-between gap-2 text-sm font-black ${
-                          category.homepage_image_url
-                            ? 'text-white'
-                            : 'text-[#741f23]'
-                        }`}
-                      >
+                      <span className={`flex items-end justify-between gap-2 text-sm font-black ${category.homepage_image_url ? 'text-white' : 'text-[#741f23]'}`}>
                         {category.name}
-                        <ArrowRight
-                          size={14}
-                          className="shrink-0 transition-transform group-hover:translate-x-1"
-                          aria-hidden="true"
-                        />
+                        <ArrowRight size={14} className="shrink-0 transition-transform group-hover:translate-x-1" aria-hidden="true" />
                       </span>
                     </span>
                   </Link>
