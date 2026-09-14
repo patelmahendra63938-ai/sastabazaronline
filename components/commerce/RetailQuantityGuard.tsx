@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
+import MetaEcommerceTracker from '@/components/MetaEcommerceTracker';
 
 const MAX_RETAIL_QTY_PER_PRODUCT_SIZE = 5;
 const CART_KEY = 'sastabazar_cart';
@@ -28,13 +29,9 @@ function normalizeRetailCart() {
       return { ...item, quantity: safeQuantity };
     });
 
-    if (changed) {
-      localStorage.setItem(CART_KEY, JSON.stringify(normalized));
-    }
-
+    if (changed) localStorage.setItem(CART_KEY, JSON.stringify(normalized));
     return changed;
   } catch {
-    // Ignore malformed local cart data; cart/checkout already handle invalid storage.
     return false;
   }
 }
@@ -70,17 +67,20 @@ export default function RetailQuantityGuard() {
     };
   }, []);
 
-  if (!showLimitNotice) return null;
-
   return (
-    <div className="fixed bottom-24 left-1/2 z-[90] w-[calc(100%_-_2rem)] max-w-md -translate-x-1/2 rounded-2xl border border-[#ead8b8] bg-white px-4 py-3 text-xs shadow-xl lg:bottom-6">
-      <p className="font-black text-[#741f23]">Retail limit: max 5 pcs per Product + Size.</p>
-      <p className="mt-1 text-[11px] leading-relaxed text-stone-600">
-        Your cart was adjusted to 5 pcs for this size. Need a larger quantity?{' '}
-        <Link href="/contact" className="font-black text-[#741f23] underline underline-offset-2">
-          Bulk Order / Contact Us
-        </Link>
-      </p>
-    </div>
+    <>
+      <MetaEcommerceTracker />
+      {showLimitNotice ? (
+        <div className="fixed bottom-24 left-1/2 z-[90] w-[calc(100%_-_2rem)] max-w-md -translate-x-1/2 rounded-2xl border border-[#ead8b8] bg-white px-4 py-3 text-xs shadow-xl lg:bottom-6">
+          <p className="font-black text-[#741f23]">Retail limit: max 5 pcs per Product + Size.</p>
+          <p className="mt-1 text-[11px] leading-relaxed text-stone-600">
+            Your cart was adjusted to 5 pcs for this size. Need a larger quantity?{' '}
+            <Link href="/contact" className="font-black text-[#741f23] underline underline-offset-2">
+              Bulk Order / Contact Us
+            </Link>
+          </p>
+        </div>
+      ) : null}
+    </>
   );
 }
