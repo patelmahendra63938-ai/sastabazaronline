@@ -6,6 +6,7 @@ import GA4EcommerceTracker from '@/components/GA4EcommerceTracker';
 import RetailQuantityGuard from '@/components/commerce/RetailQuantityGuard';
 import WhatsAppHelpButton from '@/components/WhatsAppHelpButton';
 import MobileBottomNav from '@/components/MobileBottomNav';
+import FreeShippingStrip from '@/components/FreeShippingStrip';
 
 const SITE_URL = 'https://www.adhyeybrothers.in';
 const SITE_NAME = 'ADHYEY BROTHERS';
@@ -191,6 +192,7 @@ export default function RootLayout({
           />
         </noscript>
 
+        <FreeShippingStrip />
         <RetailQuantityGuard />
         {children}
         <MobileBottomNav />
