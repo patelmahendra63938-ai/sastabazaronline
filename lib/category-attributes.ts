@@ -149,6 +149,31 @@ export const CATEGORY_ENGINE: Record<string, CategoryConfig> = {
     ]
   },
 
+  'Home Decor': {
+    id: 'home_decor',
+    name: 'Home Decor',
+    defaultHsn: '39269099',
+    defaultGst: 18,
+    generalAttributes: [
+      { key: 'Material', label: 'Primary Material', type: 'text', placeholder: 'e.g. Plastic, resin, metal', level: 'required' },
+      { key: 'Colour', label: 'Colour', type: 'text', placeholder: 'e.g. White, Grey', level: 'recommended' },
+      { key: 'Country of Origin', label: 'Country of Origin', type: 'text', placeholder: 'India', level: 'recommended' }
+    ],
+    subcategories: [
+      {
+        name: 'Wall Decor & Utility Hooks',
+        productTypes: ['Deer Head Wall Hook / Key Holder', 'Decorative Wall Hook', 'Key Holder'],
+        attributes: [
+          { key: 'Mount Type', label: 'Mount Type', type: 'select', options: ['Screw Mount', 'Adhesive Mount', 'Not Confirmed'], level: 'required' },
+          { key: 'Primary Use', label: 'Primary Use', type: 'select', options: ['Keys', 'Bags', 'Caps / Hats', 'Scarves', 'Decorative Utility Hook', 'Multi-purpose'], level: 'recommended' },
+          { key: 'Design', label: 'Design / Theme', type: 'text', placeholder: 'e.g. Deer Head / Antler', level: 'recommended' },
+          { key: 'Pack Size', label: 'Pack Size', type: 'text', placeholder: 'e.g. Pack of 1', level: 'recommended' },
+          { key: 'Product Dimensions', label: 'Product Dimensions', type: 'text', placeholder: 'Add only if supplier-confirmed', level: 'optional' }
+        ]
+      }
+    ]
+  },
+
   'Stationery & Office': {
     id: 'stationery_office',
     name: 'Stationery & Office',
