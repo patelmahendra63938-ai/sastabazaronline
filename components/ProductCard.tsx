@@ -34,11 +34,17 @@ interface ProductCardProps {
 }
 
 const SIZE_ORDER = ['XS','S','M','L','XL','XXL','XXXL','FREE SIZE','STANDARD'];
+const INTERNAL_VARIANT_LABELS = new Set(['SHARED STOCK']);
 
 function getSizeOrder(size: string) {
   const normalized = size.trim().toUpperCase();
   const index = SIZE_ORDER.indexOf(normalized);
   return index === -1 ? SIZE_ORDER.length : index;
+}
+
+function isCustomerFacingVariant(item: ProductInventoryItem) {
+  const label = String(item.size || '').trim().toUpperCase();
+  return Boolean(label) && !INTERNAL_VARIANT_LABELS.has(label);
 }
 
 export default function ProductCard({ product, activeCampaigns = [], priorityImage = false }: ProductCardProps) {
@@ -54,15 +60,18 @@ export default function ProductCard({ product, activeCampaigns = [], priorityIma
 
   const inventoryItems = Array.isArray(product.inventory) ? product.inventory : [];
   const availableInventory = inventoryItems.filter(item => Number(item.available_quantity || 0) > 0);
-  const availableSizes = Array.from(new Set(availableInventory.map(item => String(item.size || '').trim()).filter(Boolean))).sort((a, b) => {
+  const customerFacingInventory = inventoryItems.filter(isCustomerFacingVariant);
+  const availableCustomerFacingInventory = customerFacingInventory.filter(item => Number(item.available_quantity || 0) > 0);
+  const availableSizes = Array.from(new Set(availableCustomerFacingInventory.map(item => String(item.size || '').trim()).filter(Boolean))).sort((a, b) => {
     const orderDifference = getSizeOrder(a) - getSizeOrder(b);
     return orderDifference !== 0 ? orderDifference : a.localeCompare(b);
   });
 
-  const hasInventoryVariants = inventoryItems.length > 0;
+  const hasAnyInventory = inventoryItems.length > 0;
+  const hasInventoryVariants = customerFacingInventory.length > 0;
   const hasKnownProductStock = typeof product.stock === 'number' && Number.isFinite(product.stock);
-  const isOutOfStock = hasInventoryVariants ? availableInventory.length === 0 : hasKnownProductStock && Number(product.stock) <= 0;
-  const canDirectAddToCart = !hasInventoryVariants && hasKnownProductStock && Number(product.stock) > 0;
+  const isOutOfStock = hasAnyInventory ? availableInventory.length === 0 : hasKnownProductStock && Number(product.stock) <= 0;
+  const canDirectAddToCart = !hasAnyInventory && hasKnownProductStock && Number(product.stock) > 0;
   const hasRealMrp = mrpValue > 0 && mrpValue > finalPrice;
   const discountPercent = hasRealMrp ? Math.round(((mrpValue - finalPrice) / mrpValue) * 100) : 0;
 
@@ -179,7 +188,7 @@ export default function ProductCard({ product, activeCampaigns = [], priorityIma
                       {availableSizes.length > 6 && <span className="shrink-0 text-[10px] font-bold text-[#741f23]">+{availableSizes.length - 6}</span>}
                     </div>
                   </>
-                ) : <p className="text-[9px] font-bold text-red-600 md:text-[10px]">No size currently available</p>}
+                ) : <p className="text-[9px] font-bold text-red-600 md:text-[10px]">No option currently available</p>}
               </div>
             )}
           </div>
@@ -189,7 +198,7 @@ export default function ProductCard({ product, activeCampaigns = [], priorityIma
           {isOutOfStock ? (
             <button type="button" disabled className="flex min-h-10 w-full cursor-not-allowed items-center justify-center rounded-xl bg-stone-200 px-2 text-[11px] font-bold text-stone-500 md:min-h-11 md:px-3 md:text-xs">Out of Stock</button>
           ) : hasInventoryVariants ? (
-            <Link href={`/product/${product.id}`} className="flex min-h-10 w-full items-center justify-center gap-1 rounded-xl bg-[#741f23] px-2 text-[11px] font-bold text-white shadow-sm transition hover:bg-[#5e171b] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d7aa5b] focus-visible:ring-offset-2 md:min-h-11 md:gap-1.5 md:px-3 md:text-xs"><span>Select Size</span><ArrowRight size={13} aria-hidden="true" className="md:h-3.5 md:w-3.5" /></Link>
+            <Link href={`/product/${product.id}`} className="flex min-h-10 w-full items-center justify-center gap-1 rounded-xl bg-[#741f23] px-2 text-[11px] font-bold text-white shadow-sm transition hover:bg-[#5e171b] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d7aa5b] focus-visible:ring-offset-2 md:min-h-11 md:gap-1.5 md:px-3 md:text-xs"><span>Select Option</span><ArrowRight size={13} aria-hidden="true" className="md:h-3.5 md:w-3.5" /></Link>
           ) : canDirectAddToCart ? (
             <button type="button" onClick={handleAddToCart} aria-label={`${added ? 'Added' : 'Add'} ${product.title} to cart`} className={`flex min-h-10 w-full cursor-pointer items-center justify-center gap-1 rounded-xl px-2 text-[11px] font-bold text-white shadow-sm transition active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d7aa5b] focus-visible:ring-offset-2 md:min-h-11 md:gap-1.5 md:px-3 md:text-xs ${added ? 'bg-green-700 hover:bg-green-800' : 'bg-[#741f23] hover:bg-[#5e171b]'}`}>
               {added ? <Check size={13} className="text-white md:h-3.5 md:w-3.5" aria-hidden="true" /> : <ShoppingCart size={13} className="md:h-3.5 md:w-3.5" aria-hidden="true" />}

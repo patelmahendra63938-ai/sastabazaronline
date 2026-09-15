@@ -33,6 +33,56 @@ export function normalizeStorefrontCategory(value?: string | null) {
     .trim();
 }
 
+const SUBCATEGORY_ALIASES = new Map<string, string>([
+  ['dining and table accessories', 'Dining & Serving'],
+  ['dining and serving', 'Dining & Serving'],
+  ['kitchen storage and containers', 'Kitchen Storage & Containers'],
+  ['kitchen tools and accessories', 'Kitchen Tools & Accessories'],
+  ['kitchen and bathroom accessories', 'Sink, Drain & Faucet Accessories'],
+  ['sink drain and faucet accessories', 'Sink, Drain & Faucet Accessories'],
+  ['cleaning and laundry', 'Cleaning & Laundry'],
+  ['door and wall accessories', 'Door & Wall Accessories'],
+  ['home organization', 'Home Organization & Storage'],
+  ['home organisation', 'Home Organization & Storage'],
+  ['home organization and storage', 'Home Organization & Storage'],
+  ['home organisation and storage', 'Home Organization & Storage'],
+  ['bathroom and personal care accessories', 'Bathroom & Personal Care Accessories'],
+  ['furniture and surface protection', 'Furniture & Surface Protection'],
+  ['home utility and appliances', 'Home Utility & Appliances'],
+  ['makeup accessories', 'Makeup Accessories'],
+  ['women ethnic wear', 'Women Ethnic Wear'],
+  ['girls', 'Girls'],
+  ['men ethnic and western', 'Men Ethnic & Western'],
+]);
+
+const KNOWN_SUBCATEGORIES_BY_MAIN: Record<string, Set<string>> = {
+  [normalizeStorefrontCategory('Home & Kitchen')]: new Set(
+    [
+      'Kitchen Storage & Containers',
+      'Dining & Serving',
+      'Kitchen Tools & Accessories',
+      'Sink, Drain & Faucet Accessories',
+      'Cleaning & Laundry',
+      'Door & Wall Accessories',
+      'Home Organization & Storage',
+      'Bathroom & Personal Care Accessories',
+      'Furniture & Surface Protection',
+      'Home Utility & Appliances',
+    ].map(normalizeStorefrontCategory)
+  ),
+  [normalizeStorefrontCategory('Fashion & Apparel')]: new Set(
+    ['Women Ethnic Wear', 'Girls', 'Men Ethnic & Western'].map(
+      normalizeStorefrontCategory
+    )
+  ),
+};
+
+function canonicalSubcategory(value?: string | null) {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  return SUBCATEGORY_ALIASES.get(normalizeStorefrontCategory(trimmed)) || trimmed;
+}
+
 function findCategoryConfig(category?: string | null) {
   const wanted = normalizeStorefrontCategory(category);
   return Object.values(CATEGORY_ENGINE).find(
@@ -42,42 +92,111 @@ function findCategoryConfig(category?: string | null) {
 
 function readSavedSubcategory(description?: string | null) {
   if (!description) return null;
-  const match = description.match(/(?:catalog\s+)?sub\s*category\s*:\s*([^\n\r]+)/i);
+  const match = description.match(
+    /(?:catalog\s+)?sub\s*category\s*:\s*([^\n\r]+)/i
+  );
   return match?.[1]?.trim() || null;
 }
 
 function productTypeMatches(text: string, productType: string) {
-  const type = normalizeStorefrontCategory(productType)
-    .replace(/\bsets?\b/g, '')
-    .replace(/\band\b/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-  return Boolean(type && text.includes(type));
+  const candidates = productType
+    .split(/[\/,&|]+/)
+    .map(value =>
+      normalizeStorefrontCategory(value)
+        .replace(/\bsets?\b/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+    )
+    .filter(value => value.length >= 3);
+
+  return candidates.some(candidate => text.includes(candidate));
+}
+
+function isKnownSavedSubcategory(mainCategory: string, candidate: string) {
+  const allowed = KNOWN_SUBCATEGORIES_BY_MAIN[normalizeStorefrontCategory(mainCategory)];
+  if (!allowed) return true;
+  return allowed.has(normalizeStorefrontCategory(candidate));
+}
+
+function classifyHomeAndKitchen(text: string) {
+  if (
+    /(ceramic|porcelain|crockery)/.test(text) &&
+    /(bowl|plate|dinnerware|serve|serving|bakeware|baking dish)/.test(text)
+  ) {
+    return 'Dining & Serving';
+  }
+
+  if (
+    /(coaster|placemat|table mat|cup mat|drinkware|coffee mug|travel mug)/.test(
+      text
+    )
+  ) {
+    return 'Dining & Serving';
+  }
+
+  if (/(jar|canister|bottle|storage container|spice storage)/.test(text)) {
+    return 'Kitchen Storage & Containers';
+  }
+
+  if (
+    /(spatula|ladle|rolling pin|dough roller|pastry roller|fondant roller|rice spoon|turner)/.test(
+      text
+    )
+  ) {
+    return 'Kitchen Tools & Accessories';
+  }
+
+  if (
+    /(faucet|tap aerator|tap nozzle|faucet extender|drain pipe|gutter seal|sink drain|draining tray|over sink)/.test(
+      text
+    )
+  ) {
+    return 'Sink, Drain & Faucet Accessories';
+  }
+
+  if (/(cleaning brush|scrub brush|laundry)/.test(text)) {
+    return 'Cleaning & Laundry';
+  }
+
+  if (/(door knob|door stopper|wall protector|wall bumper|crash pad)/.test(text)) {
+    return 'Door & Wall Accessories';
+  }
+
+  if (/(hair dryer holder|hairdryer holder)/.test(text)) {
+    return 'Bathroom & Personal Care Accessories';
+  }
+
+  if (/(extension board holder|power strip organizer|power strip organiser)/.test(text)) {
+    return 'Home Organization & Storage';
+  }
+
+  return null;
 }
 
 export function classifyStorefrontCategory(product: StorefrontCategoryProduct) {
   const config = findCategoryConfig(product.category);
   if (!config) return product.category?.trim() || null;
 
-  const saved = readSavedSubcategory(product.description);
-  if (saved) {
-    const match = config.subcategories.find(
-      subcategory =>
-        normalizeStorefrontCategory(subcategory.name) ===
-        normalizeStorefrontCategory(saved)
-    );
-    if (match) return match.name;
+  const mainCategory = config.name;
+  const saved = canonicalSubcategory(readSavedSubcategory(product.description));
+  if (saved && isKnownSavedSubcategory(mainCategory, saved)) {
+    return saved;
   }
 
   const text = normalizeStorefrontCategory(
     `${product.title || ''} ${product.description || ''}`
   );
 
-  if (normalizeStorefrontCategory(config.name) === normalizeStorefrontCategory('Fashion & Apparel')) {
+  if (
+    normalizeStorefrontCategory(mainCategory) ===
+    normalizeStorefrontCategory('Fashion & Apparel')
+  ) {
     if (/\bgirls?\b/.test(text) && /(night|pyjama|pajama|sleepwear)/.test(text)) {
       return 'Girls';
     }
-    if (/(dhoti choli|saree|kurti|kurta|lehenga|anarkali|gown|sharara)/.test(text)) {
+    if (
+      /(dhoti choli|saree|kurti|kurta|lehenga|anarkali|gown|sharara)/.test(text)
+    ) {
       return 'Women Ethnic Wear';
     }
     if (/\bmen\b|\bmens\b|\bshirt\b|\btrouser\b|\bjeans\b/.test(text)) {
@@ -85,13 +204,28 @@ export function classifyStorefrontCategory(product: StorefrontCategoryProduct) {
     }
   }
 
+  if (
+    normalizeStorefrontCategory(mainCategory) ===
+    normalizeStorefrontCategory('Home & Kitchen')
+  ) {
+    const homeAndKitchenCategory = classifyHomeAndKitchen(text);
+    if (homeAndKitchenCategory) return homeAndKitchenCategory;
+  }
+
   for (const subcategory of config.subcategories) {
-    if (subcategory.productTypes.some(productType => productTypeMatches(text, productType))) {
-      return subcategory.name;
+    if (
+      subcategory.productTypes.some(productType =>
+        productTypeMatches(text, productType)
+      )
+    ) {
+      return canonicalSubcategory(subcategory.name) || subcategory.name;
     }
   }
 
-  if (config.subcategories.length === 1) return config.subcategories[0].name;
+  if (config.subcategories.length === 1) {
+    return canonicalSubcategory(config.subcategories[0].name) || config.subcategories[0].name;
+  }
+
   return null;
 }
 
@@ -148,9 +282,14 @@ export function buildActiveStorefrontCategories(
     .sort((a, b) => {
       const mainCompare = a.main_category.localeCompare(b.main_category);
       if (mainCompare !== 0) return mainCompare;
-      const featured = Number(Boolean(b.homepage_featured)) - Number(Boolean(a.homepage_featured));
+      const featured =
+        Number(Boolean(b.homepage_featured)) -
+        Number(Boolean(a.homepage_featured));
       if (featured !== 0) return featured;
-      return Number(a.homepage_display_order || 0) - Number(b.homepage_display_order || 0);
+      return (
+        Number(a.homepage_display_order || 0) -
+        Number(b.homepage_display_order || 0)
+      );
     });
 }
 
@@ -170,7 +309,9 @@ export async function getActiveStorefrontCategories() {
       .eq('is_active', true),
     supabase
       .from('categories')
-      .select('id, name, homepage_featured, homepage_display_order, homepage_image_url, display_order')
+      .select(
+        'id, name, homepage_featured, homepage_display_order, homepage_image_url, display_order'
+      )
       .eq('is_active', true)
       .order('display_order', { ascending: true }),
     getStorefrontFallbackProducts(),

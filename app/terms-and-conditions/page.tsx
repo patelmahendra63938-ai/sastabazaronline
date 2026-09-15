@@ -4,6 +4,8 @@ import { BUSINESS_INFO } from '@/lib/business-info';
 
 export const metadata: Metadata = {
   title: 'Terms & Conditions',
+  description:
+    'Read the terms and conditions for shopping on ADHYEY BROTHERS, including orders, payments, shipping, cancellations, returns and customer responsibilities.',
 };
 
 export default function TermsAndConditionsPage() {
@@ -72,11 +74,10 @@ export default function TermsAndConditionsPage() {
         </li>
 
         <li>
-          Eligible clothing products may be returned or exchanged within 7 days
-          from delivery in accordance with our Return Policy. ADHYEY BROTHERS
-          bears the return courier charge for every eligible return accepted under
-          that policy. Refunds are handled under our Refund and Cancellation
-          Policy.
+          Eligible products may be returned or exchanged within 7 days from
+          delivery in accordance with our Return Policy. ADHYEY BROTHERS bears the
+          return courier charge for every eligible return accepted under that
+          policy. Refunds are handled under our Refund and Cancellation Policy.
         </li>
 
         <li>

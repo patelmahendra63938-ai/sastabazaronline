@@ -8,7 +8,10 @@ import ProductCard, { Product } from '@/components/ProductCard';
 import Link from 'next/link';
 import Pagination from '@/components/Pagination';
 import { ArrowLeft, ShoppingBag } from 'lucide-react';
-import { getActiveStorefrontCategoryByName } from '@/lib/catalog/storefront-categories';
+import {
+  getActiveStorefrontCategoryByName,
+  normalizeStorefrontCategory,
+} from '@/lib/catalog/storefront-categories';
 
 const SITE_URL = 'https://www.adhyeybrothers.in';
 const PAGE_SIZE = 16;
@@ -19,58 +22,137 @@ function parsePage(value?: string) {
   return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : 1;
 }
 
+const CATEGORY_SEO: Record<string, { title: string; description: string }> = {
+  [normalizeStorefrontCategory('Fashion & Apparel')]: {
+    title: 'Clothing & Fashion Online',
+    description:
+      'Shop clothing and fashion online at ADHYEY BROTHERS. Explore ethnic wear, girls fashion and everyday styles with Pan India delivery.',
+  },
+  [normalizeStorefrontCategory('Women Ethnic Wear')]: {
+    title: 'Women’s Ethnic Wear, Dhoti Choli & Lehenga Choli',
+    description:
+      'Shop women’s ethnic wear including Dhoti Choli, Lehenga Choli and festive styles at ADHYEY BROTHERS with Pan India delivery from Surat.',
+  },
+  [normalizeStorefrontCategory('Girls')]: {
+    title: 'Girls Nightwear & Fashion Online',
+    description:
+      'Shop girls nightwear and fashion online at ADHYEY BROTHERS. Explore comfortable styles with Pan India delivery.',
+  },
+  [normalizeStorefrontCategory('Men Ethnic & Western')]: {
+    title: 'Men’s Ethnic & Western Wear Online',
+    description:
+      'Shop men’s ethnic and western wear online at ADHYEY BROTHERS with quality styles and Pan India delivery.',
+  },
+  [normalizeStorefrontCategory('Home & Kitchen')]: {
+    title: 'Home & Kitchen Products Online',
+    description:
+      'Shop Home & Kitchen products including ceramic dinnerware, kitchen storage, serving essentials, cleaning and utility products with Pan India delivery.',
+  },
+  [normalizeStorefrontCategory('Dining & Serving')]: {
+    title: 'Ceramic Bowls, Plates & Dinnerware Online',
+    description:
+      'Shop ceramic bowls, dinner plates, dinnerware sets, coasters and serving essentials at ADHYEY BROTHERS with Pan India delivery.',
+  },
+  [normalizeStorefrontCategory('Kitchen Storage & Containers')]: {
+    title: 'Kitchen Storage Jars & Containers Online',
+    description:
+      'Shop kitchen storage jars, containers, spice storage and pantry essentials online at ADHYEY BROTHERS with Pan India delivery.',
+  },
+  [normalizeStorefrontCategory('Kitchen Tools & Accessories')]: {
+    title: 'Kitchen Tools & Accessories Online',
+    description:
+      'Shop useful kitchen tools, serving utensils and everyday cooking accessories online at ADHYEY BROTHERS with Pan India delivery.',
+  },
+  [normalizeStorefrontCategory('Sink, Drain & Faucet Accessories')]: {
+    title: 'Sink, Drain & Faucet Accessories Online',
+    description:
+      'Shop faucet aerators, sink accessories, drain solutions and useful kitchen and bathroom fittings at ADHYEY BROTHERS.',
+  },
+  [normalizeStorefrontCategory('Cleaning & Laundry')]: {
+    title: 'Cleaning & Laundry Essentials Online',
+    description:
+      'Shop practical home cleaning and laundry essentials online at ADHYEY BROTHERS with Pan India delivery.',
+  },
+  [normalizeStorefrontCategory('Door & Wall Accessories')]: {
+    title: 'Door & Wall Accessories Online',
+    description:
+      'Shop door stoppers, wall protectors and practical door and wall accessories online at ADHYEY BROTHERS.',
+  },
+  [normalizeStorefrontCategory('Home Organization & Storage')]: {
+    title: 'Home Organization & Storage Online',
+    description:
+      'Shop holders, organizers and practical storage accessories for a neater home at ADHYEY BROTHERS.',
+  },
+  [normalizeStorefrontCategory('Bathroom & Personal Care Accessories')]: {
+    title: 'Bathroom & Personal Care Accessories',
+    description:
+      'Shop useful bathroom and personal-care accessories online at ADHYEY BROTHERS with Pan India delivery.',
+  },
+  [normalizeStorefrontCategory('Home Decor')]: {
+    title: 'Home Decor & Utility Accessories Online',
+    description:
+      'Shop decorative and useful home accessories online at ADHYEY BROTHERS with Pan India delivery.',
+  },
+  [normalizeStorefrontCategory('Stationery & Office')]: {
+    title: 'Stationery & Office Essentials Online',
+    description:
+      'Shop practical stationery and office essentials online at ADHYEY BROTHERS with Pan India delivery.',
+  },
+  [normalizeStorefrontCategory('Automotive & Utility')]: {
+    title: 'Automotive & Utility Products Online',
+    description:
+      'Shop practical automotive and utility products online at ADHYEY BROTHERS with Pan India delivery.',
+  },
+  [normalizeStorefrontCategory('Makeup Accessories')]: {
+    title: 'Makeup Accessories Online',
+    description:
+      'Shop practical makeup and beauty accessories online at ADHYEY BROTHERS with Pan India delivery.',
+  },
+};
+
 function categorySeo(name: string) {
-  const normalized = name.toLowerCase();
+  return (
+    CATEGORY_SEO[normalizeStorefrontCategory(name)] || {
+      title: `${name} Online Shopping`,
+      description: `Shop ${name} products online at ADHYEY BROTHERS with secure shopping and Pan India delivery.`,
+    }
+  );
+}
 
-  if (normalized === 'women ethnic wear') {
-    return {
-      title: 'Women’s Ethnic Wear, Dhoti Choli & Lehenga Choli',
-      description:
-        'Shop women’s ethnic wear including Dhoti Choli, Lehenga Choli and festive styles at ADHYEY BROTHERS. Pan India delivery from Surat, Gujarat.',
-    };
-  }
-
-  if (normalized === 'girls') {
-    return {
-      title: 'Girls Nightwear & Fashion Online',
-      description:
-        'Shop girls nightwear and fashion online at ADHYEY BROTHERS. Explore comfortable styles with Pan India delivery from Surat, Gujarat.',
-    };
-  }
-
-  if (normalized === 'men ethnic & western') {
-    return {
-      title: 'Men’s Ethnic & Western Wear Online',
-      description:
-        'Shop men’s ethnic and western wear online at ADHYEY BROTHERS with quality styles and Pan India delivery.',
-    };
-  }
-
-  return {
-    title: `${name} Online Shopping`,
-    description: `Shop active ${name} products online at ADHYEY BROTHERS with Pan India delivery.`,
-  };
+function categoryCanonical(name: string, page = 1) {
+  const base = `${SITE_URL}/category/${encodeURIComponent(name)}`;
+  return page > 1 ? `${base}?page=${page}` : base;
 }
 
 export async function generateMetadata({
   params,
+  searchParams,
 }: {
   params: Promise<{ categoryName: string }> | { categoryName: string };
+  searchParams: Promise<{ page?: string }> | { page?: string };
 }): Promise<Metadata> {
   const resolvedParams = await params;
+  const resolvedSearchParams = await searchParams;
   const requestedName = decodeURIComponent(resolvedParams.categoryName);
+  const requestedPage = parsePage(resolvedSearchParams.page);
   const activeCategory = await getActiveStorefrontCategoryByName(requestedName);
   const canonicalName = activeCategory?.name || requestedName;
-  const canonical = `${SITE_URL}/category/${encodeURIComponent(canonicalName)}`;
+  const canonical = categoryCanonical(canonicalName, requestedPage);
   const seo = categorySeo(canonicalName);
-  const isIndexable = Boolean(activeCategory && activeCategory.product_count > 0);
+  const maxPage = activeCategory
+    ? Math.max(1, Math.ceil(activeCategory.product_count / PAGE_SIZE))
+    : 1;
+  const isIndexable = Boolean(
+    activeCategory &&
+      activeCategory.product_count > 0 &&
+      requestedPage <= maxPage
+  );
+  const pageSuffix = requestedPage > 1 ? ` – Page ${requestedPage}` : '';
 
   return {
-    title: seo.title,
+    title: `${seo.title}${pageSuffix}`,
     description: seo.description,
-    alternates: {
-      canonical,
-    },
+    alternates: { canonical },
     robots: {
       index: isIndexable,
       follow: true,
@@ -84,7 +166,7 @@ export async function generateMetadata({
       type: 'website',
       url: canonical,
       siteName: 'ADHYEY BROTHERS',
-      title: `${seo.title} | ADHYEY BROTHERS`,
+      title: `${seo.title}${pageSuffix} | ADHYEY BROTHERS`,
       description: seo.description,
       images: [
         {
@@ -97,7 +179,7 @@ export async function generateMetadata({
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${seo.title} | ADHYEY BROTHERS`,
+      title: `${seo.title}${pageSuffix} | ADHYEY BROTHERS`,
       description: seo.description,
       images: ['/opengraph-image'],
     },
@@ -159,29 +241,40 @@ export default async function CategoryPage({
   );
 
   const rangeFrom = count > 0 ? (currentPage - 1) * PAGE_SIZE + 1 : 0;
-  const rangeTo = count > 0
-    ? Math.min((currentPage - 1) * PAGE_SIZE + products.length, count)
-    : 0;
-  const canonical = `${SITE_URL}/category/${encodeURIComponent(canonicalName)}`;
-  const isWomenEthnicWear = canonicalName.trim().toLowerCase() === 'women ethnic wear';
+  const rangeTo =
+    count > 0
+      ? Math.min((currentPage - 1) * PAGE_SIZE + products.length, count)
+      : 0;
+  const canonical = categoryCanonical(canonicalName, currentPage);
+  const isWomenEthnicWear =
+    canonicalName.trim().toLowerCase() === 'women ethnic wear';
 
   const breadcrumbJsonLd = JSON.stringify({
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
-      {
-        '@type': 'ListItem',
-        position: 1,
-        name: 'Home',
-        item: SITE_URL,
-      },
+      { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
       {
         '@type': 'ListItem',
         position: 2,
         name: canonicalName,
-        item: canonical,
+        item: categoryCanonical(canonicalName),
       },
     ],
+  }).replace(/</g, '\\u003c');
+
+  const itemListJsonLd = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: `${canonicalName} products`,
+    url: canonical,
+    numberOfItems: count,
+    itemListElement: products.map((product, index) => ({
+      '@type': 'ListItem',
+      position: rangeFrom + index,
+      name: product.title,
+      url: `${SITE_URL}/product/${encodeURIComponent(String(product.id))}`,
+    })),
   }).replace(/</g, '\\u003c');
 
   return (
@@ -190,6 +283,12 @@ export default async function CategoryPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: breadcrumbJsonLd }}
       />
+      {products.length > 0 ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: itemListJsonLd }}
+        />
+      ) : null}
       <div>
         <Header />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
@@ -200,12 +299,18 @@ export default async function CategoryPage({
                   <ShoppingBag size={13} aria-hidden="true" />
                   Category
                 </div>
-                <h1 className="mt-3 text-2xl font-black leading-tight sm:text-3xl">{canonicalName}</h1>
+                <h1 className="mt-3 text-2xl font-black leading-tight sm:text-3xl">
+                  {canonicalName}
+                </h1>
                 <p className="mt-2 text-xs leading-relaxed text-[#f4dfbf] sm:text-sm">
-                  Explore {count} active {count === 1 ? 'product' : 'products'} in {canonicalName}.
+                  Explore {count} active {count === 1 ? 'product' : 'products'} in{' '}
+                  {canonicalName}.
                 </p>
               </div>
-              <Link href="/" className="inline-flex min-h-10 items-center justify-center gap-1.5 self-start rounded-xl border border-white/20 bg-white/10 px-4 text-xs font-bold text-white transition hover:bg-white/15 sm:self-auto">
+              <Link
+                href="/"
+                className="inline-flex min-h-10 items-center justify-center gap-1.5 self-start rounded-xl border border-white/20 bg-white/10 px-4 text-xs font-bold text-white transition hover:bg-white/15 sm:self-auto"
+              >
                 <ArrowLeft size={14} aria-hidden="true" />
                 Back to Home
               </Link>
@@ -213,17 +318,25 @@ export default async function CategoryPage({
           </section>
 
           {isWomenEthnicWear && (
-            <section className="mb-8 rounded-3xl border border-[#e7c88d] bg-[#fff7e8] p-5 shadow-xs sm:p-7" aria-labelledby="dhoti-choli-collection-heading">
+            <section
+              className="mb-8 rounded-3xl border border-[#e7c88d] bg-[#fff7e8] p-5 shadow-xs sm:p-7"
+              aria-labelledby="dhoti-choli-collection-heading"
+            >
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#b5843d]">
                 Featured festive collection
               </p>
               <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="max-w-2xl">
-                  <h2 id="dhoti-choli-collection-heading" className="text-xl font-black text-[#741f23] sm:text-2xl">
+                  <h2
+                    id="dhoti-choli-collection-heading"
+                    className="text-xl font-black text-[#741f23] sm:text-2xl"
+                  >
                     Women’s Dhoti Choli for Navratri, Garba & Weddings
                   </h2>
                   <p className="mt-2 text-xs leading-relaxed text-stone-600 sm:text-sm">
-                    Explore our dedicated Dhoti Choli collection with velvet, Vichitra silk, sequin and embroidered festive styles for Navratri, Garba, Dandiya, Haldi and wedding celebrations.
+                    Explore our dedicated Dhoti Choli collection with velvet,
+                    Vichitra silk, sequin and embroidered festive styles for
+                    Navratri, Garba, Dandiya, Haldi and wedding celebrations.
                   </p>
                 </div>
                 <Link
@@ -241,22 +354,34 @@ export default async function CategoryPage({
               <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-[#fff7e8] text-[#741f23]">
                 <ShoppingBag size={24} aria-hidden="true" />
               </div>
-              <h2 className="mt-4 text-lg font-black text-stone-900">No products are currently available</h2>
+              <h2 className="mt-4 text-lg font-black text-stone-900">
+                No products are currently available
+              </h2>
               <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed text-stone-500 sm:text-sm">
-                This category does not have active products right now. Please browse another category or return to the main catalog.
+                This category does not have active products right now. Please browse
+                another category or return to the main catalog.
               </p>
-              <Link href="/" className="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl bg-[#741f23] px-5 text-xs font-bold text-white transition hover:bg-[#5e171b]">
+              <Link
+                href="/"
+                className="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl bg-[#741f23] px-5 text-xs font-bold text-white transition hover:bg-[#5e171b]"
+              >
                 Browse All Products
               </Link>
             </section>
           ) : (
             <>
               <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-                <p className="text-[11px] font-semibold text-stone-500">Showing {rangeFrom}–{rangeTo} of {count}</p>
-                <span className="rounded-lg border border-[#ead8b8] bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-[#741f23]">Newest first</span>
+                <p className="text-[11px] font-semibold text-stone-500">
+                  Showing {rangeFrom}–{rangeTo} of {count}
+                </p>
+                <span className="rounded-lg border border-[#ead8b8] bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-[#741f23]">
+                  Newest first
+                </span>
               </div>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
-                {products.map(product => <ProductCard key={product.id} product={product} />)}
+                {products.map(product => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
               </div>
               <Pagination
                 pathname={`/category/${encodeURIComponent(canonicalName)}`}

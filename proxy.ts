@@ -2,8 +2,54 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 const ADMIN_ROLES = ['admin', 'super_admin', 'staff'] as const;
+const STOREFRONT_QUERY_KEYS = new Set([
+  'category',
+  'brand',
+  'color',
+  'fabric',
+  'pattern',
+  'gender',
+  'fit',
+  'occasion',
+  'type',
+  'minPrice',
+  'maxPrice',
+  'size',
+  'sort',
+  'page',
+  'q',
+]);
 
 export async function proxy(request: NextRequest) {
+  const { pathname, searchParams } = request.nextUrl;
+
+  // Keep old single-category links useful while consolidating indexing onto
+  // clean, descriptive category URLs.
+  if (pathname === '/') {
+    const category = searchParams.get('category')?.trim();
+    if (
+      category &&
+      !category.includes(',') &&
+      Array.from(searchParams.keys()).every(key => key === 'category')
+    ) {
+      const categoryUrl = request.nextUrl.clone();
+      categoryUrl.pathname = `/category/${encodeURIComponent(category)}`;
+      categoryUrl.search = '';
+      return NextResponse.redirect(categoryUrl, 308);
+    }
+
+    const response = NextResponse.next();
+    const hasStorefrontQuery = Array.from(searchParams.keys()).some(key =>
+      STOREFRONT_QUERY_KEYS.has(key)
+    );
+
+    if (hasStorefrontQuery) {
+      response.headers.set('X-Robots-Tag', 'noindex, follow');
+    }
+
+    return response;
+  }
+
   let response = NextResponse.next({
     request: {
       headers: request.headers,
@@ -38,12 +84,8 @@ export async function proxy(request: NextRequest) {
     }
   );
 
-  const { pathname } = request.nextUrl;
-
   const isAdminRoute = pathname.startsWith('/admin');
-  const isLoginPage =
-    pathname === '/login' ||
-    pathname === '/admin/login';
+  const isLoginPage = pathname === '/login' || pathname === '/admin/login';
 
   /*
    * 1. Protect all admin routes.
@@ -53,26 +95,17 @@ export async function proxy(request: NextRequest) {
       data: { user },
     } = await supabase.auth.getUser();
 
-    /*
-     * No authenticated user:
-     * send them to the existing /login page.
-     */
     if (!user) {
       const loginUrl = request.nextUrl.clone();
-
       loginUrl.pathname = '/login';
       loginUrl.searchParams.set('redirect', pathname);
-
       return NextResponse.redirect(loginUrl);
     }
-
   }
 
   /*
    * 2. Logged-in admin/staff visiting /login.
-   *
    * Do not automatically redirect every authenticated customer.
-   * Verify the role first.
    */
   if (isLoginPage) {
     const {
@@ -92,9 +125,7 @@ export async function proxy(request: NextRequest) {
         role &&
         ADMIN_ROLES.includes(role as (typeof ADMIN_ROLES)[number])
       ) {
-        return NextResponse.redirect(
-          new URL('/admin/dashboard', request.url)
-        );
+        return NextResponse.redirect(new URL('/admin/dashboard', request.url));
       }
     }
   }
@@ -103,5 +134,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/login'],
+  matcher: ['/', '/admin/:path*', '/login'],
 };
