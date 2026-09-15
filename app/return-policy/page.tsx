@@ -2,15 +2,19 @@ import type { Metadata } from 'next';
 import LegalPage from '@/components/legal/LegalPage';
 import { BUSINESS_INFO } from '@/lib/business-info';
 
-export const metadata: Metadata = { title: 'Return Policy' };
+export const metadata: Metadata = {
+  title: 'Return Policy',
+  description:
+    'Read the ADHYEY BROTHERS 7-day return and exchange policy for eligible products, including conditions and return-shipping information.',
+};
 
 export default function ReturnPolicyPage() {
   return (
     <LegalPage title="Return Policy">
       <p>
         ADHYEY BROTHERS offers a 7-day return or exchange window for eligible
-        clothing products. The 7-day period starts from the date the order is
-        delivered to you, not from the order placement date.
+        products. The 7-day period starts from the date the order is delivered to
+        you, not from the order placement date.
       </p>
 
       <h2 className="text-lg font-bold text-gray-900">Eligibility</h2>
