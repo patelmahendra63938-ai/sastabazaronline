@@ -1,4 +1,5 @@
 export const CUSTOMER_SHIPPING_MAX_INR = 199;
+export const FREE_SHIPPING_MIN_INR = 499;
 export const SHIPPING_HANDLING_MIN_DAYS = 0;
 export const SHIPPING_HANDLING_MAX_DAYS = 2;
 export const SHIPPING_TRANSIT_MIN_DAYS = 2;
