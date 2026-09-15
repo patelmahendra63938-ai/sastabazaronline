@@ -1,4 +1,4 @@
-import { CUSTOMER_SHIPPING_MAX_INR } from '@/lib/shipping/policy';
+import { CUSTOMER_SHIPPING_MAX_INR, FREE_SHIPPING_MIN_INR } from '@/lib/shipping/policy';
 
 export interface ShippingPackageInput {
   weight: number; // grams
@@ -85,6 +85,7 @@ function getCourierCostPaise(courier: NimbusCourier): number {
  * Customer shipping price authority.
  * Shipping shown to customer = NimbusPost forward courier rate x 1.30,
  * capped at CUSTOMER_SHIPPING_MAX_INR.
+ * Orders with product subtotal >= FREE_SHIPPING_MIN_INR get ₹0 customer shipping.
  * COD shown to customer = NimbusPost original COD charge (no markup).
  */
 export async function checkPincodeShippingRate(
@@ -208,7 +209,10 @@ export async function checkPincodeShippingRate(
 
     const baseCourierRate = best.courierPaise / 100;
     const markedUpShipping = Math.ceil(baseCourierRate * 1.30);
-    const finalCustomerShipping = Math.min(markedUpShipping, CUSTOMER_SHIPPING_MAX_INR);
+    const freeShippingApplied = Number(subtotal) >= FREE_SHIPPING_MIN_INR;
+    const finalCustomerShipping = freeShippingApplied
+      ? 0
+      : Math.min(markedUpShipping, CUSTOMER_SHIPPING_MAX_INR);
     const providerCodCharge =
       paymentType === 'COD'
         ? positiveNumber(best.courier.result?.codChargesPaise) / 100
@@ -225,7 +229,9 @@ export async function checkPincodeShippingRate(
       displayWeight,
       actualWeightKg: actualWeight,
       chargeableWeightKg,
-      message: 'Delivery is available for this PIN code.',
+      message: freeShippingApplied
+        ? `Free shipping applied on orders ₹${FREE_SHIPPING_MIN_INR} and above.`
+        : 'Delivery is available for this PIN code.',
     };
   } catch (error) {
     console.error('[NIMBUSPOST_V2_RATE_EXCEPTION]', error);

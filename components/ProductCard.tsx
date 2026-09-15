@@ -4,10 +4,11 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { ShoppingCart, Check, ArrowRight } from 'lucide-react';
+import { ShoppingCart, Check, ArrowRight, Truck } from 'lucide-react';
 import { Campaign, calculateDiscountedPrice } from '@/lib/promotions';
 import { resolveStorefrontImageSrc } from '@/lib/storefront-image';
 import ProductRatingTag from '@/components/ProductRatingTag';
+import { FREE_SHIPPING_MIN_INR } from '@/lib/shipping/policy';
 
 interface ProductInventoryItem {
   size?: string | null;
@@ -122,6 +123,9 @@ export default function ProductCard({ product, activeCampaigns = [], priorityIma
               quality={70}
               className="h-full w-full object-cover transition-transform duration-300 group-active:scale-[0.99]"
             />
+            <span className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full bg-white/95 px-2 py-1 text-[8px] font-black text-[#741f23] shadow-sm ring-1 ring-[#ead8b8]">
+              <Truck size={10} aria-hidden="true" /> FREE SHIPPING ₹{FREE_SHIPPING_MIN_INR}+
+            </span>
           </div>
           <div className="px-2 py-2 text-center">
             <span className="text-sm font-black text-[#741f23]">
@@ -139,6 +143,7 @@ export default function ProductCard({ product, activeCampaigns = [], priorityIma
               {appliedOffer && !isOutOfStock && <span className="absolute left-2 top-2 rounded-md bg-[#741f23] px-1.5 py-0.5 text-[9px] font-black text-white shadow-sm md:left-2.5 md:top-2.5 md:px-2 md:text-[10px]">{appliedOffer.offerLabel}</span>}
               {isOutOfStock && <span className="absolute left-2 top-2 rounded-md bg-stone-800 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-white shadow-sm md:left-2.5 md:top-2.5 md:px-2 md:text-[10px]">Out of Stock</span>}
               {discountPercent > 0 && !isOutOfStock && <span className="absolute right-2 top-2 rounded-md bg-[#fff7e8] px-1.5 py-0.5 text-[9px] font-black text-[#741f23] shadow-sm md:right-2.5 md:top-2.5 md:px-2 md:text-[10px]">{discountPercent}% OFF</span>}
+              {!isOutOfStock && <span className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full bg-white/95 px-2 py-1 text-[8px] font-black text-[#741f23] shadow-sm ring-1 ring-[#ead8b8] md:text-[9px]"><Truck size={10} aria-hidden="true" /> FREE SHIPPING ₹{FREE_SHIPPING_MIN_INR}+</span>}
             </div>
           </Link>
 
