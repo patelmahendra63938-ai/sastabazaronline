@@ -23,9 +23,21 @@ const STOREFRONT_QUERY_KEYS = new Set([
 export async function proxy(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
 
-  // Faceted/search URLs are useful to shoppers but should not compete with
-  // canonical category and product pages in search results.
+  // Keep old single-category links useful while consolidating indexing onto
+  // clean, descriptive category URLs.
   if (pathname === '/') {
+    const category = searchParams.get('category')?.trim();
+    if (
+      category &&
+      !category.includes(',') &&
+      Array.from(searchParams.keys()).every(key => key === 'category')
+    ) {
+      const categoryUrl = request.nextUrl.clone();
+      categoryUrl.pathname = `/category/${encodeURIComponent(category)}`;
+      categoryUrl.search = '';
+      return NextResponse.redirect(categoryUrl, 308);
+    }
+
     const response = NextResponse.next();
     const hasStorefrontQuery = Array.from(searchParams.keys()).some(key =>
       STOREFRONT_QUERY_KEYS.has(key)
