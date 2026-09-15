@@ -33,10 +33,9 @@ async function flushRatingBatch() {
   if (!productIds.length) return;
 
   const { data, error } = await supabase
-    .from('reviews')
-    .select('product_id, rating')
-    .in('product_id', productIds)
-    .eq('status', 'approved');
+    .from('products')
+    .select('id, rating, review_count')
+    .in('id', productIds);
 
   if (error) {
     for (const productId of productIds) {
@@ -45,24 +44,22 @@ async function flushRatingBatch() {
     return;
   }
 
-  const grouped = new Map<string, number[]>();
+  const summaries = new Map<string, RatingSummary>();
 
   for (const row of data || []) {
-    const productId = String(row.product_id || '');
-    const rating = Number(row.rating || 0);
-    if (!productId || !rating) continue;
+    const productId = String(row.id || '');
+    const average = Number(row.rating || 0);
+    const count = Number(row.review_count || 0);
+    if (!productId) continue;
 
-    const values = grouped.get(productId) || [];
-    values.push(rating);
-    grouped.set(productId, values);
+    summaries.set(productId, {
+      average: Number.isFinite(average) ? average : 0,
+      count: Number.isFinite(count) ? count : 0,
+    });
   }
 
   for (const productId of productIds) {
-    const values = grouped.get(productId) || [];
-    const average = values.length
-      ? values.reduce((sum, value) => sum + value, 0) / values.length
-      : 0;
-    publish(productId, { average, count: values.length });
+    publish(productId, summaries.get(productId) || { average: 0, count: 0 });
   }
 }
 
