@@ -149,6 +149,32 @@ export const CATEGORY_ENGINE: Record<string, CategoryConfig> = {
     ]
   },
 
+  'Stationery & Office': {
+    id: 'stationery_office',
+    name: 'Stationery & Office',
+    defaultHsn: '39269099',
+    defaultGst: 18,
+    generalAttributes: [
+      { key: 'Material', label: 'Primary Material', type: 'text', placeholder: 'e.g. PP Plastic, Paper, PVC', level: 'required' },
+      { key: 'Pack Size', label: 'Pack Size', type: 'text', placeholder: 'e.g. Pack of 10', level: 'recommended' },
+      { key: 'Country of Origin', label: 'Country of Origin', type: 'text', placeholder: 'India', level: 'recommended' }
+    ],
+    subcategories: [
+      {
+        name: 'School Supplies',
+        productTypes: ['Book Covers', 'Book Cover Film', 'Notebook Covers'],
+        attributes: [
+          { key: 'Cover Type', label: 'Cover Type', type: 'select', options: ['Self-Adhesive Film', 'Transparent Sleeve', 'Protective Cover'], level: 'required' },
+          { key: 'Size', label: 'Size / Dimensions', type: 'text', placeholder: 'e.g. 16K - 43 × 30 cm', level: 'required' },
+          { key: 'Finish', label: 'Finish', type: 'select', options: ['Transparent Matte', 'Transparent Glossy', 'Clear Textured'], level: 'recommended' },
+          { key: 'Water Resistant', label: 'Water Resistant', type: 'select', options: ['Yes', 'No', 'Not Confirmed'], level: 'recommended' },
+          { key: 'Self-Adhesive', label: 'Self-Adhesive', type: 'select', options: ['Yes', 'No'], level: 'recommended' },
+          { key: 'Primary Use', label: 'Primary Use', type: 'text', placeholder: 'e.g. Textbooks, notebooks, craft books', level: 'recommended' }
+        ]
+      }
+    ]
+  },
+
   'Electronics & Gadgets': {
     id: 'electronics',
     name: 'Electronics & Gadgets',
