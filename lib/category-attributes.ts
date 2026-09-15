@@ -175,6 +175,30 @@ export const CATEGORY_ENGINE: Record<string, CategoryConfig> = {
     ]
   },
 
+  'Automotive & Utility': {
+    id: 'automotive_utility',
+    name: 'Automotive & Utility',
+    defaultHsn: '39269099',
+    defaultGst: 18,
+    generalAttributes: [
+      { key: 'Material', label: 'Primary Material', type: 'text', placeholder: 'e.g. PVC hose, rubber bulb, plastic fittings', level: 'required' },
+      { key: 'Country of Origin', label: 'Country of Origin', type: 'text', placeholder: 'India', level: 'recommended' }
+    ],
+    subcategories: [
+      {
+        name: 'Manual Pumps & Transfer Tools',
+        productTypes: ['Manual Siphon Pump / Liquid Transfer Pump'],
+        attributes: [
+          { key: 'Pump Type', label: 'Pump Type', type: 'select', options: ['Manual Siphon Pump', 'Hand Transfer Pump'], level: 'required' },
+          { key: 'Compatible Liquids', label: 'Suitable Liquids', type: 'text', placeholder: 'e.g. Petrol, diesel, water, oil (as compatible)', level: 'recommended' },
+          { key: 'Hose Length', label: 'Hose Length', type: 'text', placeholder: 'e.g. 1 metre', level: 'recommended' },
+          { key: 'Primary Use', label: 'Primary Use', type: 'select', options: ['Fuel Transfer', 'Water Transfer', 'Oil / Liquid Transfer', 'Aquarium / Fish Tank', 'Multi-purpose Liquid Transfer'], level: 'recommended' },
+          { key: 'Portable', label: 'Portable', type: 'select', options: ['Yes', 'No'], level: 'optional' }
+        ]
+      }
+    ]
+  },
+
   'Electronics & Gadgets': {
     id: 'electronics',
     name: 'Electronics & Gadgets',
