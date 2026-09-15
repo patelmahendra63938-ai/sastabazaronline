@@ -106,11 +106,11 @@ export const CATEGORY_ENGINE: Record<string, CategoryConfig> = {
       },
       {
         name: 'Kitchen Tools & Accessories',
-        productTypes: ['Rolling Pin', 'Dough Roller', 'Pastry Roller', 'Fondant Roller'],
+        productTypes: ['Rolling Pin', 'Dough Roller', 'Pastry Roller', 'Fondant Roller', 'Serving Spatula / Rice Spoon'],
         attributes: [
-          { key: 'Tool Type', label: 'Kitchen Tool Type', type: 'select', options: ['Rolling Pin', 'Dough Roller', 'Pastry Roller', 'Fondant Roller'], level: 'required' },
-          { key: 'Primary Use', label: 'Primary Use', type: 'select', options: ['Roti / Chapati Dough', 'Bread Dough', 'Pastry', 'Fondant', 'Dumpling Wrappers', 'Multi-purpose Dough Rolling'], level: 'recommended' },
-          { key: 'Surface / Finish', label: 'Surface / Finish', type: 'text', placeholder: 'e.g. Textured non-stick surface', level: 'recommended' },
+          { key: 'Tool Type', label: 'Kitchen Tool Type', type: 'select', options: ['Rolling Pin', 'Dough Roller', 'Pastry Roller', 'Fondant Roller', 'Serving Spatula / Rice Spoon'], level: 'required' },
+          { key: 'Primary Use', label: 'Primary Use', type: 'select', options: ['Roti / Chapati Dough', 'Bread Dough', 'Pastry', 'Fondant', 'Dumpling Wrappers', 'Multi-purpose Dough Rolling', 'Serving Rice', 'Serving Curry', 'Soup / Stew', 'Pudding / Dessert', 'Multi-purpose Serving'], level: 'recommended' },
+          { key: 'Surface / Finish', label: 'Surface / Finish', type: 'text', placeholder: 'e.g. Textured non-stick surface, polished stainless steel', level: 'recommended' },
           { key: 'Product Length', label: 'Product Length', type: 'text', placeholder: 'e.g. 30 cm', level: 'optional' },
           { key: 'Dishwasher Safe', label: 'Dishwasher Safe', type: 'select', options: ['Yes', 'No', 'Not Confirmed'], level: 'optional' }
         ]
