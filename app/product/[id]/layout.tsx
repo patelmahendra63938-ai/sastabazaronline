@@ -73,7 +73,14 @@ const getProduct = cache(async (id: string): Promise<ProductSeoRecord | null> =>
 async function getApprovedReviews(productId: string): Promise<ApprovedReviewRow[]> {
   const supabase = getSupabaseClient();
   if (!supabase) return [];
-  const { data, error } = await supabase.from('reviews').select('customer_name,rating,review_text,created_at').eq('product_id', productId).eq('status', 'approved').order('created_at', { ascending: false }).limit(25);
+  const { data, error } = await supabase
+    .from('reviews')
+    .select('customer_name,rating,review_text,created_at')
+    .eq('product_id', productId)
+    .eq('status', 'approved')
+    .eq('verified_purchase', true)
+    .order('created_at', { ascending: false })
+    .limit(25);
   if (error) {
     console.warn('Product review SEO fetch skipped:', { message: error.message, productId });
     return [];
