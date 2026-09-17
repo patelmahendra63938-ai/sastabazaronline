@@ -46,6 +46,10 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   images: {
+    // Serve images directly from their source instead of using Vercel's
+    // Image Optimization transformations. This prevents new transformation
+    // quota usage on the Hobby plan while keeping remote Supabase images valid.
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: "https",
