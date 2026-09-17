@@ -6,8 +6,8 @@ export const BUSINESS_INFO = {
   grievanceOfficer: 'Mahendra Patel',
   grievancePhone: '+91 9879331036',
   grievancePhoneHref: 'tel:+919879331036',
-  officePhone: '+91 9723268666',
-  officePhoneHref: 'tel:+919723268666',
+  officePhone: '+91 9737902897',
+  officePhoneHref: 'tel:+919737902897',
   website: 'www.adhyeybrothers.in',
   websiteHref: 'https://www.adhyeybrothers.in',
   addressLines: [
