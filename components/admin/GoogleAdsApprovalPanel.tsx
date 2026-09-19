@@ -1,10 +1,11 @@
-import { ShieldCheck, CircleAlert, CheckCircle2, XCircle } from 'lucide-react';
+import { ShieldCheck, CircleAlert, CheckCircle2, XCircle, ImageIcon, UploadCloud, Palette } from 'lucide-react';
 import GoogleAdsBudgetEditor from '@/components/admin/GoogleAdsBudgetEditor';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import {
   approveGoogleAdsProposalAction,
   rejectGoogleAdsProposalAction,
   updateGoogleAdsProposalBudgetAction,
+  prepareGoogleAdsCreativeAssetsAction,
 } from '@/app/admin/ads/actions';
 
 type ProposalSettings = {
@@ -30,6 +31,22 @@ type ProposalSettings = {
   first_7_days_budget_increase?: boolean;
   approval_mode?: boolean;
   landing_url?: string;
+  creative_assets_prepared_at?: string;
+  creative_colours?: string[];
+  creative_assets?: Array<{
+    product_id: string;
+    title: string;
+    colour: string;
+    source_url: string;
+    square?: { width: number; height: number; resource_name: string };
+    landscape?: { width: number; height: number; resource_name: string };
+  }>;
+  creative_copy?: {
+    headlines?: string[];
+    long_headline?: string;
+    descriptions?: string[];
+  };
+  launch_state?: string;
 };
 
 function statusBadge(status: string) {
@@ -149,8 +166,100 @@ export default async function GoogleAdsApprovalPanel() {
         </div>
       </div>
 
+
+      <div className="mt-5 rounded-2xl border border-[#ead8b8] bg-white p-5">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <div className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.16em] text-[#8a5a20]">
+              <ImageIcon size={14} /> Automatic Creative Builder
+            </div>
+            <h3 className="mt-2 text-sm font-black text-[#5e171b]">Safe-fit Google Ads image set</h3>
+            <p className="mt-1 max-w-3xl text-[11px] leading-5 text-stone-500">
+              Uses Wine Purple, Black, Yellow and Green Dhoti Choli products. Every product is rendered as
+              1200×1200 square and 1200×628 landscape PNG. The full outfit is contained inside the canvas,
+              so the model, head, dupatta and garment edges are not center-cropped.
+            </p>
+          </div>
+          <span className={
+            'inline-flex w-fit items-center gap-1 rounded-lg px-3 py-1.5 text-[10px] font-black uppercase ' +
+            (s.creative_assets_prepared_at ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700')
+          }>
+            {s.creative_assets_prepared_at ? <CheckCircle2 size={13} /> : <CircleAlert size={13} />}
+            {s.creative_assets_prepared_at ? '8 assets ready' : 'not prepared'}
+          </span>
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+          {(s.creative_assets?.length
+            ? s.creative_assets
+            : [
+                { colour: 'Wine Purple', source_url: '', title: 'Wine Purple Dhoti Choli' },
+                { colour: 'Black', source_url: '', title: 'Black Dhoti Choli' },
+                { colour: 'Yellow', source_url: '', title: 'Yellow Dhoti Choli' },
+                { colour: 'Green', source_url: '', title: 'Green Dhoti Choli' },
+              ]
+          ).map((asset) => (
+            <div key={asset.colour} className="overflow-hidden rounded-xl border border-stone-200 bg-stone-50">
+              <div className="aspect-square bg-white p-3">
+                {asset.source_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={asset.source_url} alt={asset.title} className="h-full w-full object-contain" />
+                ) : (
+                  <div className="flex h-full items-center justify-center text-stone-300"><ImageIcon size={28} /></div>
+                )}
+              </div>
+              <div className="border-t border-stone-200 px-3 py-2">
+                <div className="flex items-center gap-1 text-[10px] font-black text-stone-700">
+                  <Palette size={11} /> {asset.colour}
+                </div>
+                <div className="mt-1 truncate text-[9px] text-stone-400">{asset.title}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-4 rounded-xl bg-stone-50 p-4">
+          <div className="text-[9px] font-black uppercase tracking-wider text-stone-400">Creative copy</div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {(s.creative_copy?.headlines ?? [
+              'Shop Dhoti Choli Online',
+              'Festive Dhoti Choli Sets',
+              'Dhoti Choli for Garba',
+              'Haldi & Wedding Styles',
+              'Wine Black Yellow Green',
+            ]).map((headline) => (
+              <span key={headline} className="rounded-full bg-white px-2.5 py-1 text-[10px] font-bold text-stone-700">
+                {headline}
+              </span>
+            ))}
+          </div>
+          <p className="mt-3 text-[11px] leading-5 text-stone-600">
+            {(s.creative_copy?.descriptions?.[0]) ??
+              'Shop Dhoti Choli sets in Wine Purple, Black, Yellow and Green for festive occasions.'}
+          </p>
+        </div>
+
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-[10px] leading-4 text-stone-500">
+            This action uploads image assets to the Google Ads asset library only. It does not launch the new
+            campaign and does not pause any old campaign.
+          </p>
+          <form action={prepareGoogleAdsCreativeAssetsAction}>
+            <input type="hidden" name="proposalId" value={proposal.id} />
+            <button
+              type="submit"
+              disabled={proposal.status !== 'approved' || Boolean(s.creative_assets_prepared_at)}
+              className="inline-flex items-center gap-2 rounded-xl bg-[#741f23] px-4 py-2.5 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <UploadCloud size={14} />
+              {s.creative_assets_prepared_at ? 'Images uploaded' : 'Auto prepare & upload'}
+            </button>
+          </form>
+        </div>
+      </div>
+
       <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs leading-5 text-amber-900">
-        <strong>Safety state:</strong> approval/rejection is live and audited. Google Ads write execution remains blocked until the mutation executor is separately enabled and validated, so this panel cannot spend money by itself.
+        <strong>Safety state:</strong> approval/rejection is live and audited. Campaign launch, pause/resume and budget execution remain blocked until the final launch executor is separately approved. Creative preparation may upload image assets to the Google Ads asset library, but it cannot spend money or change campaign delivery.
       </div>
 
       <div className="mt-4 flex flex-wrap gap-3">

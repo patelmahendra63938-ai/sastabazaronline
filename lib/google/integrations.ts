@@ -420,3 +420,53 @@ export async function registerMerchantDeveloper(developerEmail: string) {
 
   return jsonOrError(response);
 }
+
+
+export async function uploadGoogleAdsImageAsset(input: {
+  name: string;
+  pngBytes: Buffer;
+  width: number;
+  height: number;
+}) {
+  const customerId = requiredEnv('GOOGLE_ADS_CUSTOMER_ID').replace(/\D/g, '');
+  const accessToken = await getGoogleAccessToken();
+
+  const response = await fetch(
+    'https://googleads.googleapis.com/v25/customers/' + customerId + '/assets:mutate',
+    {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer ' + accessToken,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        operations: [
+          {
+            create: {
+              name: input.name,
+              imageAsset: {
+                data: input.pngBytes.toString('base64'),
+                fileSize: String(input.pngBytes.byteLength),
+                mimeType: 'IMAGE_PNG',
+                fullSize: {
+                  heightPixels: input.height,
+                  widthPixels: input.width,
+                },
+              },
+            },
+          },
+        ],
+      }),
+      cache: 'no-store',
+    }
+  );
+
+  const body = (await jsonOrError(response)) as {
+    results?: Array<{ resourceName?: string }>;
+  };
+  const resourceName = body.results?.[0]?.resourceName;
+  if (!resourceName) {
+    throw new Error('Google Ads image upload succeeded without an asset resource name.');
+  }
+  return resourceName;
+}
