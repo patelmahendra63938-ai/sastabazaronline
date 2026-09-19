@@ -16,12 +16,16 @@ export interface UserProfile {
 }
 
 /**
- * Server-side function to get the current authenticated user and their profile
+ * Server-side function to get the current authenticated user and their profile.
  */
 export async function getCurrentUser() {
   const supabase = await createServerSupabaseClient();
-  
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
   if (userError || !user) {
     return { user: null, profile: null, role: null };
   }
@@ -35,13 +39,13 @@ export async function getCurrentUser() {
   return {
     user,
     profile: profile as UserProfile | null,
-    role: (profile?.role || 'customer') as UserRole
+    role: (profile?.role || 'customer') as UserRole,
   };
 }
 
 /**
  * Authoritative server-side authorization boundary for the admin render tree.
- * Redirects before protected layout content is rendered.
+ * Requires both an authorized staff role and an MFA-verified (AAL2) session.
  */
 export async function requireAdminUser() {
   const currentUser = await getCurrentUser();
@@ -52,6 +56,14 @@ export async function requireAdminUser() {
 
   if (!currentUser.role || !ADMIN_ROLES.includes(currentUser.role)) {
     redirect('/?error=unauthorized');
+  }
+
+  const supabase = await createServerSupabaseClient();
+  const { data: aal, error: aalError } =
+    await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+
+  if (aalError || aal.currentLevel !== 'aal2') {
+    redirect('/login/mfa');
   }
 
   return currentUser;
