@@ -1,4 +1,5 @@
 import { ShieldCheck, CircleAlert, CheckCircle2, XCircle } from 'lucide-react';
+import GoogleAdsBudgetEditor from '@/components/admin/GoogleAdsBudgetEditor';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import {
   approveGoogleAdsProposalAction,
@@ -28,6 +29,7 @@ type ProposalSettings = {
   ios_exclusion?: string;
   first_7_days_budget_increase?: boolean;
   approval_mode?: boolean;
+  landing_url?: string;
 };
 
 function statusBadge(status: string) {
@@ -107,51 +109,21 @@ export default async function GoogleAdsApprovalPanel() {
       </div>
 
       <div className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <form action={updateGoogleAdsProposalBudgetAction} className="rounded-2xl border border-[#ead8b8] bg-white p-5">
-          <input type="hidden" name="proposalId" value={proposal.id} />
-          <h3 className="text-sm font-black text-[#5e171b]">Editable test budget</h3>
-          <p className="mt-1 text-[11px] leading-5 text-stone-500">
-            Changing either value resets the proposal to Draft and requires approval again.
-          </p>
-          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="text-[11px] font-bold text-stone-600">
-              Daily budget (₹)
-              <input
-                type="number"
-                name="dailyBudget"
-                min="1"
-                step="1"
-                defaultValue={s.daily_budget_inr ?? 500}
-                className="mt-1 w-full rounded-xl border border-[#ead8b8] px-3 py-2 text-sm font-bold text-stone-800 outline-none focus:border-[#741f23]"
-              />
-            </label>
-            <label className="text-[11px] font-bold text-stone-600">
-              Test days
-              <input
-                type="number"
-                name="testDays"
-                min="1"
-                max="365"
-                step="1"
-                defaultValue={s.test_days ?? 7}
-                className="mt-1 w-full rounded-xl border border-[#ead8b8] px-3 py-2 text-sm font-bold text-stone-800 outline-none focus:border-[#741f23]"
-              />
-            </label>
-          </div>
-          <div className="mt-3 rounded-xl bg-stone-50 px-3 py-2.5 text-xs text-stone-600">
-            Current planned maximum: <strong>₹{s.planned_max_spend_inr ?? ((s.daily_budget_inr ?? 500) * (s.test_days ?? 7))}</strong>
-          </div>
-          <button type="submit" className="mt-3 rounded-xl bg-[#5e171b] px-4 py-2.5 text-xs font-black text-white">
-            Save budget & days
-          </button>
-        </form>
+        <GoogleAdsBudgetEditor
+          proposalId={proposal.id}
+          initialBudget={s.daily_budget_inr ?? 500}
+          initialDays={s.test_days ?? 7}
+          initialLandingUrl={s.landing_url ?? 'https://adhyeybrothers.in/collections/dhoti-choli'}
+        />
 
         <div className="rounded-2xl border border-[#ead8b8] bg-white p-5">
           <div className="text-[10px] font-black uppercase tracking-[0.16em] text-[#8a5a20]">Sample Ad Preview</div>
           <div className="mt-3 rounded-2xl border border-stone-200 bg-stone-50 p-4">
             <div className="text-[10px] font-semibold text-stone-500">Sponsored · Adhyey Brothers</div>
             <div className="mt-2 text-base font-black text-[#1a0dab]">Dhoti Choli for Girls | Shop Online</div>
-            <div className="mt-1 text-xs font-semibold text-[#188038]">adhyeybrothers.in</div>
+            <div className="mt-1 text-xs font-semibold text-[#188038]">
+              {s.landing_url ?? 'https://adhyeybrothers.in/collections/dhoti-choli'}
+            </div>
             <p className="mt-2 text-xs leading-5 text-stone-700">
               Discover stylish Dhoti Choli sets for festive looks. Shop selected designs online from Adhyey Brothers.
             </p>
@@ -161,8 +133,18 @@ export default async function GoogleAdsApprovalPanel() {
               <span className="rounded-full bg-white px-2.5 py-1">Shop Now</span>
             </div>
           </div>
-          <p className="mt-3 text-[11px] leading-5 text-stone-500">
-            Preview only. Google Performance Max can automatically combine approved Merchant Center products and campaign assets across placements.
+          <div className="mt-3 flex flex-wrap gap-3 text-[11px]">
+            <a
+              href={s.landing_url ?? 'https://adhyeybrothers.in/collections/dhoti-choli'}
+              target="_blank"
+              rel="noreferrer"
+              className="font-black text-[#741f23] underline underline-offset-2"
+            >
+              Check landing page
+            </a>
+          </div>
+          <p className="mt-2 text-[11px] leading-5 text-stone-500">
+            Preview only. This is the destination URL stored in the proposal and shown for approval before any live Google Ads write.
           </p>
         </div>
       </div>
