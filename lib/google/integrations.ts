@@ -128,7 +128,7 @@ async function googleAdsSummary(accessToken: string): Promise<GoogleAdsSummary> 
   const query = [
     'SELECT',
     'campaign.id, campaign.name, campaign.status, campaign.advertising_channel_type,',
-    'campaign_budget.amount_micros,'
+    'campaign_budget.amount_micros,',
     'metrics.impressions, metrics.clicks, metrics.cost_micros,',
     'metrics.conversions, metrics.conversions_value',
     'FROM campaign',
