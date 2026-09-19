@@ -18,6 +18,7 @@ import {
   type IntegrationResult,
 } from '@/lib/google/integrations';
 import { registerMerchantDeveloperAction } from './actions';
+import GoogleAdsApprovalPanel from '@/components/admin/GoogleAdsApprovalPanel';
 
 export const dynamic = 'force-dynamic';
 
@@ -165,6 +166,7 @@ export default async function AdsConnectionsPage() {
 
   return (
     <div className="space-y-6">
+      <GoogleAdsApprovalPanel />
       <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div>
           <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-[#fff7e8] px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-[#8a5a20]">
