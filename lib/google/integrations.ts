@@ -424,9 +424,10 @@ export async function registerMerchantDeveloper(developerEmail: string) {
 
 export async function uploadGoogleAdsImageAsset(input: {
   name: string;
-  pngBytes: Buffer;
+  imageBytes: Buffer;
   width: number;
   height: number;
+  mimeType: 'IMAGE_JPEG' | 'IMAGE_PNG';
 }) {
   const customerId = requiredEnv('GOOGLE_ADS_CUSTOMER_ID').replace(/\D/g, '');
   const accessToken = await getGoogleAccessToken();
@@ -445,9 +446,9 @@ export async function uploadGoogleAdsImageAsset(input: {
             create: {
               name: input.name,
               imageAsset: {
-                data: input.pngBytes.toString('base64'),
-                fileSize: String(input.pngBytes.byteLength),
-                mimeType: 'IMAGE_PNG',
+                data: input.imageBytes.toString('base64'),
+                fileSize: String(input.imageBytes.byteLength),
+                mimeType: input.mimeType,
                 fullSize: {
                   heightPixels: input.height,
                   widthPixels: input.width,
