@@ -150,6 +150,7 @@ export async function updateGoogleAdsProposalBudgetAction(formData: FormData) {
   const proposalId = String(formData.get('proposalId') ?? '').trim();
   const dailyBudget = Number(formData.get('dailyBudget'));
   const testDays = Number(formData.get('testDays'));
+  const landingUrl = String(formData.get('landingUrl') ?? '').trim();
 
   if (!proposalId) redirect('/admin/ads?google=proposal-missing');
   if (!Number.isInteger(dailyBudget) || dailyBudget < 1) {
@@ -157,6 +158,20 @@ export async function updateGoogleAdsProposalBudgetAction(formData: FormData) {
   }
   if (!Number.isInteger(testDays) || testDays < 1 || testDays > 365) {
     redirect('/admin/ads?google=invalid-test-days');
+  }
+
+  let parsedLandingUrl: URL;
+  try {
+    parsedLandingUrl = new URL(landingUrl);
+  } catch {
+    redirect('/admin/ads?google=invalid-landing-url');
+  }
+
+  if (
+    parsedLandingUrl.protocol !== 'https:' ||
+    !['adhyeybrothers.in', 'www.adhyeybrothers.in'].includes(parsedLandingUrl.hostname)
+  ) {
+    redirect('/admin/ads?google=invalid-landing-url');
   }
 
   const { createServerSupabaseClient } = await import('@/lib/supabase/server');
@@ -180,6 +195,7 @@ export async function updateGoogleAdsProposalBudgetAction(formData: FormData) {
     test_days: testDays,
     planned_max_spend_inr: dailyBudget * testDays,
     first_7_day_max_spend_inr: dailyBudget * Math.min(testDays, 7),
+    landing_url: parsedLandingUrl.toString(),
   };
 
   const now = new Date().toISOString();
@@ -208,12 +224,14 @@ export async function updateGoogleAdsProposalBudgetAction(formData: FormData) {
     before_state: {
       daily_budget_inr: previousSettings.daily_budget_inr,
       test_days: previousSettings.test_days ?? 7,
+      landing_url: previousSettings.landing_url ?? 'https://adhyeybrothers.in/collections/dhoti-choli',
       status: proposal.status,
     },
     after_state: {
       daily_budget_inr: dailyBudget,
       test_days: testDays,
       planned_max_spend_inr: dailyBudget * testDays,
+      landing_url: parsedLandingUrl.toString(),
       status: 'draft',
     },
     metadata: {
