@@ -30,7 +30,7 @@ export async function proxy(request: NextRequest) {
     if (
       category &&
       !category.includes(',') &&
-      Array.from(searchParams.keys()).every(key => key === 'category')
+      Array.from(searchParams.keys()).every((key) => key === 'category')
     ) {
       const categoryUrl = request.nextUrl.clone();
       categoryUrl.pathname = `/category/${encodeURIComponent(category)}`;
@@ -39,7 +39,7 @@ export async function proxy(request: NextRequest) {
     }
 
     const response = NextResponse.next();
-    const hasStorefrontQuery = Array.from(searchParams.keys()).some(key =>
+    const hasStorefrontQuery = Array.from(searchParams.keys()).some((key) =>
       STOREFRONT_QUERY_KEYS.has(key)
     );
 
@@ -85,12 +85,13 @@ export async function proxy(request: NextRequest) {
   );
 
   const isAdminRoute = pathname.startsWith('/admin');
-  const isLoginPage = pathname === '/login' || pathname === '/admin/login';
+  const isPrimaryLoginPage = pathname === '/login' || pathname === '/admin/login';
+  const isMfaPage = pathname === '/login/mfa';
 
   /*
-   * 1. Protect all admin routes.
+   * 1. Protect every admin route with user, role and AAL2 checks.
    */
-  if (isAdminRoute && !isLoginPage) {
+  if (isAdminRoute && !isPrimaryLoginPage) {
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -101,13 +102,38 @@ export async function proxy(request: NextRequest) {
       loginUrl.searchParams.set('redirect', pathname);
       return NextResponse.redirect(loginUrl);
     }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    const role = profile?.role;
+
+    if (
+      !role ||
+      !ADMIN_ROLES.includes(role as (typeof ADMIN_ROLES)[number])
+    ) {
+      return NextResponse.redirect(new URL('/?error=unauthorized', request.url));
+    }
+
+    const { data: aal, error: aalError } =
+      await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+
+    if (aalError || aal.currentLevel !== 'aal2') {
+      const mfaUrl = request.nextUrl.clone();
+      mfaUrl.pathname = '/login/mfa';
+      mfaUrl.searchParams.set('redirect', pathname);
+      return NextResponse.redirect(mfaUrl);
+    }
   }
 
   /*
-   * 2. Logged-in admin/staff visiting /login.
-   * Do not automatically redirect every authenticated customer.
+   * 2. Logged-in admin/staff visiting the primary login page.
+   * Send AAL1 sessions to MFA and AAL2 sessions to the dashboard.
    */
-  if (isLoginPage) {
+  if (isPrimaryLoginPage) {
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -125,8 +151,57 @@ export async function proxy(request: NextRequest) {
         role &&
         ADMIN_ROLES.includes(role as (typeof ADMIN_ROLES)[number])
       ) {
-        return NextResponse.redirect(new URL('/admin/dashboard', request.url));
+        const { data: aal } =
+          await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+
+        const destination =
+          aal?.currentLevel === 'aal2' ? '/admin/dashboard' : '/login/mfa';
+
+        return NextResponse.redirect(new URL(destination, request.url));
       }
+    }
+  }
+
+  /*
+   * 3. The MFA page requires a signed-in, authorized staff account.
+   */
+  if (isMfaPage) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    const role = profile?.role;
+
+    if (
+      !role ||
+      !ADMIN_ROLES.includes(role as (typeof ADMIN_ROLES)[number])
+    ) {
+      await supabase.auth.signOut();
+      return NextResponse.redirect(new URL('/?error=unauthorized', request.url));
+    }
+
+    const { data: aal } =
+      await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+
+    if (aal?.currentLevel === 'aal2') {
+      const requestedPath = searchParams.get('redirect');
+      const destination =
+        requestedPath &&
+        (requestedPath === '/admin' || requestedPath.startsWith('/admin/'))
+          ? requestedPath
+          : '/admin/dashboard';
+
+      return NextResponse.redirect(new URL(destination, request.url));
     }
   }
 
@@ -134,5 +209,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/admin/:path*', '/login'],
+  matcher: ['/', '/admin/:path*', '/login/:path*', '/login'],
 };

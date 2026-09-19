@@ -13,7 +13,10 @@ function withTimeout<T>(promise: PromiseLike<T>, ms = 12000): Promise<T> {
   return Promise.race([
     Promise.resolve(promise),
     new Promise<T>((_, reject) =>
-      setTimeout(() => reject(new Error('Authentication service timed out. Please try again.')), ms)
+      setTimeout(
+        () => reject(new Error('Authentication service timed out. Please try again.')),
+        ms
+      )
     ),
   ]);
 }
@@ -84,13 +87,30 @@ export async function adminLoginAction(input: {
     }
 
     const requestedPath = input.redirectPath;
-    const redirectPath =
+    const targetPath =
       requestedPath &&
       (requestedPath === '/admin' || requestedPath.startsWith('/admin/'))
         ? requestedPath
         : '/admin/dashboard';
 
-    return { success: true, redirectPath };
+    const { data: aal, error: aalError } =
+      await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+
+    if (aalError) {
+      return {
+        success: false,
+        error: 'Unable to verify the authenticator status. Please try again.',
+      };
+    }
+
+    if (aal.currentLevel !== 'aal2') {
+      return {
+        success: true,
+        redirectPath: `/login/mfa?redirect=${encodeURIComponent(targetPath)}`,
+      };
+    }
+
+    return { success: true, redirectPath: targetPath };
   } catch (error) {
     console.error('[ADMIN_LOGIN_ERROR]', error);
     return {
