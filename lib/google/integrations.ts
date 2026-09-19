@@ -128,7 +128,7 @@ async function googleAdsSummary(accessToken: string): Promise<GoogleAdsSummary> 
   const query = [
     'SELECT',
     'campaign.id, campaign.name, campaign.status, campaign.advertising_channel_type,',
-    'campaign.start_date, campaign.end_date, campaign_budget.amount_micros,',
+    'campaign_budget.amount_micros,'
     'metrics.impressions, metrics.clicks, metrics.cost_micros,',
     'metrics.conversions, metrics.conversions_value',
     'FROM campaign',
@@ -157,8 +157,6 @@ async function googleAdsSummary(accessToken: string): Promise<GoogleAdsSummary> 
         name?: string;
         status?: string;
         advertisingChannelType?: string;
-        startDate?: string;
-        endDate?: string;
       };
       campaignBudget?: { amountMicros?: string | number };
       metrics?: {
@@ -180,8 +178,8 @@ async function googleAdsSummary(accessToken: string): Promise<GoogleAdsSummary> 
       status: row.campaign?.status ?? 'UNKNOWN',
       channelType: row.campaign?.advertisingChannelType ?? 'UNKNOWN',
       dailyBudget: numberValue(row.campaignBudget?.amountMicros) / 1_000_000,
-      startDate: row.campaign?.startDate ?? '',
-      endDate: row.campaign?.endDate ?? '',
+      startDate: '',
+      endDate: '',
       impressions: numberValue(metrics.impressions),
       clicks: numberValue(metrics.clicks),
       cost: numberValue(metrics.costMicros) / 1_000_000,
