@@ -6,6 +6,10 @@ export type GoogleAdsCampaign = {
   id: string;
   name: string;
   status: string;
+  channelType: string;
+  dailyBudget: number;
+  startDate: string;
+  endDate: string;
   impressions: number;
   clicks: number;
   cost: number;
@@ -123,7 +127,8 @@ async function googleAdsSummary(accessToken: string): Promise<GoogleAdsSummary> 
   const customerId = requiredEnv('GOOGLE_ADS_CUSTOMER_ID').replace(/\D/g, '');
   const query = [
     'SELECT',
-    'campaign.id, campaign.name, campaign.status,',
+    'campaign.id, campaign.name, campaign.status, campaign.advertising_channel_type,',
+    'campaign.start_date, campaign.end_date, campaign_budget.amount_micros,',
     'metrics.impressions, metrics.clicks, metrics.cost_micros,',
     'metrics.conversions, metrics.conversions_value',
     'FROM campaign',
@@ -147,7 +152,15 @@ async function googleAdsSummary(accessToken: string): Promise<GoogleAdsSummary> 
 
   const body = (await jsonOrError(response)) as Array<{
     results?: Array<{
-      campaign?: { id?: string; name?: string; status?: string };
+      campaign?: {
+        id?: string;
+        name?: string;
+        status?: string;
+        advertisingChannelType?: string;
+        startDate?: string;
+        endDate?: string;
+      };
+      campaignBudget?: { amountMicros?: string | number };
       metrics?: {
         impressions?: string | number;
         clicks?: string | number;
@@ -165,6 +178,10 @@ async function googleAdsSummary(accessToken: string): Promise<GoogleAdsSummary> 
       id: row.campaign?.id ?? '',
       name: row.campaign?.name ?? 'Unnamed campaign',
       status: row.campaign?.status ?? 'UNKNOWN',
+      channelType: row.campaign?.advertisingChannelType ?? 'UNKNOWN',
+      dailyBudget: numberValue(row.campaignBudget?.amountMicros) / 1_000_000,
+      startDate: row.campaign?.startDate ?? '',
+      endDate: row.campaign?.endDate ?? '',
       impressions: numberValue(metrics.impressions),
       clicks: numberValue(metrics.clicks),
       cost: numberValue(metrics.costMicros) / 1_000_000,
