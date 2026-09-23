@@ -29,12 +29,13 @@ export async function generateProductPosts() {
 export async function testMetaConnection() {
   await requireAdminUser();
   if (!process.env.CRON_SECRET) finish('cron-missing');
+  let result = 'meta-connected';
   try {
     await checkMetaConnection();
-    finish('meta-connected');
   } catch {
-    finish('meta-connection-failed');
+    result = 'meta-connection-failed';
   }
+  finish(result);
 }
 
 export async function savePostCaption(formData: FormData) {
