@@ -13,8 +13,13 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   if (!post || !['approved', 'publishing', 'published'].includes(post.status)) {
     return new Response('Not found', { status: 404 });
   }
-  const storagePrefix = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/product-images/`;
-  if (!post.image_url.startsWith(storagePrefix)) return new Response('Unsupported image', { status: 422 });
+
+  const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').replace(/\/+$/, '');
+  const storagePrefix = `${supabaseUrl}/storage/v1/object/public/product-images/`;
+  if (!supabaseUrl || !post.image_url.startsWith(storagePrefix)) {
+    return new Response('Unsupported image', { status: 422 });
+  }
+
   try {
     const imageResponse = await fetch(post.image_url, { signal: AbortSignal.timeout(15_000) });
     if (!imageResponse.ok || Number(imageResponse.headers.get('content-length') || 0) > 10_000_000) {
