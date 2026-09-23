@@ -28,5 +28,5 @@ export function productCaption(title: string, price: number, id: string, channel
   const callToAction = channel === 'instagram'
     ? 'Shop now — link in bio.'
     : `Shop: https://adhyeybrothers.in/product/${id}`;
-  return `${title}\n\n${priceText}\n${callToAction}\n\n#AdhyeyBrothers #ShopOnline`;
+  return channel === 'instagram'\n    ? `${title}\n\n${priceText}\n${callToAction}`\n    : `${title}\n\n${priceText}\n${callToAction}\n\n#AdhyeyBrothers #ShopOnline`;
 }
