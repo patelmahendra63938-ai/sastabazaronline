@@ -36,9 +36,10 @@ const modules: Module[] = [
   },
   {
     title: 'Marketing',
-    match: ['/admin/ads', '/admin/coupons', '/admin/settings/discounts'],
+    match: ['/admin/ads', '/admin/social-planner', '/admin/coupons', '/admin/settings/discounts'],
     tabs: [
       { label: 'Ads & Connections', href: '/admin/ads', match: ['/admin/ads'] },
+      { label: 'Social Planner', href: '/admin/social-planner', match: ['/admin/social-planner'] },
       { label: 'Coupons & Promotions', href: '/admin/coupons', match: ['/admin/coupons'] },
       { label: 'Discount Settings', href: '/admin/settings/discounts', match: ['/admin/settings/discounts'] },
     ],

@@ -86,7 +86,7 @@ export default async function AdsConnectionsPage({
     .order('created_at', { ascending: false })
     .limit(10);
 
-  const metaToken = hasAny('META_ACCESS_TOKEN', 'META_GRAPH_ACCESS_TOKEN', 'FACEBOOK_ACCESS_TOKEN');
+  const metaToken = hasAny('META_SYSTEM_USER_ACCESS_TOKEN', 'META_ACCESS_TOKEN', 'META_GRAPH_ACCESS_TOKEN', 'FACEBOOK_ACCESS_TOKEN');
   const metaAdAccount = hasAny('META_AD_ACCOUNT_ID', 'FACEBOOK_AD_ACCOUNT_ID');
   const metaPage = hasAny('META_PAGE_ID', 'FACEBOOK_PAGE_ID');
   const instagram = hasAny(
