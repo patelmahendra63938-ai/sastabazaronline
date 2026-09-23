@@ -14,14 +14,18 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     return new Response('Not found', { status: 404 });
   }
 
-  const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').replace(/\/+$/, '');
-  const storagePrefix = `${supabaseUrl}/storage/v1/object/public/product-images/`;
-  if (!supabaseUrl || !post.image_url.startsWith(storagePrefix)) {
+  let sourceUrl: URL;
+  try {
+    sourceUrl = new URL(post.image_url);
+  } catch {
     return new Response('Unsupported image', { status: 422 });
   }
+  const validHost = sourceUrl.protocol === 'https:' && sourceUrl.hostname.endsWith('.supabase.co');
+  const validPath = sourceUrl.pathname.startsWith('/storage/v1/object/public/product-images/');
+  if (!validHost || !validPath) return new Response('Unsupported image', { status: 422 });
 
   try {
-    const imageResponse = await fetch(post.image_url, { signal: AbortSignal.timeout(15_000) });
+    const imageResponse = await fetch(sourceUrl, { signal: AbortSignal.timeout(15_000) });
     if (!imageResponse.ok || Number(imageResponse.headers.get('content-length') || 0) > 10_000_000) {
       return new Response('Image unavailable', { status: 502 });
     }
