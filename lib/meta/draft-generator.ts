@@ -5,7 +5,7 @@ import { istDate, productCaption, scheduledUtc, type SocialChannel, type SocialS
 export async function prepareProductPostDrafts() {
   const { data: products, error } = await supabaseAdmin
     .from('products')
-    .select('id,title,price,images,stock')
+    .select('id,title,price,images,stock,category')
     .eq('is_active', true).gt('stock', 0)
     .order('created_at', { ascending: false }).limit(100);
   if (error) throw new Error('Catalog unavailable');
@@ -27,7 +27,7 @@ export async function prepareProductPostDrafts() {
           channel, slot, publish_date: date, scheduled_at,
           product_id: product.id, product_title: product.title,
           price_snapshot: Number(product.price), image_url: product.images[0],
-          caption: productCaption(product.title, Number(product.price), product.id, channel),
+          caption: productCaption(product.title, Number(product.price), product.id, channel, product.category),
         });
       }
     }
