@@ -7,8 +7,11 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request, { params }: { params: Promise<{ channel: string }> }) {
-  const { channel } = await params;
-  if (channel !== 'facebook' && channel !== 'instagram') return new Response('Not found', { status: 404 });
+  const { channel: routeName } = await params;
+  const match = /^(facebook|instagram)-([12])$/.exec(routeName);
+  if (!match) return new Response('Not found', { status: 404 });
+  const channel = match[1];
+  const slot = Number(match[2]);
   if (!process.env.CRON_SECRET || request.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
     return new Response('Unauthorized', { status: 401 });
   }
@@ -25,6 +28,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ chan
   const { data: candidate, error } = await supabaseAdmin.from('meta_product_posts')
     .select('id,product_id,price_snapshot,image_url,caption,scheduled_at')
     .eq('channel', channel)
+    .eq('slot', slot)
     .eq('publish_date', istDate())
     .eq('status', 'approved')
     .lte('scheduled_at', now.toISOString())

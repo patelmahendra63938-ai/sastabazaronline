@@ -6,6 +6,7 @@ import { requireAdminUser } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { productCaption } from '@/lib/meta/post-planner';
 import { prepareProductPostDrafts } from '@/lib/meta/draft-generator';
+import { checkMetaConnection } from '@/lib/meta/publish';
 
 function finish(status: string): never {
   revalidatePath('/admin/social-planner');
@@ -23,6 +24,17 @@ export async function generateProductPosts() {
   }
   if (!count) finish('no-products');
   finish('generated');
+}
+
+export async function testMetaConnection() {
+  await requireAdminUser();
+  if (!process.env.CRON_SECRET) finish('cron-missing');
+  try {
+    await checkMetaConnection();
+    finish('meta-connected');
+  } catch {
+    finish('meta-connection-failed');
+  }
 }
 
 export async function savePostCaption(formData: FormData) {

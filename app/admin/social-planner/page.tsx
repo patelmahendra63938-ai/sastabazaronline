@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { requireAdminUser } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { approvePost, cancelPost, generateProductPosts, replacePost, savePostCaption } from './actions';
+import { istTime, type SocialChannel, type SocialSlot } from '@/lib/meta/post-planner';
+import { approvePost, cancelPost, generateProductPosts, replacePost, savePostCaption, testMetaConnection } from './actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,6 +15,9 @@ const notice: Record<string, string> = {
   expired: 'This slot has passed. Generate drafts for upcoming days.',
   'product-changed': 'Product price, image or availability changed. This draft needs a fresh review.',
   'no-products': 'No in-stock products with images are available.',
+  'cron-missing': 'Scheduler secret is missing from this deployment.',
+  'meta-connected': 'Read-only connection check passed for the Facebook Page and linked Instagram account. Publishing permissions still need a live post test.',
+  'meta-connection-failed': 'The Facebook Page or linked Instagram account could not be read with the configured Meta token. Check the system user assets, permissions and token.',
 };
 
 export default async function SocialPlannerPage({
@@ -26,7 +30,7 @@ export default async function SocialPlannerPage({
   const configured = Boolean(process.env.META_SYSTEM_USER_ACCESS_TOKEN && process.env.CRON_SECRET);
   const enabled = process.env.META_PUBLISH_ENABLED === 'true';
   const { data: posts, error } = await supabaseAdmin.from('meta_product_posts')
-    .select('id,channel,publish_date,scheduled_at,product_id,product_title,price_snapshot,image_url,caption,status,remote_post_id,error_message')
+    .select('id,channel,slot,publish_date,scheduled_at,product_id,product_title,price_snapshot,image_url,caption,status,remote_post_id,error_message')
     .order('scheduled_at', { ascending: false }).limit(60);
 
   return (
@@ -34,7 +38,7 @@ export default async function SocialPlannerPage({
       <div className="rounded-2xl border border-[#ead8b8] bg-white p-6">
         <h1 className="text-2xl font-bold text-[#741f23]">Meta product planner</h1>
         <p className="mt-2 text-sm text-stone-600">
-          Facebook: 7:00 AM IST. Instagram: 7:00 PM IST. Products come from the website catalog.
+          Facebook: 7:00 AM and 11:00 AM IST. Instagram: 5:00 PM and 7:00 PM IST. Products come from the website catalog.
           New drafts are prepared daily; each post needs your approval before it can publish.
         </p>
         <p className="mt-1 text-xs text-amber-800">
@@ -42,11 +46,17 @@ export default async function SocialPlannerPage({
         </p>
         <p className="mt-2 text-sm font-semibold text-[#741f23]">
           Publishing: {configured && enabled ? 'enabled (Meta permissions still require a live check)' :
-            'paused until server credentials and the publishing switch are configured'}
+            configured ? 'paused; credentials are present but publishing is disabled' :
+              'paused; server credentials are missing'}
         </p>
         <form action={generateProductPosts} className="mt-4">
           <button className="rounded-lg bg-[#741f23] px-4 py-2 text-sm font-semibold text-white">
             Prepare next 7 days
+          </button>
+        </form>
+        <form action={testMetaConnection} className="mt-3">
+          <button className="rounded-lg border border-[#741f23] px-4 py-2 text-sm font-semibold text-[#741f23]">
+            Check Meta connection (no post sent)
           </button>
         </form>
         {result && <p role="status" className="mt-3 text-sm text-stone-700">{notice[result] || 'The request could not be completed. Please try again.'}</p>}
@@ -64,7 +74,7 @@ export default async function SocialPlannerPage({
             <div className="min-w-0 space-y-2">
               <div className="flex flex-wrap items-center gap-2 text-sm">
                 <span className="rounded bg-[#f4e6d2] px-2 py-1 font-bold capitalize">{post.channel}</span>
-                <span>{post.publish_date} · {post.channel === 'facebook' ? '7:00 AM' : '7:00 PM'} IST</span>
+                <span>{post.publish_date} · {istTime(post.channel as SocialChannel, post.slot as SocialSlot)} IST</span>
                 <span className="rounded bg-stone-100 px-2 py-1 font-semibold capitalize">{post.status}</span>
               </div>
               <Link href={`/product/${post.product_id}`} className="font-semibold text-[#741f23] underline">{post.product_title}</Link>

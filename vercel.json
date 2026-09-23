@@ -1,6 +1,8 @@
 {
   "crons": [
-    { "path": "/api/cron/meta-post/facebook", "schedule": "30 1 * * *" },
-    { "path": "/api/cron/meta-post/instagram", "schedule": "30 13 * * *" }
+    { "path": "/api/cron/meta-post/facebook-1", "schedule": "30 1 * * *" },
+    { "path": "/api/cron/meta-post/facebook-2", "schedule": "30 5 * * *" },
+    { "path": "/api/cron/meta-post/instagram-1", "schedule": "30 11 * * *" },
+    { "path": "/api/cron/meta-post/instagram-2", "schedule": "30 13 * * *" }
   ]
 }
