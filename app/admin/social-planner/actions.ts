@@ -86,7 +86,7 @@ export async function replacePost(formData: FormData) {
   const id = String(formData.get('id') ?? '');
   if (!/^[0-9a-f-]{36}$/i.test(id)) finish('invalid-id');
   const { data: old } = await supabaseAdmin.from('meta_product_posts')
-    .select('product_id,scheduled_at,status').eq('id', id).maybeSingle();
+    .select('product_id,scheduled_at,status,channel').eq('id', id).maybeSingle();
   if (!old || !['cancelled', 'failed'].includes(old.status) ||
       new Date(old.scheduled_at).getTime() <= Date.now() + 15 * 60_000) finish('expired');
   const { data: products } = await supabaseAdmin.from('products')
@@ -100,7 +100,7 @@ export async function replacePost(formData: FormData) {
     product_title: product.title,
     price_snapshot: Number(product.price),
     image_url: product.images[0],
-    caption: productCaption(product.title, Number(product.price), product.id),
+    caption: productCaption(product.title, Number(product.price), product.id, old.channel),
     status: 'pending', approved_by: null, approved_at: null, claimed_at: null,
     error_message: null, updated_at: new Date().toISOString(),
   }).eq('id', id).in('status', ['cancelled', 'failed']).select('id').maybeSingle();
