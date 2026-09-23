@@ -62,3 +62,13 @@ export async function publishMetaProduct(input: {
   if (!published.id) throw new Error('Instagram did not return a post ID');
   return published.id;
 }
+
+// Read-only check: no media container or post is created.
+export async function checkMetaConnection() {
+  const systemToken = process.env.META_SYSTEM_USER_ACCESS_TOKEN;
+  if (!systemToken) throw new Error('Meta token is not configured');
+  const page = await graph<GraphResponse>(`${PAGE_ID}?fields=access_token,instagram_business_account`, systemToken);
+  if (!page.access_token) throw new Error('Page access is unavailable');
+  if (!page.instagram_business_account?.id) throw new Error('Instagram account is not linked to the Page');
+  await graph<GraphResponse>(`${page.instagram_business_account.id}?fields=id`, page.access_token);
+}
