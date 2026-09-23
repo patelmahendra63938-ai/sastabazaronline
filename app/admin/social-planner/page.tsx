@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { requireAdminUser } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { istTime, type SocialChannel, type SocialSlot } from '@/lib/meta/post-planner';
-import { approvePost, cancelPost, generateProductPosts, replacePost, savePostCaption, testMetaConnection } from './actions';
+import { approvePost, cancelPost, generateProductPosts, replacePost, savePostCaption } from './actions';
+import { ConnectionCheck } from './connection-check';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,11 +55,7 @@ export default async function SocialPlannerPage({
             Prepare next 7 days
           </button>
         </form>
-        <form action={testMetaConnection} className="mt-3">
-          <button className="rounded-lg border border-[#741f23] px-4 py-2 text-sm font-semibold text-[#741f23]">
-            Check Meta connection (no post sent)
-          </button>
-        </form>
+        <ConnectionCheck />
         {result && <p role="status" className="mt-3 text-sm text-stone-700">{notice[result] || 'The request could not be completed. Please try again.'}</p>}
         {error && <p role="alert" className="mt-3 text-sm text-red-700">Planner database is not ready yet.</p>}
       </div>
