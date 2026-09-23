@@ -27,7 +27,7 @@ export async function prepareProductPostDrafts() {
           channel, slot, publish_date: date, scheduled_at,
           product_id: product.id, product_title: product.title,
           price_snapshot: Number(product.price), image_url: product.images[0],
-          caption: productCaption(product.title, Number(product.price), product.id),
+          caption: productCaption(product.title, Number(product.price), product.id, channel),
         });
       }
     }

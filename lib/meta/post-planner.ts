@@ -23,6 +23,10 @@ export function istDate(offsetDays = 0) {
     .slice(0, 10);
 }
 
-export function productCaption(title: string, price: number, id: string) {
-  return `${title}\n\n₹${new Intl.NumberFormat('en-IN').format(price)}\nShop: https://adhyeybrothers.in/product/${id}\n\n#AdhyeyBrothers #ShopOnline`;
+export function productCaption(title: string, price: number, id: string, channel: SocialChannel) {
+  const priceText = `₹${new Intl.NumberFormat('en-IN').format(price)}`;
+  const callToAction = channel === 'instagram'
+    ? 'Shop now — link in bio.'
+    : `Shop: https://adhyeybrothers.in/product/${id}`;
+  return `${title}\n\n${priceText}\n${callToAction}\n\n#AdhyeyBrothers #ShopOnline`;
 }
