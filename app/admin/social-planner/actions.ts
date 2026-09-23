@@ -26,16 +26,15 @@ export async function generateProductPosts() {
   finish('generated');
 }
 
-export async function testMetaConnection() {
+export async function testMetaConnection(_previous: string) {
   await requireAdminUser();
-  if (!process.env.CRON_SECRET) finish('cron-missing');
-  let result = 'meta-connected';
+  if (!process.env.CRON_SECRET) return 'cron-missing';
   try {
     await checkMetaConnection();
+    return 'meta-connected';
   } catch {
-    result = 'meta-connection-failed';
+    return 'meta-connection-failed';
   }
-  finish(result);
 }
 
 export async function savePostCaption(formData: FormData) {
