@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -9,6 +10,7 @@ export default function AdminIntegrationsPage() {
   const isCourierActive = !!(process.env.COURIER_API_KEY || process.env.NIMBUSPOST_API_KEY);
   const isSmtpActive = !!(process.env.SMTP_USER && process.env.SMTP_PASS);
   const isWhatsappActive = !!(process.env.WHATSAPP_PHONE_NUMBER_ID && (process.env.WHATSAPP_API_TOKEN || process.env.WHATSAPP_ACCESS_TOKEN));
+  const isMetaDirectActive = !!(process.env.META_GRAPH_API_VERSION && process.env.META_ACCESS_TOKEN && process.env.META_AD_ACCOUNT_ID);
   const isMerchantActive = true; // Dynamic XML catalog feed is active at /api/feed/merchant.xml
 
   const integrationsList = [
@@ -35,6 +37,13 @@ export default function AdminIntegrationsPage() {
       status: isWhatsappActive ? 'CONNECTED' : 'READY_FOR_CONFIGURATION',
       desc: 'Instant customer WhatsApp order dispatch and AWB alerts.',
       type: 'Messaging',
+    },
+    {
+      name: 'Meta Ads Direct API',
+      status: isMetaDirectActive ? 'CONNECTED' : 'READY_FOR_CONFIGURATION',
+      desc: 'Direct server-side Meta Marketing API connection without Adspirer.',
+      type: 'Advertising',
+      href: '/admin/integrations/meta',
     },
     {
       name: 'Google Merchant Center',
@@ -80,11 +89,17 @@ export default function AdminIntegrationsPage() {
                 <p className="text-xs text-gray-600">{item.desc}</p>
               </div>
 
-              <div className="pt-4 border-t flex items-center justify-between text-xs">
+              <div className="pt-4 border-t flex items-center justify-between gap-3 text-xs">
                 <span className="font-mono text-gray-400">Environment Variables Managed</span>
-                <span className={`font-bold ${isConnected ? 'text-green-700' : 'text-indigo-950'}`}>
-                  {isConnected ? 'Active' : 'Pending API Key'}
-                </span>
+                {item.href ? (
+                  <Link href={item.href} className="font-bold text-[#741f23] hover:underline">
+                    Open
+                  </Link>
+                ) : (
+                  <span className={`font-bold ${isConnected ? 'text-green-700' : 'text-indigo-950'}`}>
+                    {isConnected ? 'Active' : 'Pending API Key'}
+                  </span>
+                )}
               </div>
             </div>
           );
