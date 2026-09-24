@@ -89,24 +89,7 @@ export default function MetaEcommerceTracker() {
     if (!sessionStorage.getItem(key) && send('InitiateCheckout', { content_ids: ids(items), contents: contents(items), content_type: 'product', currency: 'INR', num_items: items.reduce((s, i) => s + Number(i.quantity || 1), 0), value: value(items) })) sessionStorage.setItem(key, '1');
   }, [pathname]);
 
-  useEffect(() => {
-    if (pathname !== '/checkout') return;
-    const detect = () => {
-      const text = document.body.innerText || '';
-      if (!text.includes('Order Placed Successfully!')) return;
-      const orderId = text.match(/verified order reference is\s+([^\s.]+)/i)?.[1]?.trim();
-      if (!orderId || !lastCart.current.length) return;
-      const key = `meta:purchase:${orderId}`;
-      const items = lastCart.current;
-      const verifiedValue = Number(document.querySelector('[data-meta-purchase-value]')?.getAttribute('data-meta-purchase-value'));
-      const purchaseValue = Number.isFinite(verifiedValue) && verifiedValue > 0 ? verifiedValue : value(items);
-      if (!sessionStorage.getItem(key) && send('Purchase', { content_ids: ids(items), contents: contents(items), content_type: 'product', currency: 'INR', num_items: items.reduce((s, i) => s + Number(i.quantity || 1), 0), order_id: orderId, value: purchaseValue })) sessionStorage.setItem(key, '1');
-    };
-    const observer = new MutationObserver(detect);
-    observer.observe(document.body, { childList: true, subtree: true });
-    detect();
-    return () => observer.disconnect();
-  }, [pathname]);
+
 
   return null;
 }
