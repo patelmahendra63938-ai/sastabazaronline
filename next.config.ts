@@ -46,7 +46,8 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   images: {
-    // Serve remote storefront images directly from Supabase to avoid broken optimizer responses.\n    unoptimized: true,
+    // Serve remote storefront images directly from Supabase to avoid broken optimizer responses.
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: "https",
