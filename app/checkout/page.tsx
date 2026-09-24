@@ -20,6 +20,7 @@ export default function CheckoutPage() {
   const [locating, setLocating] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [orderId, setOrderId] = useState('');
+  const [completedOrderTotal, setCompletedOrderTotal] = useState<number | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [itemToRemove, setItemToRemove] = useState<any | null>(null);
   const [paymentReturnProcessing, setPaymentReturnProcessing] = useState(false);
@@ -110,6 +111,7 @@ export default function CheckoutPage() {
             window.history.replaceState({}, '', '/checkout');
 
             setOrderId(String(data.orderNumber));
+            setCompletedOrderTotal(Number(data.grandTotal ?? data.totalPayable ?? 0) || null);
             setOrderPlaced(true);
             return;
           }
@@ -453,6 +455,7 @@ export default function CheckoutPage() {
       }
 
       setOrderId(result.orderNumber || '');
+      setCompletedOrderTotal(Number(result.grandTotal ?? 0) || null);
       setOrderPlaced(true);
       localStorage.removeItem('sastabazar_cart');
       window.dispatchEvent(new Event('cartUpdated'));
@@ -475,6 +478,9 @@ export default function CheckoutPage() {
           <p className="text-sm text-gray-600">
             Thank you for shopping with ADHYEY BROTHERS. Your verified order reference is{' '}
             <span className="font-mono font-bold text-[#741f23]">{orderId}</span>.
+            {completedOrderTotal !== null && (
+              <span data-meta-purchase-value={completedOrderTotal} className="sr-only">{completedOrderTotal}</span>
+            )}
           </p>
           <div className="pt-6 flex flex-col sm:flex-row gap-3 justify-center">
             <Link href={`/orders/${orderId}`} className="bg-[#741f23] hover:bg-[#5e171b] text-white font-bold py-3.5 px-8 rounded-xl transition shadow-md text-xs uppercase tracking-wider">
