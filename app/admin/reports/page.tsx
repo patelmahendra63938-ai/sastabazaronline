@@ -17,6 +17,7 @@ export default function AdminReportsPage() {
   });
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState('ALL');
+  const [abandoned, setAbandoned] = useState<any[]>([]);
   const [commerce, setCommerce] = useState({
     cartEvents: 0,
     cartVisitors: 0,
@@ -31,15 +32,21 @@ export default function AdminReportsPage() {
   useEffect(() => {
     const fetchReportData = async () => {
       setLoading(true);
-      const [ordersResult, commerceResponse] = await Promise.all([
+      const [ordersResult, commerceResponse, abandonedResponse] = await Promise.all([
         supabase.from('orders').select('*, order_items(quantity)'),
-        fetch('/api/admin/commerce-summary?range=' + encodeURIComponent(timeRange), { cache: 'no-store' })
+        fetch('/api/admin/commerce-summary?range=' + encodeURIComponent(timeRange), { cache: 'no-store' }),
+        fetch('/api/admin/abandoned-checkouts?range=' + encodeURIComponent(timeRange), { cache: 'no-store' })
       ]);
       const { data: orders, error } = ordersResult;
 
       if (commerceResponse.ok) {
         const commerceData = await commerceResponse.json();
         setCommerce(commerceData);
+      }
+
+      if (abandonedResponse.ok) {
+        const abandonedData = await abandonedResponse.json();
+        setAbandoned(Array.isArray(abandonedData.rows) ? abandonedData.rows : []);
       }
 
       if (!error && orders) {
@@ -158,6 +165,61 @@ export default function AdminReportsPage() {
               <p className="mt-1 text-[10px] font-bold text-gray-500">From first-party purchase events</p>
             </div>
           </div>
+        </div>
+      )}
+
+
+      {!loading && (
+        <div className="rounded-2xl border bg-white shadow-sm overflow-hidden">
+          <div className="border-b px-5 py-4">
+            <h2 className="text-lg font-black text-indigo-950">Abandoned Checkouts</h2>
+            <p className="mt-1 text-xs text-gray-500">
+              Customers who entered a valid phone number or email at checkout but have not completed an order yet.
+            </p>
+          </div>
+          {abandoned.length === 0 ? (
+            <div className="px-5 py-8 text-center text-xs font-medium text-gray-500">
+              No abandoned checkout customer details captured in this period.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-left text-xs">
+                <thead className="bg-gray-50 text-[10px] uppercase text-gray-500">
+                  <tr>
+                    <th className="px-4 py-3">Customer</th>
+                    <th className="px-4 py-3">Phone / Email</th>
+                    <th className="px-4 py-3">Delivery Address</th>
+                    <th className="px-4 py-3">Cart</th>
+                    <th className="px-4 py-3">Value</th>
+                    <th className="px-4 py-3">Last Activity</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {abandoned.map((row) => (
+                    <tr key={row.id} className="align-top">
+                      <td className="px-4 py-3 font-bold text-gray-900">{row.full_name || 'Name not entered'}</td>
+                      <td className="px-4 py-3">
+                        <div className="font-semibold text-gray-900">{row.phone || '—'}</div>
+                        <div className="mt-1 text-gray-500">{row.email || '—'}</div>
+                      </td>
+                      <td className="max-w-xs px-4 py-3 text-gray-600">
+                        {[row.address, row.city, row.state, row.pincode].filter(Boolean).join(', ') || '—'}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">
+                        {Array.isArray(row.cart) && row.cart.length
+                          ? row.cart.map((item: any) => `${item.title || 'Product'} × ${item.quantity || 1}`).join(', ')
+                          : '—'}
+                      </td>
+                      <td className="px-4 py-3 font-black text-indigo-950">₹{Number(row.cart_value || 0).toLocaleString()}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-gray-500">
+                        {row.last_activity_at ? new Date(row.last_activity_at).toLocaleString('en-IN') : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
