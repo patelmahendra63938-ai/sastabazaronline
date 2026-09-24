@@ -46,13 +46,7 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   images: {
-    // Optimize remote storefront images at the size each viewport actually needs.
-    // This enables responsive srcsets and modern formats for Supabase product images.
-    formats: ["image/avif", "image/webp"],
-    qualities: [70, 75],
-    minimumCacheTTL: 86400,
-    deviceSizes: [360, 390, 430, 640, 750, 828, 1080, 1200, 1440],
-    imageSizes: [96, 128, 160, 192, 256, 320, 384],
+    // Serve remote storefront images directly from Supabase to avoid broken optimizer responses.\n    unoptimized: true,
     remotePatterns: [
       {
         protocol: "https",
