@@ -106,6 +106,16 @@ export default function CheckoutPage() {
           }
 
           if (data.paymentComplete === true && data.orderNumber) {
+            const completedItems = cart.length ? cart : (() => {
+              try {
+                const saved = JSON.parse(localStorage.getItem('sastabazar_cart') || '[]');
+                return Array.isArray(saved) ? saved : [];
+              } catch {
+                return [];
+              }
+            })();
+            const completedTotal = Number(data.grandTotal ?? data.totalPayable ?? 0);
+            fireMetaPurchase(String(data.orderNumber), completedTotal, completedItems);
             localStorage.removeItem('sastabazar_cart');
             window.dispatchEvent(new Event('cartUpdated'));
             window.history.replaceState({}, '', '/checkout');
@@ -364,6 +374,30 @@ export default function CheckoutPage() {
     );
   };
 
+  const fireMetaPurchase = useCallback((orderNumber: string, total: number, items: any[]) => {
+    if (typeof window === 'undefined' || !orderNumber || !items.length) return;
+    const fbq = (window as any).fbq;
+    if (typeof fbq !== 'function') return;
+
+    const key = `meta:purchase:${orderNumber}`;
+    if (localStorage.getItem(key)) return;
+
+    fbq('track', 'Purchase', {
+      content_ids: items.map(item => String(item.product_id || item.id || '')).filter(Boolean),
+      contents: items.map(item => ({
+        id: String(item.product_id || item.id || ''),
+        quantity: Number(item.quantity || 1),
+        item_price: Number(item.price || 0),
+      })),
+      content_type: 'product',
+      currency: 'INR',
+      num_items: items.reduce((sum, item) => sum + Number(item.quantity || 1), 0),
+      order_id: orderNumber,
+      value: Number(total || 0),
+    });
+    localStorage.setItem(key, '1');
+  }, []);
+
   const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -454,8 +488,11 @@ export default function CheckoutPage() {
         throw new Error(result.error || 'Failed to place order.');
       }
 
-      setOrderId(result.orderNumber || '');
-      setCompletedOrderTotal(Number(result.grandTotal ?? 0) || null);
+      const completedOrderNumber = result.orderNumber || '';
+      const completedTotal = Number(result.grandTotal ?? grandTotal ?? 0);
+      fireMetaPurchase(completedOrderNumber, completedTotal, cart);
+      setOrderId(completedOrderNumber);
+      setCompletedOrderTotal(completedTotal || null);
       setOrderPlaced(true);
       localStorage.removeItem('sastabazar_cart');
       window.dispatchEvent(new Event('cartUpdated'));
