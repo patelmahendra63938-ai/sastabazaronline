@@ -9,7 +9,7 @@ function randomId(prefix: string) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 }
 
-function getVisitorId() {
+export function getVisitorId() {
   const key = 'ab_visitor_id';
   let id = localStorage.getItem(key);
   if (!id) {
@@ -19,7 +19,7 @@ function getVisitorId() {
   return id;
 }
 
-function getSessionId() {
+export function getSessionId() {
   const key = 'ab_session_id';
   let id = sessionStorage.getItem(key);
   if (!id) {
@@ -66,4 +66,46 @@ export function trackFirstPartyCommerceEvent(input: {
   }).catch(() => {
     // Analytics must never block the shopping flow.
   });
+}
+
+
+export async function saveAbandonedCheckout(input: {
+  fullName?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  cart: any[];
+  cartValue: number;
+}) {
+  if (typeof window === 'undefined') return;
+
+  const response = await fetch('/api/analytics/abandoned-checkout', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      visitorId: getVisitorId(),
+      sessionId: getSessionId(),
+      ...input,
+    }),
+    keepalive: true,
+  }).catch(() => null);
+
+  return response?.ok === true;
+}
+
+export async function markAbandonedCheckoutConverted(orderNumber: string) {
+  if (typeof window === 'undefined' || !orderNumber) return;
+
+  await fetch('/api/analytics/abandoned-checkout/convert', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      visitorId: getVisitorId(),
+      orderNumber,
+    }),
+    keepalive: true,
+  }).catch(() => null);
 }
