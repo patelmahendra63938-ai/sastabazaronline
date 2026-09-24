@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import { toGA4Items, trackGA4Event } from '@/lib/analytics';
+import { trackFirstPartyCommerceEvent } from '@/lib/first-party-analytics';
 
 function readCart(): any[] {
   if (typeof window === 'undefined') return [];
@@ -63,6 +64,15 @@ export default function GA4EcommerceTracker() {
           value: cartValue(added),
           items: toGA4Items(added),
         });
+
+        for (const item of added) {
+          trackFirstPartyCommerceEvent({
+            eventType: 'add_to_cart',
+            productId: String(item.product_id || item.id || ''),
+            quantity: Number(item.quantity || 1),
+            value: Number(item.price || 0) * Number(item.quantity || 1),
+          });
+        }
       }
 
       if (nextCart.length > 0) lastNonEmptyCartRef.current = nextCart;
@@ -127,6 +137,12 @@ export default function GA4EcommerceTracker() {
         currency: 'INR',
         value: cartValue(cart),
         items: toGA4Items(cart),
+      });
+      trackFirstPartyCommerceEvent({
+        eventType: 'begin_checkout',
+        quantity: cart.reduce((sum, item) => sum + Number(item.quantity || 1), 0),
+        value: cartValue(cart),
+        dedupeKey: `begin_checkout:${signature}`,
       });
       sessionStorage.setItem(dedupeKey, '1');
     }

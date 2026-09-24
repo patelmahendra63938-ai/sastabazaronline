@@ -17,11 +17,30 @@ export default function AdminReportsPage() {
   });
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState('ALL');
+  const [commerce, setCommerce] = useState({
+    cartEvents: 0,
+    cartVisitors: 0,
+    cartSessions: 0,
+    checkoutVisitors: 0,
+    purchaseVisitors: 0,
+    checkoutRateFromCart: 0,
+    purchaseRateFromCart: 0,
+    trackedPurchaseValue: 0
+  });
 
   useEffect(() => {
     const fetchReportData = async () => {
       setLoading(true);
-      const { data: orders, error } = await supabase.from('orders').select('*, order_items(quantity)');
+      const [ordersResult, commerceResponse] = await Promise.all([
+        supabase.from('orders').select('*, order_items(quantity)'),
+        fetch('/api/admin/commerce-summary?range=' + encodeURIComponent(timeRange), { cache: 'no-store' })
+      ]);
+      const { data: orders, error } = ordersResult;
+
+      if (commerceResponse.ok) {
+        const commerceData = await commerceResponse.json();
+        setCommerce(commerceData);
+      }
 
       if (!error && orders) {
         const gross = orders.filter(o => !isCancelledOrderStatus(o.order_status)).reduce((sum, o) => sum + Number(o.grand_total || o.total_amount || 0), 0);
@@ -104,6 +123,40 @@ export default function AdminReportsPage() {
             </div>
             <p className="text-2xl font-black text-indigo-950">{stats.deliveredOrders} <span className="text-xs text-gray-400 font-normal">/ {stats.pendingOrders}</span></p>
             <p className="text-[10px] text-purple-600 font-bold">Fulfillment ratio</p>
+          </div>
+        </div>
+      )}
+
+
+      {!loading && (
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-lg font-black text-indigo-950">Cart & Conversion Funnel</h2>
+            <p className="mt-1 text-xs text-gray-500">
+              First-party website data stored in Supabase. Unique visitors are browser-based visitor IDs, not personally identified customers.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-2xl border bg-white p-5 shadow-sm">
+              <p className="text-[10px] font-black uppercase text-gray-500">People Added to Cart</p>
+              <p className="mt-2 text-3xl font-black text-indigo-950">{commerce.cartVisitors}</p>
+              <p className="mt-1 text-[10px] font-bold text-blue-600">{commerce.cartEvents} add-to-cart events • {commerce.cartSessions} sessions</p>
+            </div>
+            <div className="rounded-2xl border bg-white p-5 shadow-sm">
+              <p className="text-[10px] font-black uppercase text-gray-500">Reached Checkout</p>
+              <p className="mt-2 text-3xl font-black text-indigo-950">{commerce.checkoutVisitors}</p>
+              <p className="mt-1 text-[10px] font-bold text-purple-600">{commerce.checkoutRateFromCart.toFixed(1)}% of cart visitors</p>
+            </div>
+            <div className="rounded-2xl border bg-white p-5 shadow-sm">
+              <p className="text-[10px] font-black uppercase text-gray-500">Purchased</p>
+              <p className="mt-2 text-3xl font-black text-indigo-950">{commerce.purchaseVisitors}</p>
+              <p className="mt-1 text-[10px] font-bold text-green-600">{commerce.purchaseRateFromCart.toFixed(1)}% of cart visitors</p>
+            </div>
+            <div className="rounded-2xl border bg-white p-5 shadow-sm">
+              <p className="text-[10px] font-black uppercase text-gray-500">Tracked Purchase Value</p>
+              <p className="mt-2 text-3xl font-black text-indigo-950">₹{Number(commerce.trackedPurchaseValue || 0).toLocaleString()}</p>
+              <p className="mt-1 text-[10px] font-bold text-gray-500">From first-party purchase events</p>
+            </div>
           </div>
         </div>
       )}

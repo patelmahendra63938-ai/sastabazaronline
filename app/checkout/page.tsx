@@ -12,6 +12,7 @@ import {
 import Link from 'next/link';
 import Image from 'next/image';
 import { resolveStorefrontImageSrc } from '@/lib/storefront-image';
+import { trackFirstPartyCommerceEvent } from '@/lib/first-party-analytics';
 
 export default function CheckoutPage() {
   const [cart, setCart] = useState<any[]>([]);
@@ -117,6 +118,13 @@ export default function CheckoutPage() {
             const completedTotal = Number(data.grandTotal ?? data.totalPayable ?? 0);
             fireMetaPurchase(String(data.orderNumber), completedTotal, completedItems);
             fireGooglePurchase(String(data.orderNumber), completedTotal, completedItems);
+            trackFirstPartyCommerceEvent({
+              eventType: 'purchase',
+              quantity: completedItems.reduce((sum: number, item: any) => sum + Number(item.quantity || 1), 0),
+              value: completedTotal,
+              orderNumber: String(data.orderNumber),
+              dedupeKey: `purchase:${String(data.orderNumber)}`,
+            });
             localStorage.removeItem('sastabazar_cart');
             window.dispatchEvent(new Event('cartUpdated'));
             window.history.replaceState({}, '', '/checkout');
@@ -515,6 +523,13 @@ export default function CheckoutPage() {
       const completedTotal = Number(result.grandTotal ?? grandTotal ?? 0);
       fireMetaPurchase(completedOrderNumber, completedTotal, cart);
       fireGooglePurchase(completedOrderNumber, completedTotal, cart);
+      trackFirstPartyCommerceEvent({
+        eventType: 'purchase',
+        quantity: cart.reduce((sum, item) => sum + Number(item.quantity || 1), 0),
+        value: completedTotal,
+        orderNumber: completedOrderNumber,
+        dedupeKey: `purchase:${completedOrderNumber}`,
+      });
       setOrderId(completedOrderNumber);
       setCompletedOrderTotal(completedTotal || null);
       setOrderPlaced(true);
