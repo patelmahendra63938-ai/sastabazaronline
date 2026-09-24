@@ -12,7 +12,7 @@ import {
 import Link from 'next/link';
 import Image from 'next/image';
 import { resolveStorefrontImageSrc } from '@/lib/storefront-image';
-import { trackFirstPartyCommerceEvent } from '@/lib/first-party-analytics';
+import { markAbandonedCheckoutConverted, saveAbandonedCheckout, trackFirstPartyCommerceEvent } from '@/lib/first-party-analytics';
 
 export default function CheckoutPage() {
   const [cart, setCart] = useState<any[]>([]);
@@ -125,6 +125,7 @@ export default function CheckoutPage() {
               orderNumber: String(data.orderNumber),
               dedupeKey: `purchase:${String(data.orderNumber)}`,
             });
+            void markAbandonedCheckoutConverted(String(data.orderNumber));
             localStorage.removeItem('sastabazar_cart');
             window.dispatchEvent(new Event('cartUpdated'));
             window.history.replaceState({}, '', '/checkout');
@@ -209,6 +210,42 @@ export default function CheckoutPage() {
   const displayDiscount = quote?.discountDeductionAmount ?? discountDeductionAmount;
   const displayOfferName = quote?.primaryOfferName ?? primaryOfferName;
   const grandTotal = quote?.totalPayable ?? displaySubtotal;
+
+  useEffect(() => {
+    if (!isCartLoaded || cart.length === 0 || orderPlaced) return;
+
+    const phoneReady = /^\d{10}$/.test(formData.phone.trim());
+    const emailReady = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim());
+    if (!phoneReady && !emailReady) return;
+
+    const timer = window.setTimeout(() => {
+      void saveAbandonedCheckout({
+        fullName: formData.fullName.trim(),
+        phone: formData.phone.trim(),
+        email: formData.email.trim(),
+        address: formData.address.trim(),
+        city: formData.city.trim(),
+        state: formData.state.trim(),
+        pincode: formData.pincode.trim(),
+        cart,
+        cartValue: Number(grandTotal || 0),
+      });
+    }, 1000);
+
+    return () => window.clearTimeout(timer);
+  }, [
+    isCartLoaded,
+    orderPlaced,
+    formData.fullName,
+    formData.phone,
+    formData.email,
+    formData.address,
+    formData.city,
+    formData.state,
+    formData.pincode,
+    cart,
+    grandTotal,
+  ]);
 
   const appliedCouponCodes = Array.from(
     new Set(
@@ -530,6 +567,7 @@ export default function CheckoutPage() {
         orderNumber: completedOrderNumber,
         dedupeKey: `purchase:${completedOrderNumber}`,
       });
+      void markAbandonedCheckoutConverted(completedOrderNumber);
       setOrderId(completedOrderNumber);
       setCompletedOrderTotal(completedTotal || null);
       setOrderPlaced(true);
@@ -681,6 +719,9 @@ export default function CheckoutPage() {
                   </div>
 
                   <div>
+                    <p className="mb-3 rounded-xl border border-[#ead8b8] bg-[#fff7e8] px-3 py-2 text-[10px] leading-4 text-gray-600">
+                      Your checkout contact and delivery details may be securely saved to help recover an unfinished checkout. Payment credentials are never stored here.
+                    </p>
                     <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Delivery PIN Code *</label>
                     <div className="flex gap-2">
                       <input type="text" name="pincode" maxLength={6} required inputMode="numeric" pattern="[0-9]{6}" value={formData.pincode} onChange={handlePincodeChange} placeholder="e.g. 395007" className="flex-1 px-3 py-2.5 rounded-xl border text-xs font-mono font-bold focus:ring-2 focus:ring-[#d7aa5b] focus:outline-hidden bg-white border-[#ead8b8]" />
