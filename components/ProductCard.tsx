@@ -126,7 +126,7 @@ export default function ProductCard({ product, activeCampaigns = [], priorityIma
               src={imageUrl}
               alt={product.title}
               fill
-              sizes="calc(50vw - 24px)"
+              sizes="(max-width: 767px) calc(50vw - 24px), 288px"
               loading={priorityImage ? 'eager' : 'lazy'}
               fetchPriority={priorityImage ? 'high' : 'auto'}
               quality={70}

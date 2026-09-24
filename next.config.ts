@@ -46,10 +46,13 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   images: {
-    // Serve images directly from their source instead of using Vercel's
-    // Image Optimization transformations. This prevents new transformation
-    // quota usage on the Hobby plan while keeping remote Supabase images valid.
-    unoptimized: true,
+    // Optimize remote storefront images at the size each viewport actually needs.
+    // This enables responsive srcsets and modern formats for Supabase product images.
+    formats: ["image/avif", "image/webp"],
+    qualities: [70, 75],
+    minimumCacheTTL: 86400,
+    deviceSizes: [360, 390, 430, 640, 750, 828, 1080, 1200, 1440],
+    imageSizes: [96, 128, 160, 192, 256, 320, 384],
     remotePatterns: [
       {
         protocol: "https",
