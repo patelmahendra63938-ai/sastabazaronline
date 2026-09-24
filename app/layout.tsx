@@ -12,7 +12,7 @@ const SITE_NAME = 'ADHYEY BROTHERS';
 const DEFAULT_TITLE = 'Online Shopping for Clothing, Home & Kitchen & Everyday Essentials | ADHYEY BROTHERS';
 const DEFAULT_DESCRIPTION =
   'Shop clothing, Home & Kitchen essentials and useful everyday products at competitive prices from ADHYEY BROTHERS, with secure payments, GST invoices and Pan India delivery.';
-const META_PIXEL_ID = '1716691399389680';
+const META_PIXEL_ID = '1065000983008928';
 
 
 export const viewport: Viewport = {
