@@ -623,11 +623,12 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
                 </a>
               </div>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                {featuredProducts.map((product: any) => (
+                {featuredProducts.map((product: any, index: number) => (
                   <ProductCard
                     key={`featured-${product.id}`}
                     product={product}
                     activeCampaigns={activeCampaigns}
+                    priorityImage={index === 0}
                   />
                 ))}
               </div>
