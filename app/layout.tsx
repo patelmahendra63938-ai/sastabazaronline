@@ -1,6 +1,5 @@
 import './globals.css';
 import type { Metadata, Viewport } from 'next';
-import { Inter } from 'next/font/google';
 import Script from 'next/script';
 import GA4EcommerceTracker from '@/components/GA4EcommerceTracker';
 import RetailQuantityGuard from '@/components/commerce/RetailQuantityGuard';
@@ -15,10 +14,6 @@ const DEFAULT_DESCRIPTION =
   'Shop clothing, Home & Kitchen essentials and useful everyday products at competitive prices from ADHYEY BROTHERS, with secure payments, GST invoices and Pan India delivery.';
 const META_PIXEL_ID = '1716691399389680';
 
-const inter = Inter({
-  subsets: ['latin'],
-  display: 'swap',
-});
 
 export const viewport: Viewport = {
   themeColor: '#741f23',
@@ -155,7 +150,7 @@ export default function RootLayout({
   return (
     <html lang="en-IN" className="scroll-smooth">
       <body
-        className={`${inter.className} bg-[#fffaf5] text-gray-900 antialiased min-h-screen flex flex-col selection:bg-[#d7aa5b] selection:text-[#5e171b]`}
+        className="bg-[#fffaf5] text-gray-900 antialiased min-h-screen flex flex-col selection:bg-[#d7aa5b] selection:text-[#5e171b]"
       >
         <script
           type="application/ld+json"
