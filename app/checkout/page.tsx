@@ -116,6 +116,7 @@ export default function CheckoutPage() {
             })();
             const completedTotal = Number(data.grandTotal ?? data.totalPayable ?? 0);
             fireMetaPurchase(String(data.orderNumber), completedTotal, completedItems);
+            fireGooglePurchase(String(data.orderNumber), completedTotal, completedItems);
             localStorage.removeItem('sastabazar_cart');
             window.dispatchEvent(new Event('cartUpdated'));
             window.history.replaceState({}, '', '/checkout');
@@ -398,6 +399,28 @@ export default function CheckoutPage() {
     localStorage.setItem(key, '1');
   }, []);
 
+  const fireGooglePurchase = useCallback((orderNumber: string, total: number, items: any[]) => {
+    if (typeof window === 'undefined' || !orderNumber || !items.length) return;
+    const gtag = (window as any).gtag;
+    if (typeof gtag !== 'function') return;
+
+    const key = `ga4:purchase:${orderNumber}`;
+    if (localStorage.getItem(key)) return;
+
+    gtag('event', 'purchase', {
+      transaction_id: orderNumber,
+      value: Number(total || 0),
+      currency: 'INR',
+      items: items.map(item => ({
+        item_id: String(item.product_id || item.id || ''),
+        item_name: String(item.name || item.title || 'Product'),
+        price: Number(item.price || 0),
+        quantity: Number(item.quantity || 1),
+      })),
+    });
+    localStorage.setItem(key, '1');
+  }, []);
+
   const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -491,6 +514,7 @@ export default function CheckoutPage() {
       const completedOrderNumber = result.orderNumber || '';
       const completedTotal = Number(result.grandTotal ?? grandTotal ?? 0);
       fireMetaPurchase(completedOrderNumber, completedTotal, cart);
+      fireGooglePurchase(completedOrderNumber, completedTotal, cart);
       setOrderId(completedOrderNumber);
       setCompletedOrderTotal(completedTotal || null);
       setOrderPlaced(true);
