@@ -6,7 +6,7 @@ import { requireAdminUser } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { productCaption } from '@/lib/meta/post-planner';
 import { prepareProductPostDrafts } from '@/lib/meta/draft-generator';
-import { checkMetaConnection } from '@/lib/meta/publish';
+import { checkMetaConnection, publishMetaProduct } from '@/lib/meta/publish';
 
 function finish(status: string): never {
   revalidatePath('/admin/social-planner');
@@ -79,6 +79,89 @@ export async function cancelPost(formData: FormData) {
     .eq('id', id).in('status', ['pending', 'approved']).select('id').maybeSingle();
   if (error || !data) finish('cancel-failed');
   finish('cancelled');
+}
+
+export async function postNow(formData: FormData) {
+  const { user } = await requireAdminUser();
+  const id = String(formData.get('id') ?? '');
+  if (!/^[0-9a-f-]{36}$/i.test(id) || !user) finish('invalid-id');
+
+  const { data: post } = await supabaseAdmin.from('meta_product_posts')
+    .select('id,channel,product_id,status')
+    .eq('id', id)
+    .in('status', ['failed', 'pending', 'approved'])
+    .maybeSingle();
+  if (!post) finish('invalid-id');
+
+  const { data: product } = await supabaseAdmin.from('products')
+    .select('id,title,price,images,stock,category,is_active')
+    .eq('id', post.product_id)
+    .maybeSingle();
+
+  if (!product?.is_active || Number(product.stock) <= 0 || typeof product.images?.[0] !== 'string') {
+    finish('product-changed');
+  }
+
+  const caption = productCaption(
+    product.title,
+    Number(product.price),
+    product.id,
+    post.channel as 'facebook' | 'instagram',
+    product.category
+  );
+  const now = new Date().toISOString();
+
+  const { data: claimed, error: claimError } = await supabaseAdmin.from('meta_product_posts')
+    .update({
+      product_title: product.title,
+      price_snapshot: Number(product.price),
+      image_url: product.images[0],
+      caption,
+      status: 'publishing',
+      approved_by: user.id,
+      approved_at: now,
+      claimed_at: now,
+      error_message: null,
+      updated_at: now,
+    })
+    .eq('id', id)
+    .in('status', ['failed', 'pending', 'approved'])
+    .select('id')
+    .maybeSingle();
+
+  if (claimError || !claimed) finish('publish-now-failed');
+
+  try {
+    const remoteId = await publishMetaProduct({
+      id,
+      channel: post.channel as 'facebook' | 'instagram',
+      caption,
+    });
+
+    const { error } = await supabaseAdmin.from('meta_product_posts')
+      .update({
+        status: 'published',
+        remote_post_id: remoteId,
+        published_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .eq('status', 'publishing');
+
+    if (error) finish('publish-now-uncertain');
+    finish('published-now');
+  } catch (error) {
+    const message = error instanceof Error ? error.message.slice(0, 300) : 'Unknown publishing error';
+    await supabaseAdmin.from('meta_product_posts')
+      .update({
+        status: 'failed',
+        error_message: message,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .eq('status', 'publishing');
+    finish('publish-now-failed');
+  }
 }
 
 export async function replacePost(formData: FormData) {
