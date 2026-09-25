@@ -17,11 +17,10 @@ const modules: Module[] = [
   },
   {
     title: 'Products',
-    match: ['/admin/products', '/admin/add-product', '/admin/categories', '/admin/inventory', '/admin/image-optimizer'],
+    match: ['/admin/products', '/admin/add-product', '/admin/inventory', '/admin/image-optimizer'],
     tabs: [
       { label: 'Products', href: '/admin/products', match: ['/admin/products'] },
       { label: 'Add Product', href: '/admin/add-product', match: ['/admin/add-product'] },
-      { label: 'Categories', href: '/admin/categories', match: ['/admin/categories'] },
       { label: 'Inventory', href: '/admin/inventory', match: ['/admin/inventory'] },
       { label: 'Image Tools', href: '/admin/image-optimizer', match: ['/admin/image-optimizer'] },
     ],
