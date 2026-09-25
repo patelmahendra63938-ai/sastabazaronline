@@ -50,6 +50,9 @@ const SUBCATEGORY_ALIASES = new Map<string, string>([
   ['furniture and surface protection', 'Furniture & Surface Protection'],
   ['home utility and appliances', 'Home Utility & Appliances'],
   ['makeup accessories', 'Makeup Accessories'],
+  ['manicure and pedicure', 'Manicure & Pedicure'],
+  ['manicure pedicure', 'Manicure & Pedicure'],
+  ['nail care', 'Manicure & Pedicure'],
   ['women ethnic wear', 'Women Ethnic Wear'],
   ['girls', 'Girls'],
   ['men ethnic and western', 'Men Ethnic & Western'],
@@ -72,6 +75,11 @@ const KNOWN_SUBCATEGORIES_BY_MAIN: Record<string, Set<string>> = {
   ),
   [normalizeStorefrontCategory('Fashion & Apparel')]: new Set(
     ['Women Ethnic Wear', 'Girls', 'Men Ethnic & Western'].map(
+      normalizeStorefrontCategory
+    )
+  ),
+  [normalizeStorefrontCategory('Beauty & Personal Care')]: new Set(
+    ['Skin & Hair Care', 'Makeup Accessories', 'Manicure & Pedicure'].map(
       normalizeStorefrontCategory
     )
   ),
