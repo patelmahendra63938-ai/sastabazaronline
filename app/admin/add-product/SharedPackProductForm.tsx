@@ -2,8 +2,6 @@
 
 import React, { useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
 import { supabase } from '@/lib/supabase';
 import { CATEGORY_ENGINE } from '@/lib/category-attributes';
 import { normalizeProductPackage, ProductPackageValidationError } from '@/lib/catalog/product-package';
@@ -223,7 +221,7 @@ export default function SharedPackProductForm() {
 
   return (
     <main className="min-h-screen bg-[#F8F9FB] pb-24">
-      <Header />
+      
       <div className="sticky top-0 z-30 border-b border-gray-200 bg-white/95 shadow-sm backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
@@ -297,7 +295,7 @@ export default function SharedPackProductForm() {
           </aside>
         </div>
       </div>
-      <Footer />
+      
     </main>
   );
 }

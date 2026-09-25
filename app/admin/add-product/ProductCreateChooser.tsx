@@ -3,8 +3,6 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Boxes, Package, ArrowLeft } from 'lucide-react';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
 import ProductFormV2 from './ProductFormV2';
 import SharedPackProductForm from './SharedPackProductForm';
 
@@ -18,7 +16,7 @@ export default function ProductCreateChooser() {
 
   return (
     <main className="min-h-screen bg-[#F8F9FB]">
-      <Header />
+      
       <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
         <div className="mb-6 flex items-center gap-3">
           <Link href="/admin/products" className="rounded-xl border border-gray-200 bg-white p-2 text-gray-600"><ArrowLeft size={18} /></Link>
@@ -43,7 +41,7 @@ export default function ProductCreateChooser() {
           </button>
         </div>
       </div>
-      <Footer />
+      
     </main>
   );
 }

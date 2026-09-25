@@ -3,8 +3,6 @@
 import { use, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { AlertCircle, ArrowLeft, CheckCircle2, Loader2, Plus, Save, Trash2, Upload, Video, X } from 'lucide-react';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
 import { supabase } from '@/lib/supabase';
 import { normalizeProductPackage, ProductPackageValidationError } from '@/lib/catalog/product-package';
 import { compressProductVideo } from '@/lib/catalog/video-compression';
@@ -286,11 +284,11 @@ export default function EditProductClient({ params }: { params: Promise<{ id: st
     }
   }
 
-  if (loading) return <main className="min-h-screen bg-gray-50"><Header /><div className="flex min-h-[60vh] items-center justify-center gap-2 text-sm text-gray-500"><Loader2 size={18} className="animate-spin" /> Loading product...</div><Footer /></main>;
+  if (loading) return <main className="min-h-screen bg-gray-50"><div className="flex min-h-[60vh] items-center justify-center gap-2 text-sm text-gray-500"><Loader2 size={18} className="animate-spin" /> Loading product...</div></main>;
 
   return (
     <main className="min-h-screen bg-gray-50">
-      <Header />
+      
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
         <Link href="/admin/products" className="mb-5 inline-flex items-center gap-2 text-xs font-black text-indigo-950"><ArrowLeft size={15} /> Back to Product Catalog</Link>
         <div className="mb-6"><h1 className="text-2xl font-black text-indigo-950">Edit Product & Inventory Variants</h1><p className="mt-1 text-xs text-gray-500">Product data, colours, SKU/size options and ledger-safe stock editing.</p></div>
@@ -366,7 +364,7 @@ export default function EditProductClient({ params }: { params: Promise<{ id: st
           <button disabled={saving} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-orange-500 py-4 text-sm font-black text-white disabled:opacity-50"><Save size={17} /> {saving ? 'Saving...' : 'Save Product & Inventory'}</button>
         </form>
       </div>
-      <Footer />
+      
     </main>
   );
 }
