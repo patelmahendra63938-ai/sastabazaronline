@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import Header from '@/components/Header';
 import { supabase } from '@/lib/supabase';
 import { 
   RefreshCw, PackageX, Truck, ShieldAlert, CheckCircle2, 
@@ -120,7 +119,7 @@ export default function AdminReturnsRefundsDashboard() {
 
   return (
     <main className="min-h-screen bg-gray-50 flex flex-col font-sans">
-      <Header />
+      
 
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
