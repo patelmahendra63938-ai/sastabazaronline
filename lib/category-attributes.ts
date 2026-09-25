@@ -283,6 +283,17 @@ export const CATEGORY_ENGINE: Record<string, CategoryConfig> = {
           { key: 'Product Dimensions', label: 'Product Dimensions', type: 'text', placeholder: 'e.g. 20 × 15 cm', level: 'optional' },
           { key: 'Primary Use', label: 'Primary Use', type: 'text', placeholder: 'e.g. Makeup, skincare, travel grooming', level: 'recommended' }
         ]
+      },
+      {
+        name: 'Manicure & Pedicure',
+        productTypes: ['Nail Clipper Set', 'Manicure Pedicure Kit', 'Grooming Kit', 'Nail Care Kit'],
+        attributes: [
+          { key: 'Material', label: 'Tool Material', type: 'text', placeholder: 'e.g. Stainless Steel', level: 'required' },
+          { key: 'Pieces in Set', label: 'Pieces in Set', type: 'number', placeholder: 'e.g. 8', level: 'required' },
+          { key: 'Case Included', label: 'Travel / Storage Case Included', type: 'select', options: ['Yes', 'No'], level: 'recommended' },
+          { key: 'Suitable For', label: 'Suitable For', type: 'select', options: ['Men & Women', 'Women', 'Men', 'Unisex'], level: 'recommended' },
+          { key: 'Primary Use', label: 'Primary Use', type: 'text', placeholder: 'e.g. Fingernail, toenail, cuticle and grooming care', level: 'recommended' }
+        ]
       }
     ]
   }

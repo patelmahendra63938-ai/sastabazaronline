@@ -28,7 +28,7 @@ type NavItem = {
 const adminNavItems: NavItem[] = [
   { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard, match: ['/admin/dashboard'] },
   { name: 'Orders', href: '/admin/orders', icon: ShoppingCart, match: ['/admin/orders', '/admin/returns'] },
-  { name: 'Products', href: '/admin/products', icon: Package, match: ['/admin/products', '/admin/add-product', '/admin/categories', '/admin/inventory', '/admin/image-optimizer'] },
+  { name: 'Products', href: '/admin/products', icon: Package, match: ['/admin/products', '/admin/add-product', '/admin/inventory', '/admin/image-optimizer'] },
   { name: 'Customers', href: '/admin/customers', icon: Users, match: ['/admin/customers', '/admin/reviews'] },
   { name: 'Marketing', href: '/admin/ads', icon: Megaphone, match: ['/admin/ads', '/admin/social-planner', '/admin/coupons', '/admin/settings/discounts'] },
   { name: 'Shipping', href: '/admin/logistics', icon: Truck, match: ['/admin/logistics', '/admin/shipping'] },

@@ -128,6 +128,10 @@ export default function AdminProductsPage() {
               <option value="ALL">All Categories</option>
               <option value="Fashion & Apparel">Fashion & Apparel</option>
               <option value="Home & Kitchen">Home & Kitchen</option>
+              <option value="Beauty & Personal Care">Beauty & Personal Care</option>
+              <option value="Home Decor">Home Decor</option>
+              <option value="Stationery & Office">Stationery & Office</option>
+              <option value="Automotive & Utility">Automotive & Utility</option>
               <option value="Electronics & Gadgets">Electronics & Gadgets</option>
             </select>
 
