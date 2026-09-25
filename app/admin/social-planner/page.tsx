@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { requireAdminUser } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { istTime, type SocialChannel, type SocialSlot } from '@/lib/meta/post-planner';
-import { approvePost, cancelPost, generateProductPosts, replacePost, savePostCaption } from './actions';
+import { approvePost, cancelPost, generateProductPosts, postNow, replacePost, savePostCaption } from './actions';
 import { ConnectionCheck } from './connection-check';
 
 export const dynamic = 'force-dynamic';
@@ -19,6 +19,9 @@ const notice: Record<string, string> = {
   'cron-missing': 'Scheduler secret is missing from this deployment.',
   'meta-connected': 'Read-only connection check passed for the Facebook Page and linked Instagram account. Publishing permissions still need a live post test.',
   'meta-connection-failed': 'The Facebook Page or linked Instagram account could not be read with the configured Meta token. Check the system user assets, permissions and token.',
+  'published-now': 'Post published now using the current product image, price and caption.',
+  'publish-now-failed': 'Post Now failed. Check the error on the post and Meta permissions.',
+  'publish-now-uncertain': 'Meta may have published the post, but the website could not confirm the database update. Check the Page/Instagram before retrying.',
 };
 
 export default async function SocialPlannerPage({
@@ -95,6 +98,10 @@ export default async function SocialPlannerPage({
                 {['pending', 'approved'].includes(post.status) && (
                   <form action={cancelPost}><input type="hidden" name="id" value={post.id} />
                     <button className="rounded-lg border border-red-600 px-3 py-1.5 text-sm text-red-700">Cancel</button></form>
+                )}
+                {['failed', 'pending', 'approved'].includes(post.status) && (
+                  <form action={postNow}><input type="hidden" name="id" value={post.id} />
+                    <button className="rounded-lg bg-[#741f23] px-3 py-1.5 text-sm font-semibold text-white">Post Now</button></form>
                 )}
                 {['cancelled', 'failed'].includes(post.status) && (
                   <form action={replacePost}><input type="hidden" name="id" value={post.id} />
