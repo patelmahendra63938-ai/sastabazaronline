@@ -103,10 +103,20 @@ const CATEGORY_SEO: Record<string, { title: string; description: string }> = {
     description:
       'Shop practical automotive and utility products online at ADHYEY BROTHERS with Pan India delivery.',
   },
+  [normalizeStorefrontCategory('Beauty & Personal Care')]: {
+    title: 'Beauty & Personal Care Products Online',
+    description:
+      'Shop beauty, grooming and personal care accessories online at ADHYEY BROTHERS with Pan India delivery.',
+  },
   [normalizeStorefrontCategory('Makeup Accessories')]: {
     title: 'Makeup Accessories Online',
     description:
       'Shop practical makeup and beauty accessories online at ADHYEY BROTHERS with Pan India delivery.',
+  },
+  [normalizeStorefrontCategory('Manicure & Pedicure')]: {
+    title: 'Manicure, Pedicure & Nail Grooming Kits Online',
+    description:
+      'Shop nail clippers, manicure pedicure kits and grooming tools online at ADHYEY BROTHERS with Pan India delivery.',
   },
 };
 
