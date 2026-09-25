@@ -8,6 +8,7 @@ import Footer from '@/components/Footer';
 import { supabase } from '@/lib/supabase';
 import { normalizeProductPackage, ProductPackageValidationError } from '@/lib/catalog/product-package';
 import { compressProductVideo } from '@/lib/catalog/video-compression';
+import { optimizeProductImageBeforeUpload } from '@/lib/catalog/image-compression';
 import { buildInventoryVariantLabel, normalizeColours, parseInventoryVariant } from '@/lib/catalog/inventory-variant';
 
 type ColourMode = 'none' | 'customer' | 'assorted';
@@ -158,8 +159,13 @@ export default function EditProductClient({ params }: { params: Promise<{ id: st
       const urls: string[] = [];
       for (const file of files) {
         if (!file.type.startsWith('image/')) throw new Error(`${file.name} is not an image.`);
-        const name = fileName('prod', file);
-        const { error: uploadError } = await supabase.storage.from('product-images').upload(name, file, { contentType: file.type || undefined, upsert: false });
+        const optimized = await optimizeProductImageBeforeUpload(file);
+        const name = `prod-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${optimized.extension}`;
+        const { error: uploadError } = await supabase.storage.from('product-images').upload(name, optimized.blob, {
+          contentType: optimized.mimeType,
+          cacheControl: '31536000',
+          upsert: false,
+        });
         if (uploadError) throw uploadError;
         const { data } = supabase.storage.from('product-images').getPublicUrl(name);
         if (!data?.publicUrl) throw new Error('Image URL could not be created.');
