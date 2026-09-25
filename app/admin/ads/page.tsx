@@ -25,6 +25,7 @@ import {
 } from '@/lib/google/integrations';
 import GoogleAdsApprovalPanel from '@/components/admin/GoogleAdsApprovalPanel';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { getMetaConnectionStatus } from '@/lib/meta/publish';
 
 export const dynamic = 'force-dynamic';
 
@@ -77,7 +78,10 @@ export default async function AdsConnectionsPage({
   const params = await searchParams;
   const platform = params.platform === 'meta' ? 'meta' : 'google';
 
-  const google = await getGoogleDashboard();
+  const [google, metaConnection] = await Promise.all([
+    getGoogleDashboard(),
+    getMetaConnectionStatus(),
+  ]);
   const supabase = await createServerSupabaseClient();
 
   const { data: auditRows } = await supabase
@@ -88,12 +92,8 @@ export default async function AdsConnectionsPage({
 
   const metaToken = hasAny('META_SYSTEM_USER_ACCESS_TOKEN', 'META_ACCESS_TOKEN', 'META_GRAPH_ACCESS_TOKEN', 'FACEBOOK_ACCESS_TOKEN');
   const metaAdAccount = hasAny('META_AD_ACCOUNT_ID', 'FACEBOOK_AD_ACCOUNT_ID');
-  const metaPage = hasAny('META_PAGE_ID', 'FACEBOOK_PAGE_ID');
-  const instagram = hasAny(
-    'INSTAGRAM_BUSINESS_ACCOUNT_ID',
-    'INSTAGRAM_ACCOUNT_ID',
-    'META_INSTAGRAM_ACCOUNT_ID'
-  );
+  const metaPage = metaConnection.pageConnected;
+  const instagram = metaConnection.instagramConnected;
   const metaPixel = hasAny('NEXT_PUBLIC_META_PIXEL_ID', 'META_PIXEL_ID', 'FACEBOOK_PIXEL_ID');
 
   const googleConfigured =
@@ -148,16 +148,20 @@ export default async function AdsConnectionsPage({
     {
       name: 'Facebook Page',
       subtitle: 'Page identity and Meta business connection',
-      connected: metaToken && metaPage,
-      detail: metaToken && metaPage ? 'Facebook Page configuration detected.' : 'Facebook Page connection is pending.',
+      connected: metaPage,
+      detail: metaPage
+        ? 'Live Facebook Page connection verified through Meta Graph API.'
+        : metaConnection.error || 'Facebook Page connection is pending.',
       category: 'Meta',
       icon: Globe2,
     },
     {
       name: 'Instagram Business',
       subtitle: 'Instagram professional account linked through Meta',
-      connected: metaToken && instagram,
-      detail: metaToken && instagram ? 'Instagram Business configuration detected.' : 'Instagram Business connection is pending.',
+      connected: instagram,
+      detail: instagram
+        ? `Live Instagram Business connection verified${metaConnection.instagramId ? ` (ID ${metaConnection.instagramId})` : ''}.`
+        : metaConnection.error || 'Instagram Business connection is pending.',
       category: 'Meta',
       icon: Camera,
     },
