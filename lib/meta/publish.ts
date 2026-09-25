@@ -63,12 +63,71 @@ export async function publishMetaProduct(input: {
   return published.id;
 }
 
-// Read-only check: no media container or post is created.
-export async function checkMetaConnection() {
+export type MetaConnectionStatus = {
+  pageConnected: boolean;
+  instagramConnected: boolean;
+  instagramId: string | null;
+  error: string | null;
+};
+
+// Read-only status check: no media container or post is created.
+export async function getMetaConnectionStatus(): Promise<MetaConnectionStatus> {
   const systemToken = process.env.META_SYSTEM_USER_ACCESS_TOKEN;
-  if (!systemToken) throw new Error('Meta token is not configured');
-  const page = await graph<GraphResponse>(`${PAGE_ID}?fields=access_token,instagram_business_account`, systemToken);
-  if (!page.access_token) throw new Error('Page access is unavailable');
-  if (!page.instagram_business_account?.id) throw new Error('Instagram account is not linked to the Page');
-  await graph<GraphResponse>(`${page.instagram_business_account.id}?fields=id`, page.access_token);
+  if (!systemToken) {
+    return {
+      pageConnected: false,
+      instagramConnected: false,
+      instagramId: null,
+      error: 'Meta system user token is not configured',
+    };
+  }
+
+  try {
+    const page = await graph<GraphResponse>(
+      `${PAGE_ID}?fields=access_token,instagram_business_account`,
+      systemToken
+    );
+    const pageToken = page.access_token;
+    if (!pageToken) {
+      return {
+        pageConnected: false,
+        instagramConnected: false,
+        instagramId: null,
+        error: 'Facebook Page access token is unavailable',
+      };
+    }
+
+    const igId = page.instagram_business_account?.id || null;
+    if (!igId) {
+      return {
+        pageConnected: true,
+        instagramConnected: false,
+        instagramId: null,
+        error: 'Instagram professional account is not linked to this Facebook Page',
+      };
+    }
+
+    await graph<GraphResponse>(`${igId}?fields=id`, pageToken);
+
+    return {
+      pageConnected: true,
+      instagramConnected: true,
+      instagramId: igId,
+      error: null,
+    };
+  } catch (error) {
+    return {
+      pageConnected: false,
+      instagramConnected: false,
+      instagramId: null,
+      error: error instanceof Error ? error.message : 'Meta connection check failed',
+    };
+  }
+}
+
+export async function checkMetaConnection() {
+  const status = await getMetaConnectionStatus();
+  if (!status.pageConnected || !status.instagramConnected) {
+    throw new Error(status.error || 'Meta connection check failed');
+  }
 }
