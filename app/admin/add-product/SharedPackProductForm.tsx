@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { CATEGORY_ENGINE } from '@/lib/category-attributes';
 import { normalizeProductPackage, ProductPackageValidationError } from '@/lib/catalog/product-package';
+import { optimizeProductImageBeforeUpload } from '@/lib/catalog/image-compression';
 import { SHARED_STOCK_SIZE } from '@/lib/catalog/pack-options';
 import { AlertCircle, ArrowLeft, CheckCircle2, Image as ImageIcon, Loader2, Plus, Save, Trash2, UploadCloud } from 'lucide-react';
 
@@ -88,9 +89,13 @@ export default function SharedPackProductForm() {
       const uploaded: string[] = [];
       for (const file of Array.from(files)) {
         if (!file.type.startsWith('image/')) continue;
-        const ext = file.name.split('.').pop() || 'jpg';
-        const fileName = `prod-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-        const { error } = await supabase.storage.from('product-images').upload(fileName, file);
+        const optimized = await optimizeProductImageBeforeUpload(file);
+        const fileName = `prod-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${optimized.extension}`;
+        const { error } = await supabase.storage.from('product-images').upload(fileName, optimized.blob, {
+          contentType: optimized.mimeType,
+          cacheControl: '31536000',
+          upsert: false,
+        });
         if (error) throw error;
         const { data } = supabase.storage.from('product-images').getPublicUrl(fileName);
         if (data?.publicUrl) uploaded.push(data.publicUrl);
