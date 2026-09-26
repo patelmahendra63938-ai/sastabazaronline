@@ -40,7 +40,12 @@ export default async function SocialPlannerPage({
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <div className="rounded-2xl border border-[#ead8b8] bg-white p-6">
-        <h1 className="text-2xl font-bold text-[#741f23]">Meta product planner</h1>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <h1 className="text-2xl font-bold text-[#741f23]">Meta product planner</h1>
+          <Link href="/admin/brand-content" className="text-sm font-semibold text-[#741f23] underline">
+            LinkedIn + Contra planner
+          </Link>
+        </div>
         <p className="mt-2 text-sm text-stone-600">
           Facebook: 7:00 AM and 11:00 AM IST. Instagram: 5:00 PM and 7:00 PM IST. Products come from the website catalog.
           New drafts are prepared daily; each post needs your approval before it can publish.
