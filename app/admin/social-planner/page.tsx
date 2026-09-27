@@ -47,7 +47,7 @@ export default async function SocialPlannerPage({
           </Link>
         </div>
         <p className="mt-2 text-sm text-stone-600">
-          Facebook: 7:00 AM and 11:00 AM IST. Instagram: 5:00 PM and 7:00 PM IST. Products come from the website catalog.
+          Facebook: 8:00 AM and 8:00 PM IST. Instagram: 10:00 AM and 7:00 PM IST. Products come from the website catalog.
           New drafts are prepared daily; each post needs your approval before it can publish.
         </p>
         <p className="mt-1 text-xs text-amber-800">

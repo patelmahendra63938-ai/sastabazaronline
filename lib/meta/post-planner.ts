@@ -7,14 +7,14 @@ export const GRAPH_VERSION = 'v25.0';
 export function scheduledUtc(date: string, channel: SocialChannel, slot: SocialSlot) {
   // IST is UTC+05:30 and has no daylight saving time.
   const utcTime = channel === 'facebook'
-    ? (slot === 1 ? '01:30' : '05:30')
-    : (slot === 1 ? '11:30' : '13:30');
+    ? (slot === 1 ? '02:30' : '14:30')
+    : (slot === 1 ? '04:30' : '13:30');
   return `${date}T${utcTime}:00.000Z`;
 }
 
 export function istTime(channel: SocialChannel, slot: SocialSlot) {
-  return channel === 'facebook' ? (slot === 1 ? '7:00 AM' : '11:00 AM')
-    : (slot === 1 ? '5:00 PM' : '7:00 PM');
+  return channel === 'facebook' ? (slot === 1 ? '8:00 AM' : '8:00 PM')
+    : (slot === 1 ? '10:00 AM' : '7:00 PM');
 }
 
 export function istDate(offsetDays = 0) {
