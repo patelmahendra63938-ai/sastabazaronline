@@ -15,7 +15,7 @@ export interface StorefrontFilterSetting {
 
 const controls: Array<{ key: keyof HomepageDisplaySettings; label: string; description: string }> = [
   { key: 'show_filter_panel', label: 'Main Filter Panel', description: 'OFF hides the complete filter panel. ON shows only the individual filters enabled below.' },
-  { key: 'show_meesho_link', label: 'Meesho Link', description: 'Show the existing Meesho seller card.' },
+  { key: 'show_myntra_link', label: 'Myntra Link', description: 'Show the ADHYEY BROTHERS Myntra marketplace card.' },
   { key: 'show_amazon_link', label: 'Amazon Link', description: 'Show the existing Amazon seller card.' },
   { key: 'show_flipkart_link', label: 'Flipkart Link', description: 'Show the existing Flipkart seller card.' },
 ];
