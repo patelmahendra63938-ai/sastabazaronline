@@ -751,7 +751,7 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
           <HomepageSellerTrust
             showAmazon={homepageDisplay.show_amazon_link}
             showFlipkart={homepageDisplay.show_flipkart_link}
-            showMeesho={homepageDisplay.show_meesho_link}
+            showMyntra={homepageDisplay.show_myntra_link}
           />
 
           <section
