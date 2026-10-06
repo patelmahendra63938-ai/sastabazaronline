@@ -12,13 +12,13 @@ import TopTrustStrip from '@/components/trust/TopTrustStrip';
 interface HomepageSellerTrustProps {
   showAmazon?: boolean;
   showFlipkart?: boolean;
-  showMeesho?: boolean;
+  showMyntra?: boolean;
 }
 
 export default function HomepageSellerTrust({
   showAmazon = true,
   showFlipkart = true,
-  showMeesho = true,
+  showMyntra = true,
 }: HomepageSellerTrustProps) {
   const marketplaces = [
     {
@@ -48,12 +48,12 @@ export default function HomepageSellerTrust({
       btnBg: 'bg-blue-600 hover:bg-blue-700 text-white',
     },
     {
-      id: 'meesho',
-      platform: 'Meesho',
+      id: 'myntra',
+      platform: 'Myntra',
       sellerName: 'ADHYEY BROTHERS',
-      description: 'Find the ADHYEY BROTHERS profile and catalog on Meesho.',
-      url: 'https://www.meesho.com/Adhyey?ms=2',
-      ctaText: 'View on Meesho',
+      description: 'Find ADHYEY BROTHERS products on Myntra.',
+      url: 'https://www.myntra.com/lehenga-choli/adhyeybrothers/adhyey-brothers-embellished-sequinned-ready-to-wear-lehenga--blouse-with-dupatta/46525677/buy',
+      ctaText: 'View on Myntra',
       accentBorder: 'hover:border-pink-400',
       glowColor: 'group-hover:shadow-pink-500/10',
       badgeBg: 'bg-pink-50 text-pink-900 border-pink-200',
@@ -65,7 +65,7 @@ export default function HomepageSellerTrust({
       ({
         amazon: showAmazon,
         flipkart: showFlipkart,
-        meesho: showMeesho,
+        myntra: showMyntra,
       })[marketplace.id]
   );
 

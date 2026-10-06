@@ -9,7 +9,6 @@ import Footer from '@/components/Footer';
 import ProductCard, { Product } from '@/components/ProductCard';
 import { SellerMarketplaceTrust } from '@/components/SellerMarketplaceTrust';
 import { supabase } from '@/lib/supabase';
-import { sanitizeMarketplaceUrl, sanitizeMarketplaceName } from '@/lib/utils';
 import { resolveStorefrontImageSrc } from '@/lib/storefront-image';
 import {
   getActiveCampaigns,
@@ -57,7 +56,7 @@ export interface ProductDetailType {
 }
 
 interface MarketplaceVisibility {
-  show_meesho_link: boolean;
+  show_myntra_link: boolean;
   show_amazon_link: boolean;
   show_flipkart_link: boolean;
 }
@@ -69,7 +68,7 @@ interface DeliveryQuotePreview {
 }
 
 const DEFAULT_MARKETPLACE_VISIBILITY: MarketplaceVisibility = {
-  show_meesho_link: true,
+  show_myntra_link: true,
   show_amazon_link: true,
   show_flipkart_link: true,
 };
@@ -184,7 +183,7 @@ export default function ProductDetailPageClient({
         if (homepageDisplay && typeof homepageDisplay === 'object' && !Array.isArray(homepageDisplay)) {
           const value = homepageDisplay as Record<string, unknown>;
           setMarketplaceVisibility({
-            show_meesho_link: typeof value.show_meesho_link === 'boolean' ? value.show_meesho_link : true,
+            show_myntra_link: typeof value.show_myntra_link === 'boolean' ? value.show_myntra_link : (typeof value.show_meesho_link === 'boolean' ? value.show_meesho_link : true),
             show_amazon_link: typeof value.show_amazon_link === 'boolean' ? value.show_amazon_link : true,
             show_flipkart_link: typeof value.show_flipkart_link === 'boolean' ? value.show_flipkart_link : true,
           });
@@ -600,14 +599,6 @@ export default function ProductDetailPageClient({
       </main>
     );
   }
-
-  // Sanitized external marketplace URLs
-  const amazonUrl = sanitizeMarketplaceUrl(product.amazon_url);
-  const flipkartUrl = sanitizeMarketplaceUrl(product.flipkart_url);
-  const meeshoUrl = sanitizeMarketplaceUrl(product.meesho_url);
-  const otherUrl = sanitizeMarketplaceUrl(product.other_marketplace_url);
-  const otherName = sanitizeMarketplaceName(product.other_marketplace_name, 'Official Website');
-  const hasExternalLinks = Boolean(amazonUrl || flipkartUrl || meeshoUrl || otherUrl);
 
   return (
     <main className="min-h-screen bg-[#fffaf5] flex flex-col justify-between pb-24 lg:pb-0">
@@ -1152,7 +1143,7 @@ export default function ProductDetailPageClient({
           <SellerMarketplaceTrust
             amazonUrl={marketplaceVisibility.show_amazon_link ? "https://www.amazon.in/l/27943762031?me=AXKNNYVWLT32Y&tag=ShopReferral_d451e877-492b-4a44-8989-d4151cfc4c54&ref=sf_seller_app_share_new_ls_srb" : undefined}
             flipkartUrl={marketplaceVisibility.show_flipkart_link ? "https://www.flipkart.com/adhyey-brothers-women-crop-top-skirt-ethnic-jacket-set/p/itm2881ff260ebcc?pid=ETHHJNJYHKNYXZPM" : undefined}
-            meeshoUrl={marketplaceVisibility.show_meesho_link ? "https://www.meesho.com/Adhyey?ms=2" : undefined}
+            myntraUrl={marketplaceVisibility.show_myntra_link ? "https://www.myntra.com/lehenga-choli/adhyeybrothers/adhyey-brothers-embellished-sequinned-ready-to-wear-lehenga--blouse-with-dupatta/46525677/buy" : undefined}
           />
 
           {/* SIMILAR PRODUCTS */}
