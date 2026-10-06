@@ -9,17 +9,17 @@ interface Testimonial {
 interface SellerMarketplaceTrustProps {
   amazonUrl?: string;
   flipkartUrl?: string;
-  meeshoUrl?: string;
+  myntraUrl?: string;
   testimonials?: Testimonial[];
 }
 
 export const SellerMarketplaceTrust: React.FC<SellerMarketplaceTrustProps> = ({
   amazonUrl,
   flipkartUrl,
-  meeshoUrl,
+  myntraUrl,
   testimonials = []
 }) => {
-  if (!amazonUrl && !flipkartUrl && !meeshoUrl) return null;
+  if (!amazonUrl && !flipkartUrl && !myntraUrl) return null;
 
   return (
     <div className="marketplace-trust-container" style={{ padding: '20px', textAlign: 'center', background: '#f9f9f9', margin: '20px 0', borderRadius: '8px' }}>
@@ -37,9 +37,9 @@ export const SellerMarketplaceTrust: React.FC<SellerMarketplaceTrustProps> = ({
             Flipkart પર જુઓ
           </a>
         )}
-        {meeshoUrl && (
-          <a href={meeshoUrl} target="_blank" rel="noopener noreferrer" style={{ background: '#F43397', color: '#fff', padding: '10px 20px', textDecoration: 'none', borderRadius: '5px', fontWeight: 'bold', fontSize: '12px' }}>
-            Meesho પર જુઓ
+        {myntraUrl && (
+          <a href={myntraUrl} target="_blank" rel="noopener noreferrer" style={{ background: '#FF3F6C', color: '#fff', padding: '10px 20px', textDecoration: 'none', borderRadius: '5px', fontWeight: 'bold', fontSize: '12px' }}>
+            Myntra પર જુઓ
           </a>
         )}
       </div>
