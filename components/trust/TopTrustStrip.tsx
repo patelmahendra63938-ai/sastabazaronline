@@ -85,7 +85,7 @@ export default async function TopTrustStrip({ className = 'md:hidden' }: { class
         <MobileMarketplaceLinks
           showAmazon={homepageDisplay.show_amazon_link}
           showFlipkart={homepageDisplay.show_flipkart_link}
-          showMeesho={homepageDisplay.show_meesho_link}
+          showMyntra={homepageDisplay.show_myntra_link}
         />
       </div>
     </section>
