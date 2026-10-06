@@ -3,7 +3,7 @@ import { ExternalLink, ShieldCheck } from 'lucide-react';
 interface MobileMarketplaceLinksProps {
   showAmazon?: boolean;
   showFlipkart?: boolean;
-  showMeesho?: boolean;
+  showMyntra?: boolean;
 }
 
 const marketplaceItems = [
@@ -24,10 +24,10 @@ const marketplaceItems = [
     buttonClass: 'border-blue-200 bg-blue-50 text-blue-950 active:bg-blue-100',
   },
   {
-    id: 'meesho',
-    platform: 'Meesho',
-    subtitle: 'Open our Meesho marketplace profile',
-    url: 'https://www.meesho.com/Adhyey?ms=2',
+    id: 'myntra',
+    platform: 'Myntra',
+    subtitle: 'Open our Myntra product listing',
+    url: 'https://www.myntra.com/lehenga-choli/adhyeybrothers/adhyey-brothers-embellished-sequinned-ready-to-wear-lehenga--blouse-with-dupatta/46525677/buy',
     dotClass: 'bg-pink-600',
     buttonClass: 'border-pink-200 bg-pink-50 text-pink-950 active:bg-pink-100',
   },
@@ -36,12 +36,12 @@ const marketplaceItems = [
 export default function MobileMarketplaceLinks({
   showAmazon = true,
   showFlipkart = true,
-  showMeesho = true,
+  showMyntra = true,
 }: MobileMarketplaceLinksProps) {
   const enabled = {
     amazon: showAmazon,
     flipkart: showFlipkart,
-    meesho: showMeesho,
+    myntra: showMyntra,
   };
 
   const items = marketplaceItems.filter((item) => enabled[item.id]);
