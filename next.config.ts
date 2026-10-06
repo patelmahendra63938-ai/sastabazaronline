@@ -17,7 +17,17 @@ const cspReportOnly = [
   "upgrade-insecure-requests",
 ].join('; ');
 
+const cspEnforcedBaseline = [
+  "base-uri 'self'",
+  "object-src 'none'",
+  "frame-ancestors 'none'",
+].join('; ');
+
 const securityHeaders = [
+  {
+    key: 'Content-Security-Policy',
+    value: cspEnforcedBaseline,
+  },
   {
     key: 'Content-Security-Policy-Report-Only',
     value: cspReportOnly,
