@@ -5,14 +5,14 @@ import { createClient } from '@supabase/supabase-js';
 
 export interface HomepageDisplaySettings {
   show_filter_panel: boolean;
-  show_meesho_link: boolean;
+  show_myntra_link: boolean;
   show_amazon_link: boolean;
   show_flipkart_link: boolean;
 }
 
 export const DEFAULT_HOMEPAGE_DISPLAY: HomepageDisplaySettings = {
   show_filter_panel: true,
-  show_meesho_link: true,
+  show_myntra_link: true,
   show_amazon_link: true,
   show_flipkart_link: true,
 };
@@ -28,7 +28,7 @@ export function parseHomepageDisplay(value: unknown): HomepageDisplaySettings {
 
   return {
     show_filter_panel: booleanOrDefault(raw.show_filter_panel, true),
-    show_meesho_link: booleanOrDefault(raw.show_meesho_link, true),
+    show_myntra_link: booleanOrDefault(raw.show_myntra_link, booleanOrDefault(raw.show_meesho_link, true)),
     show_amazon_link: booleanOrDefault(raw.show_amazon_link, true),
     show_flipkart_link: booleanOrDefault(raw.show_flipkart_link, true),
   };
@@ -62,7 +62,7 @@ const getCachedHomepageDisplaySettings = unstable_cache(
 
     return data ? parseHomepageDisplay(data.value) : DEFAULT_HOMEPAGE_DISPLAY;
   },
-  ['homepage-display-settings-v1'],
+  ['homepage-display-settings-v2'],
   {
     revalidate: 300,
     tags: ['homepage-display-settings'],
