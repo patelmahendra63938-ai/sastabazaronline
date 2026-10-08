@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { notFound } from 'next/navigation';
 
 import MeeshoReviewsPreview from '@/components/MeeshoReviewsPreview';
 import ProductColourPurchaseBridge from './ProductDetailClient';
@@ -25,6 +26,7 @@ async function getInitialProduct(productId: string): Promise<(ProductDetailType 
     .from('products')
     .select('*')
     .eq('id', productId)
+    .eq('is_active', true)
     .maybeSingle();
 
   if (error) {
@@ -38,6 +40,7 @@ async function getInitialProduct(productId: string): Promise<(ProductDetailType 
 export default async function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const initialProduct = await getInitialProduct(id);
+  if (!initialProduct) notFound();
   const isSharedPackProduct = initialProduct?.selling_mode === 'shared_pack';
 
   return (
