@@ -25,9 +25,9 @@ import { getStorefrontFallbackProducts } from '@/lib/storefront/catalog-fallback
 import { ArrowRight, ShoppingBag } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'Online Shopping for Clothing, Home & Kitchen & Everyday Essentials',
+  title: 'Shop Dhoti Choli, Lehenga Choli & Nightwear',
   description:
-    'Shop clothing, Home & Kitchen essentials and useful everyday products at competitive prices from ADHYEY BROTHERS, with secure payments, GST invoices and Pan India delivery.',
+    'Shop Dhoti Choli, Lehenga Choli and Nightwear from ADHYEY BROTHERS, with secure payments, GST invoices and Pan India delivery.',
   alternates: {
     canonical: 'https://www.adhyeybrothers.in/',
   },
@@ -35,9 +35,9 @@ export const metadata: Metadata = {
     type: 'website',
     url: 'https://www.adhyeybrothers.in/',
     siteName: 'ADHYEY BROTHERS',
-    title: 'Online Shopping for Clothing, Home & Kitchen & Everyday Essentials | ADHYEY BROTHERS',
+    title: 'Shop Dhoti Choli, Lehenga Choli & Nightwear | ADHYEY BROTHERS',
     description:
-      'Shop clothing, Home & Kitchen essentials and useful everyday products at competitive prices from ADHYEY BROTHERS, with secure payments, GST invoices and Pan India delivery.',
+      'Shop Dhoti Choli, Lehenga Choli and Nightwear from ADHYEY BROTHERS, with secure payments, GST invoices and Pan India delivery.',
     images: [
       {
         url: '/opengraph-image',
@@ -49,9 +49,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Online Shopping for Clothing, Home & Kitchen & Everyday Essentials | ADHYEY BROTHERS',
+    title: 'Shop Dhoti Choli, Lehenga Choli & Nightwear | ADHYEY BROTHERS',
     description:
-      'Shop clothing, Home & Kitchen essentials and useful everyday products at competitive prices from ADHYEY BROTHERS, with secure payments, GST invoices and Pan India delivery.',
+      'Shop Dhoti Choli, Lehenga Choli and Nightwear from ADHYEY BROTHERS, with secure payments, GST invoices and Pan India delivery.',
     images: ['/opengraph-image'],
   },
 };
