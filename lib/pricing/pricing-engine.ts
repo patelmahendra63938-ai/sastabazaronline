@@ -130,7 +130,7 @@ export async function calculateAuthoritativeOrderPricing(input: { db: SupabaseCl
   if (!productIds.length) throw new Error('No valid product references were found in the cart.');
 
   const [productsResult, inventoryResult, packOptionsResult, promotionsResult] = await Promise.all([
-    input.db.from('products').select('id, title, price, mrp, category, hsn_code, gst_rate, net_weight_grams, package_length_cm, package_width_cm, package_height_cm, selling_mode, colour_selection_mode, available_colours').in('id', productIds),
+    input.db.from('products').select('id, title, price, mrp, category, hsn_code, gst_rate, net_weight_grams, package_length_cm, package_width_cm, package_height_cm, selling_mode, colour_selection_mode, available_colours').in('id', productIds).eq('is_active', true),
     input.db.from('inventory').select('product_id, size, sku, available_quantity').in('product_id', productIds),
     input.db.from('product_pack_options').select('id, product_id, label, pieces_per_unit, price, mrp, sku, is_active').in('product_id', productIds).eq('is_active', true),
     input.db.from('promotions').select('*').eq('is_enabled', true),
