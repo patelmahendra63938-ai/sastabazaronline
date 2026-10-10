@@ -10,9 +10,9 @@ import FreeShippingStrip from '@/components/FreeShippingStrip';
 
 const SITE_URL = 'https://www.adhyeybrothers.in';
 const SITE_NAME = 'ADHYEY BROTHERS';
-const DEFAULT_TITLE = 'Online Shopping for Clothing, Home & Kitchen & Everyday Essentials | ADHYEY BROTHERS';
+const DEFAULT_TITLE = 'Shop Dhoti Choli, Ethnic Wear & Clothing | ADHYEY BROTHERS';
 const DEFAULT_DESCRIPTION =
-  'Shop clothing, Home & Kitchen essentials and useful everyday products at competitive prices from ADHYEY BROTHERS, with secure payments, GST invoices and Pan India delivery.';
+  'Shop Dhoti Choli, ethnic wear and clothing at competitive prices from ADHYEY BROTHERS, with secure payments, GST invoices and Pan India delivery.';
 const META_PIXEL_ID = '1059766193485896';
 
 
@@ -38,11 +38,11 @@ export const metadata: Metadata = {
     'ADHYEY BROTHERS',
     'online shopping India',
     'clothing online India',
-    'home and kitchen products online',
-    'kitchen accessories online India',
-    'cleaning products online India',
-    'home utility products online',
-    'everyday essentials online India',
+    'dhoti choli online',
+    'lehenga choli online India',
+    'women festive wear online India',
+    'nightwear online India',
+    'ethnic wear online India',
     'women ethnic wear online India',
     'dhoti choli for women',
     'girls fashion online',

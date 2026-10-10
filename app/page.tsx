@@ -522,10 +522,10 @@ export default async function StorefrontPage({ searchParams }: PageProps) {
               ADHYEY BROTHERS™
             </p>
             <h1 className="mt-1 text-2xl font-black tracking-tight text-[#741f23] sm:text-3xl">
-              Shop Clothing, Home & Kitchen & Everyday Essentials Online
+              Shop Dhoti Choli, Ethnic Wear & Clothing Online
             </h1>
             <p className="mt-2 max-w-3xl text-xs leading-relaxed text-stone-600 sm:text-sm">
-              Discover clothing, Home & Kitchen essentials and useful everyday products at competitive prices, with secure payments, GST invoices and Pan India delivery.
+              Discover Dhoti Choli, ethnic wear and clothing at competitive prices, with secure payments, GST invoices and Pan India delivery.
             </p>
           </section>
 
