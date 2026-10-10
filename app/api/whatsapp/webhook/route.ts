@@ -14,7 +14,8 @@ async function sendAutomaticAnswer(phone: string, to: string, timestamp: string,
   const recent = await supabaseAdmin.from('whatsapp_messages').select('sent_by,status')
     .eq('phone_number_id', phone).eq('wa_id', to).eq('direction', 'outbound')
     .gte('message_at', new Date(Date.now() - 30 * 60 * 1000).toISOString());
-  if (recent.error || recent.data?.some(row => row.sent_by && ['pending','accepted','sent','delivered','read'].includes(row.status))) return;
+  const resumeMenu = /^(hi|hello|hey|menu|start|નમસ્તે|નમસ્કાર|[123])[!.,\s]*$/i.test(text.trim());
+  if (recent.error || (!resumeMenu && recent.data?.some(row => row.sent_by && ['pending','accepted','sent','delivered','read'].includes(row.status)))) return;
   const id = autoReplyId(phone, to, timestamp);
   const reservation = await supabaseAdmin.from('whatsapp_messages').insert({
     id, phone_number_id: phone, wa_id: to, contact_name: name, direction: 'outbound',
