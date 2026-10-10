@@ -48,7 +48,22 @@ export async function POST(request: Request) {
     const response = await fetch(`https://graph.facebook.com/v26.0/${phoneId}/messages`,{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({messaging_product:'whatsapp',recipient_type:'individual',to,type:'text',text:{body:text}}),signal:AbortSignal.timeout(15000)});
     const data=await response.json(); metaId=data.messages?.[0]?.id || null;
     status=response.ok && metaId ? 'accepted' : 'failed';
-    if (status==='failed') { code=data.error?.code ? String(data.error.code):String(response.status); message=data.error?.message || 'Meta did not accept this message'; }
+    if (status==='failed') {
+      code=data.error?.code ? String(data.error.code):String(response.status);
+      const metaError = data.error || {};
+      const diagnostics = {
+        httpStatus: response.status,
+        code: metaError.code || null,
+        subcode: metaError.error_subcode || null,
+        type: metaError.type || null,
+        trace: metaError.fbtrace_id || null,
+        phoneNumberId: phoneId,
+      };
+      console.error('[WHATSAPP_SEND_FAILED]', diagnostics);
+      message = String(metaError.message || 'Meta did not accept this message');
+      if (diagnostics.subcode) message += ` (subcode: ${diagnostics.subcode})`;
+      if (diagnostics.trace) message += ` [trace: ${diagnostics.trace}]`;
+    }
   } catch { message='Send result is uncertain. Check delivery status before sending again.'; }
   const {data:saved,error:saveError}=await supabaseAdmin.from('whatsapp_messages').update({status,meta_id:metaId,error_code:code,error_message:message}).eq('id',id).select(columns).single();
   if(saveError) return json({error:'Send result could not be recorded. Do not resend until delivery is checked.'},500);
