@@ -21,7 +21,7 @@ export default function Footer() {
             </div>
           </Link>
           <p className="max-w-sm text-xs leading-relaxed text-stone-300">
-            Shop clothing, Home & Kitchen essentials and useful everyday products at competitive prices with Pan India delivery from Surat, Gujarat.
+            Shop Dhoti Choli, ethnic wear and clothing at competitive prices with Pan India delivery from Surat, Gujarat.
           </p>
           <div className="flex items-center gap-2 text-xs font-bold text-[#e7c98d]">
             <ShieldCheck size={16} aria-hidden="true" />
