@@ -34,7 +34,7 @@ export default function MobileHomeDiscovery() {
                 Browse active categories
               </p>
               <p className="mt-1 max-w-[15rem] text-lg font-black leading-tight tracking-tight text-white">
-                Fashion, home & kitchen made easy to browse
+                Dhoti Choli and clothing made easy to browse
               </p>
               <Link
                 href="#shop-by-category-heading"
